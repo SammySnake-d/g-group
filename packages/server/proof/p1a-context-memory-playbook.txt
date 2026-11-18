@@ -1,0 +1,105 @@
+P1-A context / memory / playbook — Round 2 deterministic D-layer proof
+Branch: feat/agy-priority-context-memory-playbook
+Base: origin/dev/agy-backend (46284e53)
+Round 1 reviewed implementation: b44ad357 (implementation from 6d0dcac4)
+Combined RED: 2f3d0f2279e4dfd88e81ea4c32dfcc3504c11996
+Complete GREEN: 1a9f8f9b9e019832807883ee8052d41a266a5ccf
+Round 2 author thread: codex-cli:01a1ee5f-e210-7b00-892f-836f6421b2c2
+
+Round 1 live bug reproduction (2026-11-18)
+Saved the original b44ad357..1fd22dfd patch before resetting unpushed local commits.
+Applied only final Round 2 tests to b44ad357; no implementation fixes were present.
+npm run typecheck: exit 0.
+node --test packages/server/src/memory-api.test.ts packages/server/src/memory-coverage.test.ts packages/server/src/playbook.test.ts packages/server/src/memory-write-neighbors.test.ts
+Result: 39 tests, 33 pass, 6 fail, 0 cancelled/skipped/todo; expected nonzero exit.
+Every Round 2 behavioral bug regression failed by name with ERR_ASSERTION:
+FAIL on R1 / PASS on R2: P1A Host structured reflect validates per-message verbatim evidence and records coverage
+FAIL on R1 / PASS on R2: P1A structured reflect ignores a source-retracted entry when planning relations
+FAIL on R1 / PASS on R2: P1A stale group reply during reflect abandons all structured capture writes
+FAIL on R1 / PASS on R2: P1A ask-user structured conflict passes its question through apply and notifies
+FAIL on R1 / PASS on R2: P1A repeated listing of scrubbed invalidation preserves updatedAt
+FAIL on R1 / PASS on R2: P1A clone emits room.updated even when no announcements are copied
+
+P1-1: two valid candidates followed by invalid evidence retain both durable writes in
+one coverage batch; state=failed, unresolved=1, writes.length=2. Round 1 incorrectly
+reported state=ok after applying candidates separately.
+P1-2: capture planning ignores source-retracted entries; a repeated direct statement
+creates a fresh memory anchored to the new source instead of extending a hidden one.
+P1-3 stale group: a real other-contact event is appended during reflect. runRound
+returns stale via commitRound's GroupReplyStaleError path and reports that newer seq.
+No stale reply, .md source, gg_memory row, or memory-coverage:* doc survives on R2.
+Round 1 returned stale but had already persisted the captured .md memory.
+P1-3 ask-user: two direct user quotes with conflict relation preserve both active
+memories. The conflict write passed into MemoryCoverage.apply has a non-null room
+and conflict prompt; apply invokes that prompt's callback once, which calls
+loop.notify(contactId, 'now') once. Round 1 supplied question=null.
+P2 playbook list: an already scrubbed invalidation preserves updatedAt and
+SELECT total_changes() proves zero additional writes on repeated list().
+P2 clone: room.updated is emitted even when no announcements or playbook are copied.
+
+Existing guard and lint calibration (not pre-existing Round 1 behavioral defects)
+G1-04CAS external md edit during apply is preserved and rejects the stale write:
+PASS on b44ad357 and PASS on R2. Round 1 already contained the exact disk CAS guard.
+This additional regression cannot honestly be described as failing on Round 1.
+Live P1A-F3 mutation removed only the apply disk-before CAS guard in a disposable
+copy with workspace dependencies rebound to the copy. The named G1-04CAS test
+failed with ERR_ASSERTION (missing expected exception): 10 pass, 1 fail, no import,
+syntax, or timeout failure counted as a kill. Production source was unchanged.
+P2 memory-write-neighbors.test.ts: all six business tests pass on R1 and R2;
+the useTemplate change corrects lint only. Final lint reports zero infos, warnings,
+or errors; no invented failing business regression is claimed for this style fix.
+
+Combined Red / Green verification
+Red restores compile-only skeletons from 92166d1f while preserving all final tests
+and the existing docs/reviews. speaking.ts did not exist in 92166d1f, so Red removes
+it and restores its matching cli.ts assembly; Green restores both complete files.
+Red npm run typecheck: exit 0.
+Red node --test <all 9 base..HEAD changed test files>: 71 tests, 0 pass, 71 named
+failures, 0 cancelled/skipped/todo; no file-level load failures counted.
+Green restores Round 1 implementation plus batched, visible-only capture planning,
+post-commit capture, ask-user notification, and playbook fixes.
+git diff 2f3d0f2279e4dfd88e81ea4c32dfcc3504c11996 1a9f8f9b9e019832807883ee8052d41a266a5ccf -- 'packages/**/*.test.ts': EMPTY.
+Green changed test files: 71 pass, 0 fail/cancelled/skipped/todo.
+Green npm run typecheck: exit 0.
+Green npm run lint: exit 0; 309 files checked; 0 errors, 0 warnings, 0 infos.
+Green full npm test: 2085 pass, 0 fail/cancelled/skipped/todo; exit 0.
+Green node --test packages/adapter-pi-contact/src/recall.test.ts: 1 pass; exit 0.
+Block-1 wire prefix: 3997 UTF-8 bytes (<4000); recalled history stays in tool results.
+
+Provenance / review
+Receipt uses the actual Round 2 CODEX_THREAD_ID and ling-jing/gpt-6.1-sol.
+The original local author rollout loads successfully through loadSession (30 turns
+at the recorded check); author-session-check.json is retained with the local logs.
+review=null, waiver=null. Independent review remains pending. G-PROVENANCE returns
+no problems when review=null; that gate result alone does not establish independent
+review. No review approval or waiver is claimed.
+
+Evidence logs are preserved under /tmp/p1a-r2-evidence/: r2.patch, final-tests.patch,
+r1-typecheck.log, r1-bug-repro.log, red-typecheck.log, combined-red.log,
+green-typecheck.log, green-lint.log, combined-green.log, full-test.log, recall.log,
+p1a-f3-cas-mutant.log, author-session-check.json, gates-final.log, and push.log.
+The final gates/push commands run after this docs commit; their logs are the
+authority for those outcomes and are not represented here as already completed.
+
+Historical Round 1 controls and retained scope
+Temporary-copy spot mutants: 16/16 killed by named ERR_ASSERTION tests; 0 survivors; 0 timeouts; no syntax/import failure counted as a kill.
+KILLED snapshot-split | not ok 1 - G2-01 同一轮对话与补写检查收到同一份冻结快照; not ok 2 - G2-01 配置在途改变本轮保持旧值 下一轮才用新值; not ok 6 - P1A round reflect fallback compact and shrink share frozen snapshot through replacement; not ok 7 - P1A settings replacement is next-turn only preserving memory and note; not ok 8 - P1A batch replacement is next-turn only preserving memory and note; not ok 9 - P1A rollback replacement is next-turn only preserving memory and note
+KILLED hypothetical | not ok 2 - G1-02H 中文假设不是已定偏好
+KILLED question | not ok 3 - G1-02Q 中文无问号问句尾不是声明
+KILLED quoted | not ok 10 - G1-02C 引用的工具网页与代码块不能冒充用户直接要求
+KILLED hygiene-list | not ok 3 - 来源消息撤回:由它写出的记忆不进第 1 块前缀(已并入的前缀快照也拿掉)、不进第 5 块,read_memory 读不到正文;无关记忆照常;条目还在并标来源已撤回; not ok 4 - 来源撤回但同一件事被复述过:复述的那条消息还在就照常生效,复述也撤回了才挡下
+KILLED hygiene-prefix | not ok 3 - 来源消息撤回:由它写出的记忆不进第 1 块前缀(已并入的前缀快照也拿掉)、不进第 5 块,read_memory 读不到正文;无关记忆照常;条目还在并标来源已撤回
+KILLED C95-01 | not ok 2 - T95-R1-01 body-only retrieval preserves distinct id title body (C95-01)
+KILLED C95-02 | not ok 1 - T95-R1-01 title-only retrieval preserves distinct id title body (C95-02 C95-03); not ok 3 - T95-R1-02 five neighbors survive intact ordered by lexical id for equal relevance (C95-04); not ok 5 - G35 contact status persona room and validity hard filters precede retrieval
+KILLED C95-03 | not ok 1 - T95-R1-01 title-only retrieval preserves distinct id title body (C95-02 C95-03); not ok 2 - T95-R1-01 body-only retrieval preserves distinct id title body (C95-01); not ok 6 - G35 single-stage reflect actually receives retrieved title/body neighborhood
+KILLED C95-04 | not ok 3 - T95-R1-02 five neighbors survive intact ordered by lexical id for equal relevance (C95-04)
+KILLED C95-05 | not ok 3 - T95-R1-02 five neighbors survive intact ordered by lexical id for equal relevance (C95-04); not ok 4 - T95-R1-03 relevance DESC opposes lexical ID ASC (C95-05)
+KILLED playbook-retract | not ok 5 - P1A source retraction invalidates and scrubs observation before next context; not ok 11 - P1A hidden source rejects record and removes already recorded text from listing; not ok 12 - P1A rewind invalidates source anchored playbook without leaking into clone
+KILLED clone-messages | not ok 8 - P1A clone clean room retains selected rules announcements transferable playbook, no work content; not ok 9 - P1A clone defaults copy both contacts and pair entries but flags omit all template data; not ok 10 - P1A additive playbook and clone RPCs validate and return wire results
+KILLED clone-revoked | not ok 8 - P1A clone clean room retains selected rules announcements transferable playbook, no work content
+KILLED block1-leak | not ok 7 - P1A selective team/pair injection only in Block 5 never Block 1
+KILLED clone-tasks | not ok 8 - P1A clone clean room retains selected rules announcements transferable playbook, no work content; not ok 9 - P1A clone defaults copy both contacts and pair entries but flags omit all template data; not ok 10 - P1A additive playbook and clone RPCs validate and return wire results
+Round 1 mutation evidence is retained from the previously committed proof; these 16 controls were not rerun in Round 2. The new P1A-F3 control below was run live in this round.
+Checklist sync: all six checked backend slices have verified/critical-file/pending columns; P1-B/C P2-A/B P3 unchecked. Acceptance document original bytes are an exact prefix, all prior AC/V/R IDs retained; section 11 appended. README links checklist.
+Throughput checkpoint: Red precedes implementation; snapshot/memory/playbook share Host and are serialized under one implementation owner; independent verification uses frozen disposable copies; no competing writers. Existing contracts/assembly reused rather than a second runtime.
+Scope: D-layer controlled Host/SQLite and offline provider fixtures only. No live model S+X, frontend rendering, HTTP/WS bridge, Codex app-server or C-US09 in-flight cancellation acceptance. B4 recorded ling-jing upstream failure remains unresolved. DM#2103 concrete playbook form remains a candidate; no independent review claimed.

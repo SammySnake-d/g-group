@@ -1,0 +1,53 @@
+{
+  "slice": "P1-A：每轮 SpeakingSnapshot、记忆证据与卫生/覆盖台账、协作观察及净室群模板克隆（D 层候选）",
+  "author": {
+    "agent": "codex-cli",
+    "session": "codex-cli:01a1ee5f-e210-7b00-892f-836f6421b2c2",
+    "model": "ling-jing/gpt-6.1-sol"
+  },
+  "red": {
+    "commit": "2f3d0f2279e4dfd88e81ea4c32dfcc3504c11996"
+  },
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-3.8-flash-high",
+    "verdict": "approve",
+    "reviewed_hash": "b21e64891feba05f2087b41a7044dde14272acb56add560992ad57eda7b28f2e",
+    "notes": "Round 2 APPROVE (see reviews/feat-agy-priority-context-memory-playbook.md): All 3 Round 1 P1 defects (batched MemoryCoverage prepare/apply & G1-03P unresolved tracking, visible-only memory.list planning excluding source-retracted entries, post-commitRound capture gating & ask-user conflict prompt/notify) and all 3 P2 items (G1-04CAS guard test killing P1A-F3, zero-write scrubbed playbook listing & clone room.updated emit, 0 Biome infos) verified fixed. Independent typecheck, lint (310 files, 0 infos), 2091/2091 offline tests, 71/71 combined Red failures, Block-1 <4000B, and 6/6 Round 2 single-site fault injections all passed."
+  },
+  "waiver": null,
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/p1a-context-memory-playbook.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/p1a-context-memory-playbook.txt"
+    },
+    {
+      "id": "AC-42",
+      "status": "未测",
+      "reason": "D 层卫生清理、statedIn capture、MemoryCoverage、memory.*、md/SQLite 启动对账与 Host.memoryNeighbors 的 PR #95 C95-01..05 校准已证明；真实模型 S+X 质量/成本/时延评测留 P3。"
+    },
+    {
+      "id": "AC-08",
+      "status": "未测",
+      "reason": "D 层记忆/笔记/playbook 撤回及 rewind 级联已证明；C-US09 撤回取消在途任务留 P2-A，完整 X 层留 P3。"
+    },
+    {
+      "id": "AC-32",
+      "status": "未测",
+      "reason": "D 层 per-round SpeakingSnapshot 在 round/reflect/compact/shrink 中不变且替换下一轮生效已证明；真实 X 层留 P3。"
+    },
+    {
+      "id": "AC-54",
+      "status": "未测",
+      "reason": "D 层 contacts.profile longTerm 概览已证明并保留 nullable(json()) wire 合同；UI 渲染在 frontend repo 未测。"
+    }
+  ],
+  "unverifiable": "AC-42 真实模型 S+X、AC-08 C-US09 在途任务取消、AC-32 真实 X 层、AC-54 前端渲染均未测；P1-B Codex、P1-C HTTP/WS、P2-A/B、P3 尚未交付。B4 ling-jing 上游 502/outage 未成功闭环。U77/D08.3 的沉淀复制目标已定，DM#2103 的具体手册载体/team-pair 方案仍是本次授权候选，G5 两阶段不纳入。R-01 独立跨厂商审查待进行，review=null，无豁免。"
+}

@@ -28,6 +28,7 @@ const REFLECT_SYSTEM = [
   "{\"note\": 新状态笔记或 null, \"memories\": [{\"title\", \"text\", \"anchors\": [...], \"relation\": \"change\"|\"refine\"|\"conflict\"|null, \"target\": 记忆id或null}], \"personaSuggestion\": 一句话或 null}",
   "1 状态笔记:材料里写明「模型已写笔记」时 note 给 null;否则按下面的写法写。",
   STATE_NOTE_GUIDE,
+  "每条记忆必须给 roomId/sourceSeq/evidence，evidence 是可用来源中用户直接声明的逐字原话；不得从问句、假设、引用推断。",
   "2 记忆:按这位联系人的人设与职责,检查本轮有没有以后用得上的事——用户的偏好与纠正、定下的规矩、走通或走不通的做法。没有值得记的就给空数组,不要为了记而记。",
   "  anchors 写适用范围:room:<会话id>、user:<uid>、task:<任务id>、tool:<工具名>、path:<路径>;只有用户原话说了「以后都/所有」才用 global。",
   "  与已有记忆内容相同就不要再列;改变了某条已有结论填 change 与 target;只补充细节填 refine;与某条矛盾填 conflict。",
@@ -39,7 +40,9 @@ function reflectText(req: ReflectRequest): string {
   const neighbors = req.neighbors.length === 0 ? "(无)" : req.neighbors.map((n) => `${n.id} · ${n.title}:${n.body}`).join("\n");
   const written = req.noteWritten === null ? "(模型本轮没写笔记,请写)" : `模型已写笔记(不要覆盖):\n${req.noteWritten}`;
   const limit = req.maxBytes === null ? "" : `\n新笔记不超过 ${req.maxBytes} 字节(UTF-8)。`;
-  return `[联系人人设与职责]\n${req.contact.persona || "(未设置)"}\n\n[旧状态笔记]\n${prev}\n\n[本轮状态笔记]\n${written}\n\n[已有相关记忆]\n${neighbors}\n\n${req.material}${limit}`;
+  return `[逐条可用来源]
+${JSON.stringify(req.sources ?? [])}
+[联系人人设与职责]\n${req.contact.persona || "(未设置)"}\n\n[旧状态笔记]\n${prev}\n\n[本轮状态笔记]\n${written}\n\n[已有相关记忆]\n${neighbors}\n\n${req.material}${limit}`;
 }
 
 const RELS = new Set(["change", "refine", "conflict"]);
@@ -65,7 +68,7 @@ function parseReflect(text: string, noteWritten: boolean): ReflectResult {
     if (relation !== null && !RELS.has(relation as string)) return bad(`memories[${i}].relation 只能是 change / refine / conflict / null`);
     const target = r.target ?? null;
     if (target !== null && !str(target)) return bad(`memories[${i}].target 必须是字符串或 null`);
-    return Object.freeze({ title: r.title as string, text: r.text as string, anchors: Object.freeze([...(r.anchors as string[])]), relation: relation as "change" | "refine" | "conflict" | null, target: target as string | null });
+    return Object.freeze({ ...(typeof r.roomId === "string" ? { roomId: r.roomId } : {}), ...(Number.isSafeInteger(r.sourceSeq) ? { sourceSeq: r.sourceSeq as number } : {}), ...(typeof r.evidence === "string" ? { evidence: r.evidence } : {}), title: r.title as string, text: r.text as string, anchors: Object.freeze([...(r.anchors as string[])]), relation: relation as "change" | "refine" | "conflict" | null, target: target as string | null });
   });
   return Object.freeze({ note: noteWritten ? null : ((o.note as string | null) ?? null), memories: Object.freeze(memories), personaSuggestion: (o.personaSuggestion as string | null | undefined) ?? null });
 }

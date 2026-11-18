@@ -1,14 +1,14 @@
+import { assembleSpeaking } from "./speaking.ts";
 // 给 Electron 主进程(或 UtilityProcess)的一站式启动:按环境选联系人脑子与 Compute,建宿主、服务,并可选挂到 ipcMain。
 // 前端只需要:const s = await startServer({ dataDir: app.getPath("userData") }); s.bind(ipcMain);
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ContactView } from "@g-group/api-contract";
-import { type ContactCompactor, type ContactMind, DEFAULT_RETRY_POLICY, type ThresholdConfig } from "@g-group/kernel";
+import { DEFAULT_RETRY_POLICY, type ThresholdConfig } from "@g-group/kernel";
 import { type ComputeCommands, claudeCompute, codexCompute } from "./compute.ts";
-import { deskCompute, scriptedMind } from "./fakes.ts";
+import { deskCompute } from "./fakes.ts";
 import { Host } from "./host.ts";
-import { DEFAULT_STATE_NOTE_MAX_BYTES, makePiRuntime, type PiRuntimeOptions } from "./pi-runtime.ts";
+import { DEFAULT_STATE_NOTE_MAX_BYTES, type PiRuntimeOptions } from "./pi-runtime.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
 
 export interface StartOptions extends PiRuntimeOptions {
@@ -44,17 +44,8 @@ export const SAMPLE_CATALOG = fileURLToPath(new URL("../catalog/catalog.json", i
 export async function startServer(o: StartOptions): Promise<Started> {
   const env = o.env ?? process.env;
   mkdirSync(o.dataDir, { recursive: true });
-  let model = o.model ?? env.ANTHROPIC_DEFAULT_SONNET_MODEL;
-  // 规则替身每轮先等一会儿(GG_MIND_DELAY_MS,只给 fake):界面用例要看得见「正在回复」这段真实的忙碌
-  const delayMs = Math.min(Math.max(Number(process.env.GG_MIND_DELAY_MS) || 0, 0), 60_000);
-  let mind: (c: ContactView) => ContactMind = () => scriptedMind(delayMs ? { delayMs } : {});
-  let compactor: ((c: ContactView) => ContactCompactor) | undefined;
-  if (o.mind === "pi") {
-    const pi = await makePiRuntime(o, env);
-    model = pi.defaultModel;
-    mind = pi.mind;
-    compactor = pi.compactor;
-  }
+  const delayMs = Math.min(Math.max(Number(env.GG_MIND_DELAY_MS) || 0, 0), 60_000);
+  const { defaultModel: model, ...speaking } = await assembleSpeaking(o.mind ?? "fake", o, env, delayMs);
   const fake = o.compute === "claude" || o.compute === "codex" ? null : deskCompute({ stepMs: 300 });
   const compute = fake
     ? () => fake.adapter
@@ -68,8 +59,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
     file: path.join(o.dataDir, "gg.db"),
     dataDir: o.dataDir,
     catalogFile: o.catalogFile ?? SAMPLE_CATALOG,
-    mind,
-    ...(compactor ? { compactor } : {}),
+    ...speaking,
     compute,
     computeCwd: (taskId) => {
       const d = path.join(work, taskId);
