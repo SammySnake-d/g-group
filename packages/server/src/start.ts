@@ -14,11 +14,13 @@ import { type IpcMainLike, type Service, bindIpc, createService } from "./servic
 export interface StartOptions extends PiRuntimeOptions {
   /** 数据目录:gg.db、插件包、附件、Compute 工作目录都在这下面。 */
   readonly dataDir: string;
+  /** Optional database path; defaults to dataDir/gg.db. */
+  readonly db?: string;
   readonly stateNoteMaxBytes?: number | null;
   /** fake:规则替身(不连模型,开发前端用);pi:真实联系人脑子。默认 fake。 */
   readonly mind?: "fake" | "pi";
   /** fake:剧本 Compute(按派的活说话,见 fakes.ts deskCompute);claude:真实 Claude Code CLI。默认 fake。 */
-  readonly compute?: "fake" | "claude";
+  readonly compute?: "fake" | "claude" | "codex";
   /** 模型网关环境(ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_DEFAULT_SONNET_MODEL),默认 process.env。 */
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** 插件市场目录文件;默认包内示例市场。 */
@@ -42,6 +44,7 @@ export { DEFAULT_STATE_NOTE_MAX_BYTES };
 export const SAMPLE_CATALOG = fileURLToPath(new URL("../catalog/catalog.json", import.meta.url));
 
 export async function startServer(o: StartOptions): Promise<Started> {
+  if (o.compute === "codex") throw new Error("Codex app-server Compute is not connected; requires P1-B");
   const env = o.env ?? process.env;
   mkdirSync(o.dataDir, { recursive: true });
   const delayMs = Math.min(Math.max(Number(env.GG_MIND_DELAY_MS) || 0, 0), 60_000);
@@ -53,7 +56,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
       claudeCompute(env, { CLAUDE_CODE_MAX_RETRIES: String(DEFAULT_RETRY_POLICY.maxAutoRetries) }, o.computeCommands);
   const work = path.join(o.dataDir, "compute");
   const host = new Host({
-    file: path.join(o.dataDir, "gg.db"),
+    file: o.db ?? path.join(o.dataDir, "gg.db"),
     dataDir: o.dataDir,
     catalogFile: o.catalogFile ?? SAMPLE_CATALOG,
     ...speaking,
