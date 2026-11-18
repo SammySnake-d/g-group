@@ -1,0 +1,46 @@
+packages/adapter-pi-contact/src/tools.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 1-2,6,23,28,40-41,144-155,182,211,252-254,285-297
+packages/server/src/compaction-summary.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 6,8-70,74-98
+packages/kernel/src/history-tools.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 4-5,8-9,22,25-26,36,38,41-67,69,75-83,92-95,98-100,102-109,111-114,116-128,130-155,157,159,161,163,165,169-181,183-234,236-243,245-248,250-256,258-273
+packages/server/src/host.ts
+  s_21d4cbfd0a5fd4::t_5a40f9b7df58c3 2791
+  s_21d4cbfd0a5fd4::t_d2aab42ce420ce 2774-2775,2792,2823-2837,2855-2856,2871,2916,3019
+  s_21d4cbfd0a5fd4::t_137201ba16c701 119-122,128,138-140,177,181,285-286,296-297,477,493-503,894-895,1082-1083,1091-1099,1137-1160,1162,1166,1171,1177-1187,1214-1225,1237,1590-1593,1614-1617,1800-1803,1842,1869,2197,2204,2247,2254,2556,2586,2622-2677,2679,2681,2691,2710,2719,2730-2732,2771,2785-2790,2795,2852,2894-2910,2922,2930,2932,2939-2942,2945-2955,2957,2968,2971,2974-2982,2987,3033,3054-3060,3062-3066,3069,3071-3075,3106,3126,3162-3164,3170,3178-3185,3191,3215-3221,3231,3241,3249,3264,3347,3385,3422,3434,3456-3461,3476-3485,3746,4268,4321,4687,4692,4703,4709,4726,4759,4788,4829,5093-5110,5137,5308,5349,5465-5474
+packages/server/src/assemble.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 98,118-119
+packages/kernel/src/memory.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 5-7,11,13,151-152,154,157-174,177,181,183,187-188
+packages/kernel/src/history-search.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 1-8,12-33
+packages/server/src/history.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 7-15,17-31,33,48-49,68-69,75-142,144-174,176-182,185-187,190-241,244-245
+  s_21d4cbfd0a5fd4::t_38bf4733ae4b37 16,175,183-184,188-189
+packages/server/src/room-post-budget.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 30-107
+packages/adapter-pi-contact/src/mind.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 196-207,236,257-260,286
+packages/adapter-pi-contact/src/compact.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 142-143
+packages/domain/src/log.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 7,26
+packages/server/src/loop-guard.ts
+  s_21d4cbfd0a5fd4::t_137201ba16c701 1-2,4,6-14,34-39,41-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4910d0e0dd82ceb3a30d29bc0c9e35d260c61264",
+  "prompts": {},
+  "sessions": {
+    "s_21d4cbfd0a5fd4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ec82-9ccb-7fa0-80ae-658287515888",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
