@@ -1,0 +1,19 @@
+packages/server/src/forward-link.test.ts
+  s_52fba055a3038c::t_d29cfd744ba238 581-688
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8264ebe4ffe33837997c1ca23a30f4dfa40df5a1",
+  "prompts": {},
+  "sessions": {
+    "s_52fba055a3038c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ecef-0b2a-7b20-8837-b3f7345344c2",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
