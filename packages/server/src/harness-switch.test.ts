@@ -117,3 +117,119 @@ test("AC-51 ⑦ codex -> claude-code: boundary handoff retains task, workspace a
     } finally { before.close(); next.close(); await host.close(); }
 });
 
+
+async function failedHandoff(
+  t: import("node:test").TestContext,
+  opts: { missing?: boolean; quiesceFails?: boolean; throws?: boolean } = {},
+) {
+  const source = scriptedCompute({
+    idPrefix: "source",
+    script: (id) => [
+      { kind: "started", sessionId: id, resumed: false },
+      { kind: "completed", result: "source turn completed" },
+    ],
+    quiesce: async () => opts.quiesceFails
+      ? { ok: false, reason: "still alive", remaining: [999] }
+      : { ok: true, killed: 0 },
+  });
+  const sourceAdapter = {
+    ...source.adapter,
+    snapshot: () => ({ ok: true as const, snapshot: { constraintVer: 0, openQuestions: [], doneSideEffects: ["source milestone"] } }),
+  };
+  const destination = scriptedCompute({ idPrefix: "destination" });
+  let attempts = 0;
+  const host: Host = new Host({
+    file: file(),
+    mind: () => forwardingMind(() => host),
+    compute: {
+      "claude-code": () => sourceAdapter,
+      ...(opts.missing ? {} : {
+        codex: () => ({
+          ...destination.adapter,
+          async spawn() {
+            attempts++;
+            if (opts.throws) throw new Error("whitelist");
+            return { ok: false as const, reason: "whitelist" };
+          },
+        }),
+      }),
+    },
+    computeCwd: () => dir,
+    maxDeferMs: 5,
+  });
+  t.after(async () => { source.close(); destination.close(); await host.close(); });
+  host.updateSettings({
+    defaultHarness: "claude-code", defaultComputeModel: "shared-model",
+    models: [{ id: "shared-model", label: "shared", vendor: "anthropic", harnesses: ["claude-code", "codex"] }],
+  });
+  const c = host.createContact({ name: "handoff" });
+  const dm = host.openDm(c.id);
+  const send = (clientActionId: string, text: string) => host.send({ roomId: dm.id, clientActionId, text });
+  send("begin", "帮我整理资料");
+  await settle(host, source);
+  const task = host.listTasks({ contactId: c.id })[0]!;
+  const old = source.spawned[0]!.computeId;
+  assert.equal(host.quota.leaseOf(task.id), undefined, "original turn settled");
+  host.updateContact(c.id, { harness: "codex", confirmAffected: true });
+  send("handoff", "补充:try Codex");
+  await settle(host, source);
+  return { host, source, c, task, old, send, attempts: () => attempts };
+}
+
+test("AC-51 ⑦ reports an unregistered destination before stopping the source", async (t) => {
+  const { host, task, old, source } = await failedHandoff(t, { missing: true });
+  assert.ok(host.progress(task.id).some((p) => p.computeId === old && p.kind === "blocked" && /还没有接入它的适配器.*修复路径/.test(p.summary)));
+  assert.deepEqual(source.stopped, []);
+  assert.equal(host.taskDoc(task.id).value.task.computeId, old);
+});
+
+test("AC-51 ⑦ quarantines an unconfirmed stop and retains the lease without spawning", async (t) => {
+  const { host, task, old, source, attempts } = await failedHandoff(t, { quiesceFails: true });
+  assert.deepEqual(source.stopped, [old]);
+  assert.equal(attempts(), 0);
+  assert.match(host.listTasks({}).find((taskView) => taskView.id === task.id)?.waitingFor ?? "", /停止未确认:still alive/);
+  assert.ok(host.quota.leaseOf(task.id));
+  assert.equal(Reflect.get(host, "harnessRetiring").has(old), false);
+});
+
+test("AC-51 ⑦ relaunches the retired source after refusal and delivers replacement events", async (t) => {
+  const { host, task, old, source, c, send, attempts } = await failedHandoff(t);
+  assert.equal(attempts(), 1);
+  assert.equal(Reflect.get(host, "harnessRetiring").has(old), false);
+  assert.equal(host.quota.leaseOf(task.id), undefined);
+
+  host.updateContact(c.id, { harness: "claude-code" });
+  send("revert", "补充:continue on the source");
+  await settle(host, source);
+  assert.equal(source.spawned.length, 2);
+  assert.deepEqual(source.stopped, [old]);
+  assert.deepEqual(source.resumed, []);
+  const replacement = source.spawned[1]!;
+  assert.deepEqual(replacement.opts?.handoff, { constraintVer: 0, openQuestions: [], doneSideEffects: ["source milestone"] });
+  assert.notEqual(replacement.computeId, old);
+  assert.equal(host.taskDoc(task.id).value.task.computeId, replacement.computeId);
+  assert.deepEqual(host.progress(task.id).filter((p) => p.computeId === replacement.computeId).map((p) => p.kind), ["started", "completed"]);
+  assert.equal(host.quota.leaseOf(task.id), undefined);
+});
+
+test("AC-51 ⑦ confirms cancellation of the retired source after replacement refusal", async (t) => {
+  const { host, task, old, source, attempts } = await failedHandoff(t);
+  assert.equal(attempts(), 1);
+  host.taskDecision(task.id, "cancel", "c1");
+  await settle(host, source);
+  assert.equal(host.taskDoc(task.id).value.task.state, "T10_Cancelled");
+  assert.deepEqual(source.stopped, [old]);
+  assert.equal(host.quota.leaseOf(task.id), undefined);
+});
+
+test("AC-51 ⑦ retries a throwing replacement without stopping the retired source again", async (t) => {
+  const { host, task, old, source, send, attempts } = await failedHandoff(t, { throws: true });
+  assert.equal(attempts(), 1);
+  assert.equal(Reflect.get(host, "harnessRetiring").has(old), false);
+  assert.equal(host.quota.leaseOf(task.id), undefined);
+  send("retry", "补充:retry Codex");
+  await settle(host, source);
+  assert.equal(attempts(), 2);
+  assert.deepEqual(source.stopped, [old]);
+  assert.equal(host.quota.leaseOf(task.id), undefined);
+});
