@@ -1,0 +1,20 @@
+packages/server/src/loop-guard.test.ts
+  s_21d4cbfd0a5fd4::t_c21282fbfa1507 280-281,317,337
+  s_21d4cbfd0a5fd4::t_e8863aa567e8fb 7,9,199-279,282-316,318-336,338
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "594340898b383211fd2680ee36e2892fea9dfaf5",
+  "prompts": {},
+  "sessions": {
+    "s_21d4cbfd0a5fd4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ec82-9ccb-7fa0-80ae-658287515888",
+        "model": "shayu/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
