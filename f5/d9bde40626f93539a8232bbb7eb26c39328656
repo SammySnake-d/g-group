@@ -1,0 +1,21 @@
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_4615ac13a0183c::t_582678244bbd16 42-43
+docs/spec/验收文档-v0.1.md
+  s_4615ac13a0183c::t_9590500c006a16 325
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f5d9bde40626f93539a8232bbb7eb26c39328656",
+  "prompts": {},
+  "sessions": {
+    "s_4615ac13a0183c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f07c-37be-71c1-84c4-538a939db970",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
