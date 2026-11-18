@@ -29,10 +29,10 @@ test("T95-R1-01 body-only retrieval preserves distinct id title body (C95-01)", 
 });
 test("T95-R1-02 five neighbors survive intact ordered by lexical id for equal relevance (C95-04)", (t) => {
   const s = setup(t, Host); for (const id of ["m-e", "m-c", "m-b", "m-d", "m-a"]) s.seed(id, "quartzneedle", "same body");
-  assert.deepEqual(s.host.memoryNeighbors(s.c.id, { rooms: [s.room.id], text: "quartzneedle" }).map(x => x.id), ["m-a", "m-b", "m-c", "m-d", "m-e"]);
+  assert.deepEqual(s.host.memoryNeighbors(s.c.id, { rooms: [s.room.id], text: `quartzneedle` }).map(x => x.id), ["m-a", "m-b", "m-c", "m-d", "m-e"]);
 });
 test("T95-R1-03 relevance DESC opposes lexical ID ASC (C95-05)", (t) => {
-  const s = setup(t, Host); s.seed("m-a", "gardening", "quartzneedle " + "violet garden water ".repeat(100)); s.seed("m-z", "quartzneedle", "quartzneedle");
+  const s = setup(t, Host); s.seed("m-a", "gardening", `quartzneedle ${"violet garden water ".repeat(100)}`); s.seed("m-z", "quartzneedle", "quartzneedle");
   assert.deepEqual(s.host.memoryNeighbors(s.c.id, { rooms: [s.room.id], text: "quartzneedle" }).map(x => x.id), ["m-z", "m-a"]);
 });
 test("G35 contact status persona room and validity hard filters precede retrieval", (t) => {

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
-import { DEFAULT_RETRY_POLICY, parseMemory, planMemoryWrite, type MemoryEntry } from "@g-group/kernel";
+import { DEFAULT_RETRY_POLICY, parseMemory, planMemoryWrite, serializeMemory, type MemoryEntry } from "@g-group/kernel";
 import { openDb } from "./db.ts";
 import { MemoryStore } from "./memory-store.ts";
 import { MemoryCoverage, type CaptureWrite, type CoverageRef } from "./memory-coverage.ts";
@@ -100,4 +100,12 @@ test("G1-03P 有合法项可落地但部分无效不冒充整批检查完成", (
   const s = fixture(MemoryCoverage, MemoryStore); const w = work(s); const p = plan([], "合法事实", "m-one", `${w.id}:one`);
   s.coverage.prepare(w.id, [p], 1); s.coverage.apply(w.id);
   assert.equal(s.memory.list("c").length, 1); assert.equal(s.coverage.get(w.id).state, "failed"); assert.equal(s.coverage.get(w.id).unresolved, 1);
+});
+test("G1-04CAS external md edit during apply is preserved and rejects the stale write", () => {
+  const s = fixture(MemoryCoverage, MemoryStore); const w = work(s); const p = plan([], "事实一", "m-one", `${w.id}:one`);
+  s.coverage.prepare(w.id, [p], 0);
+  mkdirSync(path.join(s.root, "c"), { recursive: true });
+  writeFileSync(path.join(s.root, "c", "m-one.md"), serializeMemory({ ...p.after[0]!, body: "外部修改", captureIds: [] }));
+  assert.throws(() => s.coverage.apply(w.id), /被修改/);
+  assert.equal(s.memory.readDisk("c", "m-one")?.body, "外部修改");
 });

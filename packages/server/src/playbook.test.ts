@@ -58,6 +58,15 @@ test("P1A source retraction invalidates and scrubs observation before next conte
   s.host.send({ roomId: s.room.id, clientActionId: "later", text: "next", mentions: [{ id: s.a.id, source: "manual" }] }); await settled(s.host);
   assert.doesNotMatch(s.rounds.at(-1)!.request.blocks.map(b => b.text).join("\n"), /PAIR_OBSERVATION/);
 });
+test("P1A repeated listing of scrubbed invalidation preserves updatedAt", (t) => {
+  const s = setup(t, Host, PlaybookStore); s.book.record(s.input); s.host.retractMessage(s.room.id, s.source.seq);
+  const first = s.book.list()[0]!;
+  const changes = all<{ n: number }>(s.host.db, "SELECT total_changes() AS n")[0]!.n;
+  const second = s.book.list()[0]!;
+  assert.equal(first.status, "invalidated"); assert.equal(first.title, "来源已撤下");
+  assert.equal(second.updatedAt, first.updatedAt);
+  assert.equal(all<{ n: number }>(s.host.db, "SELECT total_changes() AS n")[0]!.n, changes, "listing an already scrubbed invalidation performs zero writes");
+});
 test("P1A explicit invalidate remove and promotion keep formal announcements separate", (t) => {
   const s = setup(t, Host, PlaybookStore); const e = s.book.record(s.input);
   const p = { entryId: e.id, roomId: s.room.id, clientActionId: "promote" };
@@ -98,6 +107,11 @@ test("P1A clone defaults copy both contacts and pair entries but flags omit all 
   assert.equal(copy.members.filter(m => m.kind === "contact").length, 2); assert.equal(s.book.list({ roomId: copy.id }).length, 1);
   const bare = s.book.clone({ fromRoomId: s.room.id, contactIds: [], copyRules: false, copyAnnouncements: false, copyPlaybook: false, clientActionId: "bare" });
   assert.equal(bare.rules, ""); assert.deepEqual(s.book.list({ roomId: bare.id }), []); assert.deepEqual(s.host.announcements.list(bare.id), []);
+});
+test("P1A clone emits room.updated even when no announcements are copied", (t) => {
+  const s = setup(t, Host, PlaybookStore); const events: unknown[] = []; s.host.bus.subscribe(e => events.push(e));
+  const clone = s.book.clone({ fromRoomId: s.room.id, copyAnnouncements: false, copyPlaybook: false, clientActionId: "events" });
+  assert.ok(events.some(e => (e as { type?: string; room?: { id?: string } }).type === "room.updated" && (e as { room?: { id?: string } }).room?.id === clone.id));
 });
 test("P1A additive playbook and clone RPCs validate and return wire results", async (t) => {
   const s = setup(t, Host, PlaybookStore); const result = await s.svc.handle("playbook.record", s.input); assert.equal(result.ok, true);

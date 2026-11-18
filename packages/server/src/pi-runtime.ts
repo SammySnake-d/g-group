@@ -1,4 +1,3 @@
-import { modelConfig } from "@g-group/domain";
 import type { PiContactMindOptions, PiProtocol } from "@g-group/adapter-pi-contact";
 import type { ContactView } from "@g-group/api-contract";
 import type { ContactCompactor, ContactMind } from "@g-group/kernel";
@@ -66,22 +65,16 @@ export async function makePiRuntime(o: PiRuntimeOptions, env: Readonly<Record<st
   options(defaultModel);
   function forModel<T>(create: (opts: PiContactMindOptions) => T) {
     const cache = new Map<string, T>();
-    return (_c: ContactView, snapshot: modelConfig.SpeakingSnapshot): T => {
-      let instance = cache.get(snapshot.fingerprint);
+    return (c: ContactView): T => {
+      let instance = cache.get(c.speakingModel);
       if (instance === undefined) {
-        const base = options(snapshot.model);
-        instance = create({ ...base, maxTokens: Math.max(snapshot.maxOutputTokens, base.reasoning ? 8192 : 1), contextWindow: snapshot.contextWindow });
-        cache.set(snapshot.fingerprint, instance);
+        instance = create(options(c.speakingModel));
+        cache.set(c.speakingModel, instance);
       }
       return instance;
     };
   }
-  const mind: (c: ContactView, s: modelConfig.SpeakingSnapshot) => ContactMind = forModel(pi.createPiContactMind);
-  const compactor: (c: ContactView, s: modelConfig.SpeakingSnapshot) => ContactCompactor = forModel(pi.createPiCompactor);
-  const positive = (key: string, fallback: number) => { const raw = env[key]; if (raw === undefined) return fallback; const n = Number(raw); if (!/^\d+$/.test(raw) || !Number.isSafeInteger(n) || n < 1) throw new Error(`invalid speaking option ${key}`); return n; };
-  // The public endpoint is an origin only: gateway paths may themselves contain tokens.
-  const selected = options(defaultModel);
-  const endpointConfig = Object.freeze({ provider: selected.provider, baseUrl: new URL(selected.baseUrl!).origin, authRef: "none", maxOutputTokens: positive("GG_SPEAKING_MAX_OUTPUT_TOKENS", selected.maxTokens ?? 4096), contextWindow: positive("GG_SPEAKING_CONTEXT_WINDOW", 200000), reasoning: Object.freeze({}) });
-  modelConfig.checkSpeakingEndpoint(endpointConfig);
-  return { mind, compactor, defaultModel, speakingEndpoint: () => endpointConfig };
+  const mind: (c: ContactView) => ContactMind = forModel(pi.createPiContactMind);
+  const compactor: (c: ContactView) => ContactCompactor = forModel(pi.createPiCompactor);
+  return { mind, compactor, defaultModel };
 }

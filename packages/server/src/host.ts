@@ -1,7 +1,3 @@
-import { validateCapture, messageRevision, type ReflectSource, type CompactMemory } from "@g-group/kernel";
-import { MemoryCoverage } from "./memory-coverage.ts";
-import { purgeHiddenPrefix, rewoundTexts, rescrubNotes } from "./memory-hygiene.ts";
-import { PlaybookStore } from "./playbook.ts";
 // 本地宿主:把领域状态机、SQLite 存储、联系人注意循环、Compute 适配器和承诺账本拼成 P0 最小闭环(AC-30):
 //   用户在私聊/群里发消息 → 机械送达每位成员联系人的注意循环 → 联系人一轮(五块重拼 → ContactMind)提出动作
 //   → 宿主校验、分配 action_id、与游标/账本/任务同一事务落盘 → 起 Compute → Compute 语义事件回到联系人 → 联系人汇报/交付回聊天。
@@ -434,7 +430,7 @@ export class Host {
   readonly scheduler: Scheduler;
   readonly plugins: PluginStore;
   readonly announcements: AnnouncementStore;
-  readonly exits: MemberExits;
+  private readonly exits: MemberExits;
   private readonly links: ForwardLinkStore;
   /** 共享文档单一提交点(AC-21):所有写入只经它 */
   readonly docs: SharedDocs;
@@ -1418,7 +1414,6 @@ export class Host {
   /** 撤回自己的消息:原文不再进任何联系人的上下文(AC-08)。 */
   retractMessage(roomId: string, seq: number): MessageView {
     this.appendUserEvent(roomId, { kind: "retract", target: seq });
-    new PlaybookStore(this).list({ roomId });
     return this.updatedView(roomId, seq);
   }
   private appendUserEvent(roomId: string, body: { kind: "edit"; target: number; text: string } | { kind: "retract"; target: number }) {
@@ -1961,8 +1956,6 @@ export class Host {
       run(this.db, "INSERT INTO gg_rewinds (room_id, client_action_id, to_seq, upto_seq, marker_seq, result, at) VALUES (?, ?, ?, ?, ?, ?, ?)", roomId, input.clientActionId, input.toSeq, upto, markerSeq, JSON.stringify(r), r.at);
       return r;
     });
-    rescrubNotes(this.db, this.members(roomId).filter(m => m.kind === "contact").map(m => m.id), (id, text) => this.scrubNote(id, text, this.roomsOfContact(id).map(r => r.id)));
-    new PlaybookStore(this).list({ roomId });
     this.markRead(roomId, me, result.markerSeq);
     const msgs = this.projected(roomId);
     for (const m of plan.messages) {
@@ -2677,7 +2670,7 @@ export class Host {
   // ======================= 联系人一轮 =======================
   /** 联系人的全部记忆(含已替代、降级),按创建时间排序。 */
   listMemories(contactId: string): MemoryEntry[] {
-    return this.memory.listAll(contactId);
+    return this.memory.list(contactId);
   }
   /** 压缩检查记下的「建议改人格」(不进任何一块,人格本身不改)。 */
   personaSuggestions(contactId: string): string[] {
@@ -2736,7 +2729,6 @@ export class Host {
     const now = this.now();
     const cur = prefixMemories(list, now).map((e) => ({ id: e.id, title: e.title, text: e.body }));
     const key = (x: { id: string; title: string; text: string }) => `${x.id}\u0000${x.title}\u0000${x.text}`;
-    purgeHiddenPrefix(this.db, contactId, this.memory);
     const doc = getDoc<{ entries: { id: string; title: string; text: string }[] }>(this.db, `memprefix:${contactId}`);
     let snap = doc?.value.entries ?? cur;
     if (!doc) putDoc(this.db, `memprefix:${contactId}`, 0, { entries: cur });
@@ -2769,10 +2761,7 @@ export class Host {
       const src = this.projected(a.roomId).find((m) => m.seq === a.sourceSeq);
       if (!src || src.retracted) return `来源 ${a.roomId} #${a.sourceSeq} 不存在或已撤回`;
       if (a.quote !== null) {
-        const { log } = loadLog(this.db.store, `room:${a.roomId}`);
-        const source: ReflectSource = { roomId: a.roomId, seq: src.seq, revision: messageRevision(log.events, src.seq), senderKind: src.sender.kind, senderId: src.sender.id, text: src.text, verifiedOutcome: false };
-        const candidate: CompactMemory = { ...a, kind: "fact", evidence: a.quote, sourceSeq: src.seq };
-        if (!validateCapture(candidate, [source], [source]).ok) return "quote 必须是来源用户消息里的原话直接声明";
+        if (src.sender.kind !== "user" || !src.text.includes(a.quote)) return "quote 必须是来源用户消息里的原话";
         userQuote = true;
       }
     } else if (a.quote !== null) return "给了 quote 却没有来源 seq";
@@ -2823,7 +2812,7 @@ export class Host {
   }
   /** 笔记落盘或装配前移除撤回原文;精确替换不掉就整份作废并报告 */
   private scrubNote(contactId: string, note: string, roomIds: readonly string[]): string {
-    const r = scrubRetracted(note, [...this.retractedTexts(roomIds), ...rewoundTexts(this.db, roomIds)]);
+    const r = scrubRetracted(note, this.retractedTexts(roomIds));
     if (r.leaked) {
       this.report("state-note-voided", { contactId });
       return VOIDED_NOTE;
@@ -2888,69 +2877,34 @@ export class Host {
     return `${prefix}\n${summary}`;
   }
   /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
-  memoryNeighbors(contactId: string, q: { rooms: readonly string[]; text: string }): { id: string; title: string; body: string }[] {
-    const now = this.now();
-    const visible = this.memory.list(contactId).filter(e => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && (e.validFrom === null || e.validFrom <= now) && (e.validTo === null || e.validTo > now) && e.anchors.some(a => a === GLOBAL_ANCHOR || q.rooms.some(r => a === `room:${r}`))).sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-    const found = searchHistory(visible.map(e => ({ ref: e.id, role: "user" as const, text: `${e.title}
-${e.body}` })), q.text, visible.length);
-    return found.map(hit => { const e = visible.find(e => e.id === hit.ref)!; return { id: e.id, title: e.title, body: e.body }; });
-  }
-  private captureSources(fresh: readonly Inbound[]): ReflectSource[] {
-    return fresh.flatMap(f => {
-      if (f.kind !== "message") return [];
-      const { log } = loadLog(this.db.store, `room:${f.roomId}`);
-      const m = project(log).find(m => m.seq === f.seq);
-      if (!m || m.retracted || isRewound(this.db, f.roomId, f.seq)) return [];
-      return [{ roomId: f.roomId, seq: f.seq, revision: messageRevision(log.events, f.seq), senderKind: m.sender.kind, senderId: m.sender.id, text: m.text, verifiedOutcome: false }];
-    });
-  }
-  private async settleNote(contact: ContactDoc, speaking: modelConfig.EffectiveSpeakingConfig, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], previous: string | null, pending: readonly Inbound[], signal: AbortSignal, sourcesChanged: () => boolean, roundId: string): Promise<{ note: string | null; remember: MindAction[]; persona: string | null; pending: Inbound[] } | null> {
+  memoryNeighbors(_contactId: string, _q: { rooms: readonly string[]; text: string }): { id: string; title: string; body: string }[] { throw new Error("P1-A memory neighborhood not implemented"); }
+  private async settleNote(contact: ContactDoc, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], previous: string | null, pending: readonly Inbound[], signal: AbortSignal, sourcesChanged: () => boolean, roundId: string): Promise<{ note: string | null; remember: MindAction[]; persona: string | null; pending: Inbound[] } | null> {
     const contactId = contact.id;
     const prev = previous;
     const usageRooms = [...new Set(fresh.map((f) => f.roomId))];
     const usage = (kind: "compact" | "reflect") => this.usage.sink({ kind, roundId, contactId, roomIds: usageRooms });
-    let compactor = this.opts.compactor?.(this.contactView(contact), speaking);
-    if (compactor?.model !== undefined && compactor.model !== speaking.model) {
-      this.report("compression-model-mismatch", { contactId, reason: `压缩必须用 ${speaking.model},拒绝改用 ${compactor.model}` });
-      compactor = undefined;
-    }
+    const compactor = this.opts.compactor?.(this.contactView(contact), modelConfig.resolveSpeakingConfig(modelConfig.DEFAULT_SPEAKING_ENDPOINT, contact.speakingModel, this.bootId));
     const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
     const max = this.opts.stateNoteMaxBytes ?? null;
     let note = out.stateNote;
     const remember: MindAction[] = [];
     let persona: string | null = null;
     // 每轮结束、原文移出窗口前由代码固定发起一次检查(用户 #1196、协调 #1250):同一次调用写笔记、检查有没有值得记的、最多一条人格建议
-    let capture: (() => void) | null = null;
     let reflected = false;
     if (compactor?.reflect && fresh.length > 0) {
       if (signal.aborted || sourcesChanged()) return null;
-      const neighbors = this.memoryNeighbors(contactId, { rooms: roomIds, text: [prev ?? "", ...fresh.map(f => f.kind === "message" ? f.text : f.kind === "compute" ? f.summary : f.prompt)].join("\n") });
-      const sources = this.captureSources(fresh);
+      const list = this.memory.list(contactId);
+      const anchors = this.roundAnchors(fresh);
+      const neighbors = list
+        .filter((e) => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && e.anchors.some((x) => anchors.includes(x) || x === GLOBAL_ANCHOR))
+        .map((e) => ({ id: e.id, title: e.title, body: e.body }));
       try {
-        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, sources, noteWritten: out.stateNote }, signal, usage("reflect"));
+        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, noteWritten: out.stateNote }, signal, usage("reflect"));
         reflected = true;
         if (note === null) note = r.note;
         const lastUser = [...fresh].reverse().find((f): f is InboundMessage => f.kind === "message" && f.sender.kind === "user");
         const roomId = lastUser?.roomId ?? fresh[0]!.roomId;
-        capture = () => {
-        const coverage = new MemoryCoverage(this.db, this.memory);
-        const work = coverage.begin(contactId, sources.map(s => ({ roomId: s.roomId, seq: s.seq, revision: s.revision })), [], roomIds, speaking.model);
-        let unresolved = 0;
-        for (const m of r.memories) {
-          const structured = m.roomId !== undefined || m.sourceSeq !== undefined || m.evidence !== undefined;
-          // Legacy summaries remain room-scoped; direct quote claims always require verified evidence.
-          if (!structured) { remember.push({ kind: "remember", roomId, sourceSeq: lastUser?.seq ?? null, title: m.title, text: m.text, anchors: m.anchors, quote: null, relation: m.relation, target: m.target }); continue; }
-          const check = validateCapture(m, sources, this.captureSources(fresh));
-          if (!check.ok) { unresolved++; this.report("memory-capture-rejected", { contactId, reason: check.reason }); continue; }
-          const before = this.memory.listAll(contactId);
-          const plan = planMemoryWrite(before, { title: m.title, body: m.text, anchors: check.anchors, source: { roomId: check.source.roomId, seq: check.source.seq, revision: check.source.revision, userQuote: true, quote: m.evidence!, senderId: check.source.senderId }, relation: m.relation === null ? null : { kind: m.relation, target: m.target ?? "" } }, this.now(), () => this.newId("m"));
-          if (plan.kind === "invalid") { unresolved++; continue; }
-          const id = `${work.id}:${m.roomId}:${m.sourceSeq}:${m.title}`;
-          coverage.prepare(work.id, [{ id, before: plan.changed.map(e => before.find(x => x.id === e.id) ?? null), after: plan.changed.map(e => ({ ...e, captureIds: [...(e.captureIds ?? []), id] })), question: null }], unresolved);
-          coverage.apply(work.id);
-        }
-        if (coverage.get(work.id).writes === null) { coverage.prepare(work.id, [], unresolved); coverage.apply(work.id); }
-        };
+        for (const m of r.memories) remember.push({ kind: "remember", roomId, sourceSeq: lastUser?.seq ?? null, title: m.title, text: m.text, anchors: m.anchors, quote: null, relation: m.relation, target: m.target });
         persona = r.personaSuggestion;
       } catch (e) {
         if (committedPiFailure(e)) reflected = true; // Keep the pending material; do not issue a replacement compaction.
@@ -2979,8 +2933,6 @@ ${e.body}` })), q.text, visible.length);
       if (Buffer.byteLength(note, "utf8") > max) this.report("state-note-over-limit", { contactId, bytes: Buffer.byteLength(note, "utf8"), max });
     }
     // 没有可用笔记时,另存原始输入(不是重放动作);与游标同事务提交,下一轮仍可见,成功写笔记后清除。
-    if (signal.aborted || sourcesChanged()) return null;
-    capture?.();
     const nextPending = note === null && (compactor || pending.length) ? [...pending, ...fresh] : [];
     return { note: note === null ? null : this.scrubNote(contactId, note, roomIds), remember, persona, pending: nextPending };
   }
@@ -3177,9 +3129,7 @@ ${e.body}` })), q.text, visible.length);
       throw new Error(`引用召回规划失败:${plan.detail}`);
     }
     this.report("recall", { contactId, roundId, items: plan.items.map(({ text: _t, ...rest }) => rest) });
-    const playbookPointers = new PlaybookStore(this).pointers(contactId, rooms.map(r => r.id));
     const pointers = plan.items.map((it) => renderRecall(it, sources.get(`${it.roomId}#${it.seq}`)?.sender ?? "?"));
-    pointers.push(...playbookPointers);
     // 引用链(D24/AC-41):带引用的新消息附前 K 级,放在第 5 块(新消息之后,不进前缀);已换入或同在本轮的标 in_context
     const paged = new Set(plan.items.filter((it) => it.state === "Full" || it.state === "TruncatedSlice").map((it) => `${it.roomId}#${it.seq}`));
     for (const m of recoveredPending) pointers.push({ ref: `待处理原文 ${m.roomId} #${m.seq}`, text: `${m.sender.name}: ${m.text}` });
@@ -3265,7 +3215,6 @@ ${e.body}` })), q.text, visible.length);
     // 宿主关闭时也不等一个不理会中止的脑子:轮次留在运行中,下次启动核对成孤儿
     const closing = new Promise<never>((_, reject) => signal.addEventListener("abort", () => reject(new Error("宿主中止本轮")), { once: true }));
     closing.catch(() => {});
-    const speaking = modelConfig.resolveSpeakingConfig((this.opts.speakingEndpoint ?? (() => modelConfig.DEFAULT_SPEAKING_ENDPOINT))(), model, this.bootId);
     let out: Awaited<ReturnType<ContactMind["round"]>>;
     try {
       // 每一轮现场定生效模型(原则 70):用户在失败卡上显式选了备用模型才换,只用于重跑这一批;自动重试永远用原模型(严禁静默换模)
@@ -3281,7 +3230,7 @@ ${e.body}` })), q.text, visible.length);
           return progressGet(this.runs, contactId, this.roomsOfContact(contactId).filter((r) => !leaving.has(r.id)), roomId, id);
         },
       };
-      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }, speaking).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools, this.usage.sink({ kind: "round", contactId, roomIds: [...freshRooms], roundId })), stalled, closing]);
+      out = await Promise.race([this.opts.mind({ ...this.contactView(contact), speakingModel: model }, modelConfig.resolveSpeakingConfig(modelConfig.DEFAULT_SPEAKING_ENDPOINT, model, this.bootId)).round({ contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona }, request, fresh }, ac.signal, tools, this.usage.sink({ kind: "round", contactId, roomIds: [...freshRooms], roundId })), stalled, closing]);
     } catch (e) {
       this.setActivity(contactId, null, "idle");
       if (stall) this.runs.failStalled(unit.id, stall);
@@ -3315,7 +3264,7 @@ ${e.body}` })), q.text, visible.length);
       this.runs.settle(unit.id, { stale: true, note: "压缩来源变化,放弃旧结果并重跑" });
       return "stale";
     }
-    const settled = await this.settleNote({ ...contact, speakingModel: model }, speaking, fresh, out, roomIdsAtStart, fullNote, pendingNote, signal, noteSourcesChanged, roundId);
+    const settled = await this.settleNote({ ...contact, speakingModel: model }, fresh, out, roomIdsAtStart, fullNote, pendingNote, signal, noteSourcesChanged, roundId);
     if (signal.aborted || this.closed) return "done";
     if (settled === null || noteSourcesChanged()) {
       this.report("stale-round", { contactId, reason: "检查期间压缩来源发生变化" });
