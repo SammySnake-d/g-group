@@ -1,0 +1,142 @@
+{
+  "slice": "P1-B: shared process tools, Codex app-server protocol and AC-51 ⑦ harness handoff.",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/p1b-codex-protocol.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/p1b-codex-protocol.txt"
+    },
+    {
+      "id": "AC-23",
+      "status": "未测",
+      "reason": "D 层通过自有真实进程树、停止确认/租约隔离与 wire 清理；真实 Codex 二进制 X 层与 Windows 留 P3。"
+    },
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "D 层证明双向轮边界 handoff、原任务/worktree/分支/SHA、实例与跨厂商追加账本；真实二进制和模型 S+X 留 P3。"
+    },
+    {
+      "id": "V-02",
+      "status": "未测",
+      "reason": "wire 子进程验证真实 HOME 与每槽 CODEX_HOME 分离；真实 Codex 认证/会话/配置和真实能力隔离 X 层留 P3。"
+    }
+  ],
+  "author": {
+    "agent": "codex-cli",
+    "model": "fnqtz-gpt/gpt-6.2-sol",
+    "session": "codex-cli:01a1f07c-37be-71c1-84c4-538a939db970"
+  },
+  "red": {
+    "commit": "56d3e81b7304861619648177b2da7788e5beddaf"
+  },
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "approve",
+    "reviewed_hash": "c5aedb67d63a47acd49d847f950fd56ae6405ebb15d799375c1bbe052bc778f4",
+    "notes": "Round 2 APPROVE (see reviews/feat-agy-priority-codex-protocol.md): Verified P1-1 fixed (switchHarness finally clears harnessRetiring, retiredComputes cleanly relaunches replacement session on revert/retry without event blackhole or quota lease leak, and confirms T10_Cancelled on cancel), P1-2 fixed (adapter.test.ts + harness-switch.test.ts cover Codex adapter lifecycle/pluginDirs/tool-subset refusals + missing-harness/quiesce-quarantine guards), and P2 fixed (turnStopped dedup + 0 Biome infos across 326 files). Independent typecheck, lint, 2158/2158 offline tests, 67/67 combined Red failures, Block-1 <4000B, and 6/6 Round 2 single-site fault injections all passed."
+  },
+  "waiver": null,
+  "unverifiable": "AC-23 / AC-51 / V-02 的 D 层已验证，整体 D+X 仍未测：确定性 native-wire、自有 OS 进程和 git worktree 不替代真实 codex-cli 0.169.0 / 上游模型 S+X E2E（P3）。sandbox 不冒充逐工具授权：只映射完整 native workspace scope 与空工具只读范围，其他子集、Claude skill 插件明确拒收。Windows、完全脱离父子关系的托管进程、宿主崩溃中的 Harness 原子接续、真实项目配置叠加仍待测。R-02 合并 Red 保留 R1/R2 测试，typecheck=0，67/67 用例按名字失败，Green 无测试文件改动。ling-jing 与 fnqtz-gpt 同属 OpenAI，provider 切换不构成独立跨厂商审查；review/waiver=null。",
+  "verification": {
+    "baseline": "0683b560e26151af343929c198922d2cc40a03f0",
+    "implementation": "cf39235bb46814e2a5a063dbf743827e446d4d6c",
+    "red_tests": {
+      "failed": 67,
+      "passed": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "typecheck_exit": 0
+    },
+    "green_test_edits": 0,
+    "typecheck_exit": 0,
+    "lint_exit": 0,
+    "root_tests": {
+      "passed": 2158,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "gates_selftest": {
+      "passed": 255,
+      "exit": 0
+    },
+    "recall": {
+      "passed": 1,
+      "prefix_utf8_bytes": "<4000"
+    },
+    "reference_cc_r2": {
+      "passed": 3,
+      "source": "41dace26:packages/adapter-cc-compute/src/shared-process-r2.test.ts"
+    },
+    "mutations": {
+      "killed": 4,
+      "survived": 0,
+      "sourceUnchanged": true,
+      "ids": [
+        "P1B-F5-pluginDirs",
+        "P1B-F6-missing-harness",
+        "P1B-R2-retiring-clear",
+        "P1B-R2-cancel-after-fail"
+      ]
+    },
+    "local_gates": {
+      "passed": 7,
+      "failed": [
+        "G-REVIEW"
+      ],
+      "exit": 1,
+      "command": "node --experimental-strip-types scripts/gates/run-all.ts --local --branch=feat/agy-priority-codex-protocol --base=origin/dev/agy-backend",
+      "boundary": "review=null; G-PROVENANCE takes its no-review path, not a claim that independent review provenance has been verified."
+    },
+    "binary_model_e2e": "未测; P3",
+    "lint_diagnostics": {
+      "infos": 0,
+      "warnings": 0,
+      "errors": 0
+    },
+    "proofs": [
+      "wire.mjs",
+      "resources.mjs",
+      "startup.mjs",
+      "p1b-handoff.mjs"
+    ],
+    "prior_mutations": {
+      "killed": 21,
+      "survived": 0,
+      "sourceUnchanged": true,
+      "ids": [
+        "R1-03-no-line-ps",
+        "R1-05-grace",
+        "A1",
+        "A6",
+        "A7",
+        "A10",
+        "A12",
+        "A13",
+        "memoized-exit",
+        "identity",
+        "exit-snapshot",
+        "RPC-error-fidelity",
+        "resume-id",
+        "steer-id",
+        "interrupt-kind",
+        "persistent-thread",
+        "approval-policy",
+        "early-bound",
+        "V02-HOME",
+        "V02-CODEX_HOME",
+        "handoff"
+      ]
+    }
+  }
+}

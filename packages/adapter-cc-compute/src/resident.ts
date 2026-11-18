@@ -33,8 +33,8 @@ import { SYSTEM_PROMPT, allowedTools, cliEnv } from "./cli.ts";
 import { type AcceptedReport, activityOf, preInitFrame, streamParser } from "./events.ts";
 import { type Isolation, NO_ISOLATION, checkInitIsolation, isolationOf, mcpConfigFor, promptWithSkills } from "./isolation.ts";
 import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
-import { IS_WINDOWS, type ProcRow, signalGroup } from "./procgroup.ts";
-import { confirmStopped, treeNow } from "./stop-confirm.ts";
+import { IS_WINDOWS } from "./procgroup.ts";
+import { createProcessCleanup, type ProcessCleanup } from "@g-group/process-tools";
 import { checkTurnModel, planTurn, type SessionModel, switchRefusalKind } from "./turn-model.ts";
 import type { AdapterOptions, Brief, ComputeActivity, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, QuiesceResult, Refusal, RejectedReport, TurnModel } from "./types.ts";
 
@@ -185,7 +185,7 @@ interface Proc {
   stderr: string;
   readonly parse: (line: string) => ReturnType<ReturnType<typeof streamParser>>;
   /** 停止(或停止确认结束它)时按进程表记下的后代与同组成员(AC-23);[] 是还没记,null 是记的时候读不到进程表 */
-  tree: readonly ProcRow[] | null;
+  cleanup: ProcessCleanup;
 }
 
 interface Turn {
@@ -212,6 +212,7 @@ interface State {
   proc: Proc | null;
   /** 最近一次起的进程(退出后仍留着,停止确认要它的 pid 与停止时记下的后代) */
   lastProc: Proc | null;
+  readonly cleanups: ProcessCleanup[];
   /** harness 回报的会话当前实际模型;null 表示不明 */
   model: string | null;
   effort: string | undefined;
@@ -293,13 +294,7 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
   function reap(proc: Proc) {
     if (proc.reaping) return;
     proc.reaping = true;
-    const p = proc.child;
-    if (p.exitCode !== null || p.signalCode !== null) return;
-    try { p.kill("SIGTERM"); } catch { /* 已退出 */ }
-    const ms = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS);
-    const timer = setTimeout(() => signalGroup(proc.pid, "SIGKILL"), ms);
-    timer.unref();
-    p.once("exit", () => clearTimeout(timer));
+    proc.cleanup.requestStop(resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS));
   }
 
   /** 宿主要求进程退出(兜底重启、空闲回收):先关 stdin 让 CLI 自己收尾,3 秒没退再按停止语义回收;等主进程退出 */
@@ -307,6 +302,7 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
     const proc = st.proc;
     if (!proc) return;
     proc.expectedExit = true;
+    proc.cleanup.capture();
     try { proc.child.stdin?.end(); } catch { /* 已关 */ }
     const t = setTimeout(() => reap(proc), 3000);
     await proc.exited;
@@ -458,9 +454,10 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
     let markExited: () => void = () => {};
     const exited = new Promise<void>((r) => { markExited = r; });
     const parse = streamParser();
-    const proc: Proc = { child, pid: child.pid, exited, isExited: false, resumed: resume, started: false, sawInit: false, reaping: false, expectedExit: false, stderr: "", parse, tree: [] };
+    const proc: Proc = { child, pid: child.pid, exited, isExited: false, resumed: resume, started: false, sawInit: false, reaping: false, expectedExit: false, stderr: "", parse, cleanup: createProcessCleanup(child) };
     st.proc = proc;
     st.lastProc = proc;
+    st.cleanups.push(proc.cleanup);
     // 启动参数里的模型就是会话当前模型,直到 init 或 set_model 回包更正
     if (model) st.model = model;
     if (effort) st.effort = effort;
@@ -599,7 +596,7 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       // 勾选 skill(AC-29):--bare 下没有 Skill 工具,在首个提示里列出可用 skill 与 SKILL.md 路径
       const { prompt, sections } = promptWithSkills(b.brief, o.handoff, o.iso.pluginDirs);
       const st: State = {
-        id, brief: b.brief, cwd: o.cwd ?? process.cwd(), sessionId: crypto.randomUUID(), iso: o.iso, proc: null, lastProc: null, model: null, effort: undefined, turn: null,
+        id, brief: b.brief, cwd: o.cwd ?? process.cwd(), sessionId: crypto.randomUUID(), iso: o.iso, proc: null, lastProc: null, cleanups: [], model: null, effort: undefined, turn: null,
         stopped: false, resuming: false, controls: new Map(), idleTimer: null,
         constraintVer: o.handoff?.constraintVer, openQuestions: o.handoff?.openQuestions ?? [], doneSideEffects: [...(o.handoff?.doneSideEffects ?? [])], rejected: [], unresolved: [],
       };
@@ -659,7 +656,7 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       if (st.proc) {
         const p = st.proc;
         // 停止确认要用(AC-23):发信号之前记下主进程的后代与同组成员,主进程退出后它们会被过继,事后按父子链就找不到了
-        if (!IS_WINDOWS && p.pid !== undefined && !p.isExited) p.tree = treeNow(p.pid);
+        p.cleanup.capture();
         p.expectedExit = true;
         reap(p);
       }
@@ -693,7 +690,7 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       const pid = proc.pid;
       if (!proc.isExited) {
         // 这一轮已失败或完成、常驻进程还活着:确认静止就要先结束它(下一轮用同一会话 id 恢复);停止时已记下后代的不再重记
-        if (!IS_WINDOWS && pid !== undefined && proc.tree !== null && proc.tree.length === 0) proc.tree = treeNow(pid);
+        proc.cleanup.capture();
         if (!proc.expectedExit) {
           proc.expectedExit = true;
           reap(proc);
@@ -705,9 +702,14 @@ export function createResidentComputeAdapter(options: ResidentAdapterOptions = {
       const exited = proc.isExited || (await Promise.race([proc.exited.then(() => true), new Promise<boolean>((r) => { timer = setTimeout(() => r(false), limit); timer.unref(); })]));
       clearTimeout(timer);
       if (!exited) return { ok: false, reason: "CLI 主进程没有退出", remaining: pid === undefined ? [] : [pid] };
-      if (IS_WINDOWS || pid === undefined) return { ok: true, killed: 0 };
-      // 主进程退出后:停止时记下的后代 + 此刻还在同组的成员,还活着的全部 SIGKILL,轮询到都退出(与一次性适配器同一套)
-      return confirmStopped(pid, proc.tree, timeoutMs);
+      let killed = 0;
+      for (const cleanup of [...st.cleanups]) {
+        const result = await cleanup.quiesce(timeoutMs, limit);
+        if (!result.ok) return result;
+        killed += result.killed;
+        st.cleanups.splice(st.cleanups.indexOf(cleanup), 1);
+      }
+      return { ok: true, killed };
     },
 
     async settled(computeId: string) {

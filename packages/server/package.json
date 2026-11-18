@@ -15,6 +15,7 @@
     "@g-group/api-contract": "*",
     "@g-group/domain": "*",
     "@g-group/kernel": "*",
+    "@g-group/adapter-codex-compute": "*",
     "ws": "^8.23.0"
   },
   "gGroup": {

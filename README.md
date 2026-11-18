@@ -15,24 +15,24 @@
 
 ## dev/agy-backend 后端进度
 
-[docs/BACKEND-PROGRESS-CHECKLIST.md](docs/BACKEND-PROGRESS-CHECKLIST.md) 按优先级记录 B0–B4、P1-A 与 P1-C 的实现、证据和未测边界。P1-A 提供每轮冻结说话配置、长期记忆卫生与证据台账、协作观察和净室群模板克隆；公告与协作观察分开，观察只在 Block 5 按需注入。
+[docs/BACKEND-PROGRESS-CHECKLIST.md](docs/BACKEND-PROGRESS-CHECKLIST.md) 按优先级记录 B0–B4 与 P1-A 至 P1-C 的实现、证据和未测边界。P1-A 提供每轮冻结说话配置、长期记忆卫生与证据台账、协作观察和净室群模板克隆；公告与协作观察分开，观察只在 Block 5 按需注入。
 
-当前勾选表示对应 D 层后端切片落地。B4 的 ling-jing 上游故障尚未形成 live 成功闭环；P1-C 的 HTTP/WS 合同、鉴权、背压、resync 与 CLI 生命周期已通过离线 D 层验证；真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3。P1-B Codex、P2-A/B 和 P3 真实模型/前端 D+X 验收仍待完成。DM#2103 手册具体方案继续标为候选。
+当前勾选表示对应 D 层后端切片落地。B4 的 ling-jing 上游故障尚未形成 live 成功闭环；P1-B（#126）的 Codex Compute 适配与轮边界 handoff 已完成 D 层验证；P1-C 的 HTTP/WS 合同、鉴权、背压、resync 与 CLI 生命周期已通过离线 D 层验证；真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3。P2-A/B 和 P3 真实模型/前端 D+X 验收仍待完成。DM#2103 手册具体方案继续标为候选。
 
 ## HTTP + WebSocket 后端（P1-C）
 
 ```sh
-npm ci --offline --ignore-scripts
+npm ci --ignore-scripts
 node packages/server/src/cli.ts serve --data-dir ./gg-data --port 3489 --host 127.0.0.1 --mind fake --compute fake
 # 显式允许前端来源并启用鉴权：
 node packages/server/src/cli.ts serve --data-dir ./gg-data --token local-secret --cors-origin http://localhost:5173
 ```
 
-启动输出一行 JSON：`httpUrl`、`wsUrl`（`/api/events` 端点）、`eventSeq`；SIGINT/SIGTERM 关闭 HTTP、WS 和 Host。`--port 0` 分配临时端口；`--db PATH` 覆盖数据库路径，否则使用 `--data-dir/gg.db`（未指定目录时 `./gg.db`）。支持 `--mind fake|pi`、`--compute fake|claude|codex`、`--api`、`--protocols`、`--magpie/--no-magpie`、`--model`、`--note-max-bytes N|none`。本分支未含 P1-B Codex 适配器，选择 codex 明确失败；真实 pi/Claude 依赖对应网关/CLI，本片未作现场验证。
+启动输出一行 JSON：`httpUrl`、`wsUrl`（`/api/events` 端点）、`eventSeq`；SIGINT/SIGTERM 关闭 HTTP、WS 和 Host。`--port 0` 分配临时端口；`--db PATH` 覆盖数据库路径，否则使用 `--data-dir/gg.db`（未指定目录时 `./gg.db`）。支持 `--mind fake|pi`、`--compute fake|claude|codex`、`--api`、`--protocols`、`--magpie/--no-magpie`、`--model`、`--note-max-bytes N|none`。`serve --compute codex` 已接通 P1-B 的 Codex Compute，并将默认 Harness 设为 Codex。真实二进制、模型和 Electron UI 的端到端验收留 P3。
 
 `POST /api/invoke` 发送 `{ "method": "session.hello", "params": { "clientApiVersion": "0.1.0" } }`，响应为合同 `ApiResult`；版本值以 `@g-group/api-contract` 的 `API_VERSION` 为准。事件从 `WS /api/events?sinceEventSeq=N` 续订，窗口过期收到 `stream.resync` 后重新加载快照。HTTP Bearer 和 WS `?token=`/Bearer 使用同一可选令牌；令牌启用时 health 只返回 `{ "ok": true }`，端点输出不带令牌。
 
-CORS 默认只放行 HTTP(S) 的 localhost/127.0.0.1/[::1] 来源；拒绝其它 Origin 的请求和 WS upgrade。`--cors-origin` 可重复或用逗号分隔；`file://`/`null` 需显式列入，`*` 是显式全放行。库入口 `createHttpWsBridge(started, options)` 只管理传输；`serveHttpWs({ dataDir, ...options })` 同时管理 Host。可配 `pingIntervalMs`（默认 30000）及 `maxBufferedBytes`（默认 8 MiB）；慢客户端超限后断开并取消订阅。近 35 MB base64 上传、413、补发和资源释放的证据见 [P1-C proof](packages/server/proof/p1c-http-ws-bridge.txt)。 macOS Seatbelt 的完全禁网策略会阻止 loopback listen；运行本片隔离门禁须使用现有 Docker 模式：预备 Node 22 镜像（例如 `node:22-slim`；本次实跑复用的本地镜像见 proof），再以 `GATE_SANDBOX_IMAGE=node:22-slim node scripts/gates/run-all.ts --local --branch=feat/agy-http-ws-bridge --base=origin/dev/agy-backend` 执行，容器仍为 `--network none`。
+CORS 默认只放行 HTTP(S) 的 localhost/127.0.0.1/[::1] 来源；拒绝其它 Origin 的请求和 WS upgrade。`--cors-origin` 可重复或用逗号分隔；`file://`/`null` 需显式列入，`*` 是显式全放行。库入口 `createHttpWsBridge(started, options)` 只管理传输；`serveHttpWs({ dataDir, ...options })` 同时管理 Host。可配 `pingIntervalMs`（默认 30000）及 `maxBufferedBytes`（默认 8 MiB）；慢客户端超限后断开并取消订阅。近 35 MB base64 上传、413、补发和资源释放的证据见 [P1-C proof](packages/server/proof/p1c-http-ws-bridge.txt)。macOS Seatbelt 的完全禁网策略会阻止 loopback listen；运行本片隔离门禁须使用现有 Docker 模式：预备 Node 22 镜像（例如 `node:22-slim`；本次实跑复用的本地镜像见 proof），再以 `GATE_SANDBOX_IMAGE=node:22-slim node scripts/gates/run-all.ts --local --branch=feat/agy-http-ws-bridge --base=origin/dev/agy-backend` 执行，容器仍为 `--network none`。
 
 ## 分工
 
@@ -104,3 +104,14 @@ npm run typecheck && npm run lint && npm test && npm run gates:selftest
 
 - 旧消息与记忆的混合检索使用 [acp-kernel 0.0.191](https://github.com/ranxianglei/acp-kernel)，来自 [Billion Context `541cf26`](https://github.com/ranxianglei/billion-context/tree/541cf26/kernel)。随仓保留 [MIT 及出处标注条款](third_party/acp-kernel/LICENSE)和[上游构建说明](third_party/acp-kernel/UPSTREAM.md)。
 - `packages/server/src/room-post-budget.ts`、`compaction-summary.ts` 与配套测试改编自 [milind-soni/OpenMausBot (`613ed01fd`)](https://github.com/milind-soni/OpenMausBot/tree/613ed01fd)，Copyright 2026 Milind Soni and OpenMausBot contributors，[Apache-2.0](packages/server/licenses/OpenMausBot-APACHE-2.0.txt)。
+
+
+## Codex Compute 与轮边界换 Harness（P1-B）
+
+startServer({ compute: "codex", dataDir }) 与 CLI --compute fake|claude|codex 已接入。真实运行模式注册 Claude Code 和 Codex 工厂；联系人选择 Harness 与兼容模型，宿主不静默代跑。Codex 使用 app-server 原生线程与 turn；开发指令放在线程启动/恢复参数，每轮通过 turn/start 显式发 model/effort。
+
+每个 Compute 槽位使用独立 CODEX_HOME，保留真实 HOME 供 git、SSH 和用户工具使用。联系人换 Harness 后，在下一轮边界确认旧执行器停止，再在同任务 worktree 建新原生会话，保留分支/SHA、进度与追加模型账本。工具授权只映射完整 native workspace scope 或空工具只读范围；其它子集与 Claude skill 插件明确拒收。
+
+本片已验证确定性 native-wire、真实自有进程清理、双向 handoff 与取消/rewind；真实 codex-cli 0.169.0 二进制 E2E、模型 S+X 和实际能力配置验证留 P3。AC-23 / AC-51 / V-02 整体仍“未测”，独立审查待完成。详见[证明](packages/server/proof/p1b-codex-protocol.txt)与[进度清单](docs/BACKEND-PROGRESS-CHECKLIST.md)。
+
+packages/adapter-codex-compute/src/startup.ts 的启动 admission 思路参考 OpenMausBot 613ed01fd（Apache-2.0），源码注明出处；[许可](packages/server/licenses/OpenMausBot-APACHE-2.0.txt)随仓保留。

@@ -1,0 +1,99 @@
+P1-B deterministic process / Codex protocol / harness handoff proof
+Date: 2026-11-18; local macOS; Node v22.22.0. No upstream model invocation.
+Base: 618fb79a98698692916edae38420bb8e22b1b6d1
+Red: 64e43d187a247c38856d3de59057bf387b5228f1
+Green: 7f58a64ab727f07f3ae04cb50ed6bf6a4fcc23cb
+
+Red: isolated archive; workspace links resolve into that archive; typecheck exit 0.
+node --test packages/process-tools/src/*.test.ts packages/adapter-codex-compute/src/*.test.ts packages/server/src/harness-switch.test.ts
+57 named ERR_ASSERTION failures; 0 passes/skipped/todo/cancelled.
+Red was amended before Green to fix the retaining-contact fixture and make pstack test names literal.
+Green has ZERO packages/**/*.test.ts edits relative to the final Red.
+
+Green verification:
+npm run typecheck: exit 0.
+npm run lint: exit 0 (9 informational style suggestions).
+npm test: 2079 passed; 0 failed/cancelled/skipped/todo.
+npm run gates:selftest: exit 0; 255/255.
+node --test packages/adapter-pi-contact/src/recall.test.ts: 1/1; UTF-8 cache prefix <4000 bytes.
+PR #91 reference shared-process-r2.test.ts from 41dace26: 3/3 (temporary copy with imports redirected to candidate).
+
+Runnable deterministic proofs:
+node packages/adapter-codex-compute/proof/wire.mjs
+node packages/adapter-codex-compute/proof/resources.mjs
+node packages/adapter-codex-compute/proof/startup.mjs
+node packages/server/proof/p1b-handoff.mjs
+node packages/process-tools/proof/mutations.mjs /tmp/p1b-mutations
+Mutation runner reads supplied ref/shared-process-cleanup for unchanged A6/A7/A10 owning witnesses.
+
+Observed outputs:
+P1B wire adapter: isolated home, model override, native resume continuity, stop and confirmed cleanup passed
+R1-03: 1000 deltas + structured progress + tool start/end, ps calls=11
+R1-05: EOF -> SIGTERM -> SIGKILL respects 100ms + 300ms configured grace windows
+startup admission: concurrency 2, queue 32, overload rejection, timeout removal and recovery passed
+claude-code -> codex: in-flight boundary, worktree branch/SHA, task instances, ledger vendors, cancel/rewind and lease cleanup passed
+codex -> claude-code: in-flight boundary, worktree branch/SHA, task instances, ledger vendors, cancel/rewind and lease cleanup passed
+missing: destination spawn blocked, old binding retained, lease safety preserved
+quarantine: destination spawn blocked, old binding retained, lease safety preserved
+
+Spot faults on disposable copies: killed 21/21; source seal unchanged.
+R1-03-no-line-ps: killed by R1-03
+R1-05-grace: killed by R1-05
+A1: killed by S-PROC-10
+A6: killed by S-PROC-CC-03
+A7: killed by S-PROC-CC-03
+A10: killed by S-PROC-CC-04
+A12: killed by S-PROC-11
+A13: killed by S-PROC-12
+memoized-exit: killed by S-PROC-07
+identity: killed by S-PROC-15
+exit-snapshot: killed by S-PROC-14
+RPC-error-fidelity: killed by lifecycle fault turn-rpc-error
+resume-id: killed by lifecycle fault resume-mismatch
+steer-id: killed by lifecycle fault steer-mismatch
+interrupt-kind: killed by lifecycle fault interrupt-completed
+persistent-thread: killed by persistent thread options
+approval-policy: killed by persistent thread options
+early-bound: killed by lifecycle fault early-flood
+V02-HOME: killed by CXP-R1-02 native child
+V02-CODEX_HOME: killed by CXP-01
+handoff: killed by boundary handoff
+
+Source seals (SHA-256):
+8b0f42a510cc2914d4b0fa2a1774313ae2bc1130744505b9bf602dc4c81a562a  packages/adapter-codex-compute/src/protocol.ts
+484f0b2c2e8473bd287ad6df9fa78a8d6b351b37d02110c9c2445bff18d66174  packages/process-tools/src/cleanup.ts
+e8241beecf4ecee682e979c54250dad77d467a41e0a7a7b0462981db2b1ca279  packages/adapter-cc-compute/src/resident.ts
+6f7980788c9f341ae2899fc3abb82fc4bf1d3cda17cba6a6f91ec024448a907c  packages/adapter-cc-compute/src/adapter.ts
+9676b75c57498a2a7c81808fefc7d95da5fb01d3325253eb5d2bcbe19bb58d89  packages/process-tools/src/procgroup.ts
+889d06d78c34c7b50ebb31e69f577cbc349c82c416d3939e67c3123c140ab679  packages/server/src/host.ts
+
+Contract / D-vs-X boundaries:
+Wire fields reconciled with codex-cli 0.169.0 generated TypeScript in /tmp/gg-agy-codex-ts.
+initialize -> initialized; persistent thread/start or matching thread/resume; model/effort on turn/start.
+Startup concurrency 2, queue 32; per-method RPC timeouts; malformed/oversized input, EOF/crash fail closed.
+HOME remains the real user home; CODEX_HOME is per-slot under configDir/dataDir.
+No process enumeration per stdout line; capture at tool/retirement boundaries and in the exit handler.
+lstart identity logic is centralized in process-tools; exit receipts are memoized and confirmed handles pruned.
+Native stopped.scope=turn-interrupt; OS quiesce confirmation is separate.
+Full Host native scope [Read,Write,Edit,Glob,Grep,Bash] maps to workspace-write; empty tools maps to read-only.
+Other per-tool subsets and Claude skill plugins are explicitly refused; a sandbox is NOT per-tool authorization.
+Selected MCP servers plus gg_progress use native thread config; structured milestone/blocked results map to events.
+OpenMausBot 613ed01fd (Apache-2.0) informed startup admission; source attribution in startup.ts.
+AC-51 D proof retains task instances, native sessions, real git worktree branch/SHA and append-only vendor history.
+Missing/incompatible destination is blocked before old stop; failed confirmation retains the stopping lease.
+Real codex-cli 0.169.0 binary E2E, real gateway/model S+X and real skill/MCP configuration overlay remain untested (P3).
+Windows, fully daemonized descendants and crash recovery mid-handoff are outside this proven boundary.
+AC-23 / AC-51 / V-02 overall D+X statuses remain 未测. Independent review pending; review=null, waiver=null.
+
+Committed-tree pstack check:
+node scripts/gates/run-all.ts --local --branch=feat/agy-priority-codex-protocol --base=origin/dev/agy-backend
+7/8 pass; exit 1 solely for G-REVIEW (independent review absent).
+✓ G-PROVENANCE
+✓ G-TRACE
+✗ G-REVIEW
+✓ G-RED
+✓ G-STUB
+✓ G-TAUTO
+✓ G-WORKFLOW
+✓ G-LAYER
+G-PROVENANCE uses the review=null short path; independent review provenance is not yet verified.

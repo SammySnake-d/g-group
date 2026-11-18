@@ -2,8 +2,8 @@
   "slice": "P1-C：HTTP/WS Bridge 的离线 D 层合同、上传、鉴权、CORS、续订/重同步、背压、心跳及 CLI 生命周期。",
   "author": {
     "agent": "codex-cli",
-    "session": "codex-cli:01a1eef2-c7e4-74d3-9b9f-70c85d987ada",
-    "model": "fnqtz-gpt/gpt-6.1-sol"
+    "session": "codex-cli:01a1f0a2-30c5-7282-9fe7-b1bd1996a12a",
+    "model": "fnqtz-gpt/gpt-6.2-sol"
   },
   "red": {
     "commit": "774485ef35685d19a10c5e12c8fdc0b00d831c4f"
@@ -42,7 +42,7 @@
       "reason": "仅验证 HTTP/WS 传输的 D 层子边界；真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3，原条目整项未验证。"
     }
   ],
-  "unverifiable": "AC-05/AC-31/AC-46/AC-51：合同与传输测试不证明产品整体验收、真实模型或 Electron UI；前端端到端手动 UI smoke 留前端启动/P3。AC-51 Codex app-server 需未接入的 P1-B，选择 codex 显式失败。R-01 独立审查待完成，review=null；G-PROVENANCE 在 review=null 时不核验来源，不把其绿当作独立身份认证。",
+  "unverifiable": "AC-05/AC-31/AC-46/AC-51：合同与传输测试不证明产品整体验收、真实模型或 Electron UI；前端端到端手动 UI smoke 留前端启动/P3。CLI serve 已接通 P1-B codexCompute 装配；真实模型/Electron UI 端到端留 P3。R-01 独立审查待完成，review=null；G-PROVENANCE 在 review=null 时不核验来源，不把其绿当作独立身份认证。",
   "verification": {
     "implementation": "bb8a0fb427d20ab3892681b38d79d53aaca697f1",
     "red_tests": {

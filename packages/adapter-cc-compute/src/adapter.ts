@@ -24,8 +24,8 @@ import { allowedTools, cliArgs, cliEnv } from "./cli.ts";
 import { type AcceptedReport, activityOf, preInitFrame, streamParser, type Terminal, terminalFor } from "./events.ts";
 import { type Isolation, NO_ISOLATION, checkInitIsolation, isolationOf, mcpConfigFor, promptWithSkills } from "./isolation.ts";
 import { freezeDeep, isPlainRecord, plainData } from "./plain.ts";
-import { IS_WINDOWS, type ProcRow, signalGroup } from "./procgroup.ts";
-import { confirmStopped, treeNow } from "./stop-confirm.ts";
+import { IS_WINDOWS, signalGroup } from "./procgroup.ts";
+import { createProcessCleanup, type ProcessCleanup } from "@g-group/process-tools";
 import type { AdapterOptions, Brief, ClaudeRunner, ComputeActivity, ComputeAdapter, ComputeEvent, HandoffSnapshot, Manifest, QuiesceResult, Refusal, RejectedReport } from "./types.ts";
 
 export const REPORT_MCP_PATH = fileURLToPath(new URL("../mcp/report-mcp.mjs", import.meta.url));
@@ -131,7 +131,7 @@ interface Round {
   readonly violations: string[];
   reportedFailure: string | undefined;
   /** 停止时按进程表记下的后代与同组成员(AC-23 停止确认要逐个确认它们退出);null 表示停止时读不到进程表 */
-  tree: readonly ProcRow[] | null;
+  cleanup: ProcessCleanup;
 }
 
 interface ComputeState {
@@ -233,16 +233,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
   function reap(round: Round) {
     if (round.reaping) return;
     round.reaping = true;
-    const p = round.proc;
-    const mainExited = () => p.exitCode !== null || p.signalCode !== null;
-    if (mainExited()) return;
-    try { p.kill("SIGTERM"); } catch { /* 已退出 */ }
-    // 到期对进程组 SIGKILL(k2 → FG);主进程先退出就清掉计时器(j2),这是取消组 SIGKILL 的唯一途径。
-    // 间隔与 z2 一样在每次回收时取:显式选项优先,否则读 MIRASIM_REAP_FORCE_MS(Ukc)
-    const reapForceMs = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS);
-    const timer = setTimeout(() => signalGroup(round.pid, "SIGKILL"), reapForceMs);
-    timer.unref();
-    p.once("exit", () => clearTimeout(timer));
+    round.cleanup.requestStop(resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS));
   }
 
   /** 违规:记下来(可审计),停止处理这一轮的输出并回收进程组 */
@@ -329,7 +320,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     const round: Round = {
       events: [], done: new Promise((r) => { finish = r; }), paused, markPaused: () => markPaused(),
       pid: child.pid, child, proc: child, exited: false, finished: false, terminal: null,
-      reaping: false, stopRequested: false, initOk: false, halted: false, pausedBlocked: false, violations: [], reportedFailure: undefined, tree: [],
+      reaping: false, stopRequested: false, initOk: false, halted: false, pausedBlocked: false, violations: [], reportedFailure: undefined, cleanup: createProcessCleanup(child),
     };
     st.round = round;
     const parse = streamParser();
@@ -462,7 +453,7 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       const frozen = round.terminal === "paused-blocked" && !round.exited;
       round.stopRequested = true;
       // 停止确认要用(AC-23):发信号之前记下主进程的后代与同组成员,主进程退出后它们会被过继,事后按父子链就找不到了
-      if (!IS_WINDOWS && round.pid !== undefined && !round.exited) round.tree = treeNow(round.pid);
+      round.cleanup.capture();
       // 封存这一轮(R3-01):stopped 之后的任何 stdout/tool_result 都不再产事件、改状态或发信号
       round.halted = true;
       // 冻结的进程组收不到 SIGTERM:直接对组 SIGKILL(非 mirasim 对照项);否则走 mirasim 的 z2:SIGTERM 主进程,到期组 SIGKILL
@@ -494,14 +485,14 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       const pid = round.pid;
       // 主进程退出:stop 之后由 reap 保证(reapForceMs 后组 SIGKILL);这里再给 timeoutMs 的余量
       const limit = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs;
-      if (!IS_WINDOWS && pid !== undefined && !round.exited && round.tree !== null && round.tree.length === 0) round.tree = treeNow(pid);
+      round.cleanup.capture();
       let timer: NodeJS.Timeout | undefined;
       const exited = await Promise.race([round.done.then(() => true), new Promise<boolean>((r) => { timer = setTimeout(() => r(false), limit); timer.unref(); })]);
       clearTimeout(timer);
       if (!exited) return { ok: false, reason: "CLI 主进程没有退出", remaining: pid === undefined ? [] : [pid] };
       if (IS_WINDOWS || pid === undefined) return { ok: true, killed: 0 };
       // 主进程退出后:停止时记下的后代 + 此刻还在同组的成员,还活着的全部 SIGKILL,轮询到都退出(stop-confirm.ts)
-      return confirmStopped(pid, round.tree, timeoutMs);
+      return round.cleanup.quiesce(timeoutMs, limit);
     },
 
     rejectedReports(computeId: string) {
