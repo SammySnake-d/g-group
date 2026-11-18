@@ -1,0 +1,56 @@
+packages/api-contract/src/api.ts
+  s_173fcb351f5325::t_cbe1b742e7ee1f 434-449
+packages/api-contract/src/entities.ts
+  s_173fcb351f5325::t_f120c0ab60cc9d 574-575,642-643
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_173fcb351f5325::t_017de16f34a239 48-54
+packages/server/src/magpie-discovery.ts
+  s_173fcb351f5325::t_072eb05c9d02c4 1-3
+receipts/feat-agy-frontend-contract-extensions.json
+  s_173fcb351f5325::t_9fe100b0c4993f 10-16,24-48,50,54-76
+  s_173fcb351f5325::t_c5f82cc8e403ab 1-8,17-18,20-23,49,51-53,77-78
+  s_173fcb351f5325::t_4e250f82e6eedf 9,19
+packages/api-contract/src/memory.ts
+  s_173fcb351f5325::t_6a4d0b0aa8621a 57-68
+packages/server/src/views.test.ts
+  s_173fcb351f5325::t_1caccf591baba6 40
+  s_173fcb351f5325::t_f62202b4750ad4 1-39
+packages/server/proof/f0-frontend-contracts.txt
+  s_173fcb351f5325::t_3e51ea91c7dd81 3-4
+  s_173fcb351f5325::t_42b9380b5cf007 1-2,5-22
+docs/spec/验收文档-v0.1.md
+  s_173fcb351f5325::t_3715d0c0076127 312-315
+packages/server/src/capabilities.test.ts
+  s_173fcb351f5325::t_dcedab3be33216 60,77-78,95-98,139-140,168-169,175-191
+packages/server/src/magpie-discovery.test.ts
+  s_173fcb351f5325::t_33efba52e70e9d 1-70
+  s_173fcb351f5325::t_77aa6751ad2c16 71-73
+  s_173fcb351f5325::t_df75cc5b31f2b0 74-76
+  s_173fcb351f5325::t_81a37557c46b9d 77-78
+packages/server/src/memory-api.test.ts
+  s_173fcb351f5325::t_a4c4ff6c8bc917 14,285-335
+README.md
+  s_173fcb351f5325::t_6e36b82937d440 118-121
+packages/server/src/capabilities.ts
+  s_173fcb351f5325::t_66310a7075b5a4 28,80-82
+packages/server/src/memory-api.ts
+  s_173fcb351f5325::t_65ba6e6239fcea 77-78,117
+packages/server/src/service.ts
+  s_173fcb351f5325::t_6c4cd557543b7e 160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6de8ee145532794cdcd66e3c1a97773307223fcc",
+  "prompts": {},
+  "sessions": {
+    "s_173fcb351f5325": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f0bf-a6ec-7e40-83a5-fd27bd422428",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
