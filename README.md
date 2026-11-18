@@ -115,3 +115,7 @@ startServer({ compute: "codex", dataDir }) 与 CLI --compute fake|claude|codex �
 本片已验证确定性 native-wire、真实自有进程清理、双向 handoff 与取消/rewind；真实 codex-cli 0.169.0 二进制 E2E、模型 S+X 和实际能力配置验证留 P3。AC-23 / AC-51 / V-02 整体仍“未测”，独立审查待完成。详见[证明](packages/server/proof/p1b-codex-protocol.txt)与[进度清单](docs/BACKEND-PROGRESS-CHECKLIST.md)。
 
 packages/adapter-codex-compute/src/startup.ts 的启动 admission 思路参考 OpenMausBot 613ed01fd（Apache-2.0），源码注明出处；[许可](packages/server/licenses/OpenMausBot-APACHE-2.0.txt)随仓保留。
+
+## F0 前端合同扩展
+
+后端已同步前端合同快照，提供网关模型发现、用户手动长期记忆写入、能力目录 MCP 描述与脚本清单，以及联系人资料页最近完成任务。当前证据覆盖 D 层和合同 parity，前端 UI、真实网关/模型与 Electron 端到端联调仍待 P3。
