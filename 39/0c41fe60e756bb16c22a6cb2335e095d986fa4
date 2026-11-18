@@ -1,0 +1,79 @@
+packages/server/src/memory-hygiene.test.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-289
+packages/server/src/memory-hygiene.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-24,26-40,42,44,47,49-51,53-54,56-57
+  s_c847363fc44382::t_301e90d160ac9c 25,41,43,45-46,48,52,55,58
+packages/server/src/memory-api.test.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-189,200,206
+  s_c847363fc44382::t_a2cd4502c31c6a 190-199,201-205
+packages/api-contract/src/api.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 2,454
+  s_c847363fc44382::t_25c1997494d599 1,455
+packages/domain/src/speaking-endpoint.test.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-83
+packages/kernel/src/index.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 20-21
+packages/kernel/src/memory-capture.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-7,9-14,16,18
+  s_c847363fc44382::t_301e90d160ac9c 8,15,17,19-20
+packages/api-contract/src/index.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 8-9
+  s_c847363fc44382::t_29fcca3ddd917c 10
+packages/domain/src/model-config.ts
+  s_c847363fc44382::t_301e90d160ac9c 152,154,157,159
+  s_c847363fc44382::t_06e4ab88f56d7c 1,121-151,153,155-156,158
+  s_c847363fc44382::t_1dd708c3daaffb 160
+packages/server/src/memory-coverage.ts
+  s_c847363fc44382::t_301e90d160ac9c 24-37
+  s_c847363fc44382::t_06e4ab88f56d7c 1-23,38
+packages/server/src/speaking-snapshot.test.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-226,238,245,250,253,268
+  s_c847363fc44382::t_8fc5b7e73265f9 227-237,239-244,246,249,251-252,254-267
+packages/server/src/memory-api.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-19,21-22,24,31,33-34,36-37,39-40
+  s_c847363fc44382::t_301e90d160ac9c 20,23,25-30,32,35,38,41,49
+  s_c847363fc44382::t_0ab3c0e9d4be2c 42-48
+packages/server/src/memory-coverage.test.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-103
+packages/api-contract/src/memory.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-61
+packages/kernel/src/memory-capture.test.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 1-70
+packages/server/src/host.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 151,193-194,223,451,2886
+  s_c847363fc44382::t_6cadbc1dee2549 512,2880,3233
+packages/kernel/src/runtime-ports.ts
+  s_c847363fc44382::t_06e4ab88f56d7c 194-197,209,221,226-227
+packages/api-contract/src/playbook.ts
+  s_c847363fc44382::t_194cdf9bd8a9db 1-13
+packages/kernel/src/memory.ts
+  s_c847363fc44382::t_aa9268ab82de8d 19,22
+packages/server/src/memory-store.ts
+  s_c847363fc44382::t_83e83476cb2bac 3,41-42
+packages/server/src/memory-write-neighbors.test.ts
+  s_c847363fc44382::t_aa829bf2ac86c6 1-7,9-10,12-22,24-26,28-30,32-34,36-38,40-49,51-56
+packages/server/src/playbook.test.ts
+  s_c847363fc44382::t_d5dc8f539cbbb7 1-11,13,15-18,20-24,26-31,33-36,38-42,44-52,54-61,63-70,72-78,80-95,97-102,104-111,113-117,119-125
+packages/server/src/playbook.ts
+  s_c847363fc44382::t_9984234996dace 1-12
+packages/server/src/profile.test.ts
+  s_c847363fc44382::t_439d9010f299fc 55
+packages/server/src/service.ts
+  s_c847363fc44382::t_5578fd782bd01c 1-2,8,39,41-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "390c41fe60e756bb16c22a6cb2335e095d986fa4",
+  "prompts": {},
+  "sessions": {
+    "s_c847363fc44382": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eda8-b7c7-77c3-9505-693220ca61f5",
+        "model": "aiperko/gpt-6.1-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
