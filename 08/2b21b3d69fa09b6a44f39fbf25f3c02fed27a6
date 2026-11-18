@@ -1,0 +1,27 @@
+README.md
+  s_6b62a024142f98::t_4f2bac13b79383 59-60,65
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_6b62a024142f98::t_717e3712629d72 1-17
+docs/spec/验收文档-v0.1.md
+  s_6b62a024142f98::t_e3a0ea64cfabaa 143-144
+receipts/chore-agy-gates-process-layer.json
+  s_6b62a024142f98::t_c8f2ae1078f831 1-36
+scripts/gates/proof/process-layer.txt
+  s_6b62a024142f98::t_eb73469f78c1b3 1-474
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "082b21b3d69fa09b6a44f39fbf25f3c02fed27a6",
+  "prompts": {},
+  "sessions": {
+    "s_6b62a024142f98": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ee2b-38ee-7cd1-8041-c3b9ae6f1ce0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
