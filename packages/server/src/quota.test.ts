@@ -79,3 +79,33 @@ test("取消排队后不再被授予", () => {
   assert.deepEqual(q.release(t1.granted.leaseId).granted, []);
   assert.equal(q.waitingReason("t2"), null);
 });
+
+test("AC-23 租约持久化写入失败:不授予、不改变内存中的占用和排队", () => {
+  let fail = true;
+  const config = { ...cfg(1, {}), persist: () => { if (fail) throw new Error("租约存储失败"); } };
+  const q = new QuotaTable(config);
+  assert.throws(() => q.acquire(req("t1", "x", "dm-x")), /租约存储失败/);
+  assert.deepEqual(q.view(), { leases: [], waiting: [] });
+  fail = false;
+  const first = q.acquire(req("t1", "x", "dm-x"));
+  assert.ok("granted" in first);
+  assert.ok("queued" in q.acquire(req("t2", "x", "dm-x")));
+  const before = q.view();
+  fail = true;
+  assert.throws(() => q.release(first.granted.leaseId), /租约存储失败/);
+  assert.deepEqual(q.view(), before, "释放与排队者授予必须一起回滚");
+  fail = false;
+  assert.deepEqual(q.release(first.granted.leaseId).granted.map((l) => l.taskId), ["t2"]);
+});
+
+test("AC-23 恢复租约后禁止未确认的 lease_id 直接释放,也不能复用同任务", () => {
+  const saved = { leaseId: "lease-before", scope: "personal:x" as const, taskId: "t1", contactId: "x", roomId: "dm-x", stopping: true };
+  const config = { ...cfg(1, {}), initialLeases: [saved] };
+  const q = new QuotaTable(config);
+  assert.ok("queued" in q.acquire(req("t1", "x", "dm-x")));
+  assert.deepEqual(q.release(saved.leaseId), { released: false, granted: [] }, "仅凭旧 lease_id 不是新进程已经确认停下");
+  assert.deepEqual(q.leaseOf("t1"), saved);
+  assert.ok("queued" in q.acquire(req("t2", "x", "dm-x")));
+  const other = q.acquire(req("t3", "y", "dm-y"));
+  assert.ok("granted" in other && other.granted.scope === "personal:y", "恢复的租约不能占用其他联系人的槽");
+});

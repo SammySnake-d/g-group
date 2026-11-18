@@ -122,11 +122,11 @@ test("私聊派活:台账里有联系人轮次 → Compute 会话 → Compute �
   await host.close();
 });
 
-test("重放 2430 号:一个会话带 3 个后台任务,宿主进程退出后重启,启动核对就把它们和会话、轮次全变 orphaned「宿主进程退出」,任务按失败收口,负责联系人在会话里报卡点,用户不用发「继续」(AC-43 ①②、AC-14)", async () => {
+test("重放 2430 号:宿主重启后台单元变 orphaned,任务无停止确认保持 T9 和原租约,联系人主动报卡点(AC-43 ①②、AC-23、AC-14)", async () => {
   const clock = fakeClock();
   const f = file();
   const c1 = scriptedCompute({ script: () => [started] });
-  const h1 = mk(Host, clock, { file: f, mind: () => scriptedMind(), compute: () => c1.adapter, bootId: "boot-a" });
+  const h1 = mk(Host, clock, { file: f, mind: () => scriptedMind(), compute: () => c1.adapter, bootId: "boot-a", personalComputeSlots: 1 });
   const c = h1.createContact({ name: "小克" });
   const dm = h1.openDm(c.id);
   h1.send({ roomId: dm.id, clientActionId: "u1", text: "帮我跑一个很久的任务" });
@@ -135,21 +135,36 @@ test("重放 2430 号:一个会话带 3 个后台任务,宿主进程退出后重
   await waitFor(() => runsOf(h1, "background").length === 3, "三个后台任务进台账");
   const before = h1.listRuns({}).runs;
   assert.equal(before.filter((r) => r.status === "running").length, 6);
+  const taskBefore = h1.listTasks({ roomId: dm.id })[0]!;
+  const leaseBefore = h1.quota.leaseOf(taskBefore.id);
+  assert.ok(leaseBefore);
+  assert.equal(leaseBefore.scope, `personal:${c.id}`);
   c1.close();
   await h1.close();
   clock.advance(5 * MIN);
   const c2 = scriptedCompute();
-  const h2 = mk(Host, clock, { file: f, mind: () => scriptedMind(), compute: () => c2.adapter, bootId: "boot-b" });
+  const h2 = mk(Host, clock, { file: f, mind: () => scriptedMind(), compute: () => c2.adapter, bootId: "boot-b", personalComputeSlots: 1 });
   await settle(h2);
   const after_ = h2.listRuns({}).runs.filter((r) => before.some((b) => b.id === r.id));
   assert.equal(after_.length, 6);
   assert.deepEqual([...new Set(after_.map((r) => `${r.status}|${r.note}`))], ["orphaned|宿主进程退出"]);
   assert.ok(after_.every((r) => r.text === "没跑完 · 宿主进程退出" && r.tone === "orphaned"));
   assert.equal(h2.listRuns({ statuses: ["running"] }).runs.filter((r) => before.some((b) => b.id === r.id)).length, 0, "不留「运行中」");
-  assert.equal(h2.listTasks({ roomId: dm.id })[0]!.state, "T11_Failed");
+  // docs/dev-handbook 90226df5 需求 §D16.1/§D20.3:进程失联而未收到停止确认时保持 T9。
+  // AC-43 的 orphaned 是运行台账状态,不等于可以伪造 StoppedConfirmed 清除物理占用。
+  assert.equal(h2.taskDoc(taskBefore.id).value.task.state, "T9_StopRequested");
+  assert.deepEqual(h2.quota.leaseOf(taskBefore.id), leaseBefore, "恢复原 lease_id、联系人和作用域");
+  assert.ok(h2.taskView(h2.taskDoc(taskBefore.id).value).waitingFor?.includes("停止未确认"));
+  assert.ok("queued" in h2.quota.acquire({ taskId: taskBefore.id, contactId: c.id, roomId: dm.id, isGroup: false }), "同任务不能复用未知旧执行器占用");
   const all = texts(h2, dm.id);
   assert.equal(all.filter((t) => t.startsWith("user:")).length, 1, "用户没有手发「继续」");
   assert.match(all.at(-1)!, /^contact:任务卡住了:没跑完:宿主进程退出/);
+  h2.send({ roomId: dm.id, clientActionId: "post-restart", text: "帮我再写一份报告" });
+  await settle(h2, c2);
+  const next = h2.listTasks({ roomId: dm.id }).find((task) => task.id !== taskBefore.id);
+  assert.ok(next);
+  assert.ok(h2.quota.waitingReason(next.id), "新任务等待旧执行器停止确认");
+  assert.equal(c2.spawned.length, 0, "未知旧资源不可重新授予新任务");
   c2.close();
   await h2.close();
 });

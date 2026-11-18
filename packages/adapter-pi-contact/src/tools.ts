@@ -1,4 +1,4 @@
-// 联系人的直接工具清单:每种 MindAction 一个工具,外加 update_state_note 与只读的 read_memory(经宿主给的本轮查询口取全文)。
+// 联系人的直接工具清单:每种 MindAction 一个工具,外加 update_state_note 与只读的 read_memory / read_quote_parent / progress_get(经宿主给的本轮查询口取)。
 // 工具只校验参数形状、登记成 MindAction 并立即回「已登记」,不做任何 I/O;
 // 宿主在本轮结束后逐条校验(会话可见、任务归属、seq 在本轮输入里)、分配 action_id、落盘后才执行(runtime-ports.ts)。
 // 清单是封闭的:联系人没有 shell、文件读写、网络这类工具;要动手就用 dispatch_compute 开 Compute(AC-33)。
@@ -19,6 +19,7 @@ export const PI_CONTACT_TOOL_NAMES = Object.freeze([
   "read_memory",
   "read_quote_parent",
   "progress_rerun",
+  "progress_get",
 ] as const);
 export type PiContactToolName = (typeof PI_CONTACT_TOOL_NAMES)[number];
 
@@ -142,6 +143,14 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       note: f("text", true, "完整的新状态笔记"),
     },
   },
+  progress_get: {
+    description:
+      "查运行台账里一个单元的详情(第 5 块「运行台账」只列了 Compute 会话一行):状态、原因类别与原文、用时、最后进展、子单元(子代理 / 后台任务 / 轮次)与最近事件,条数有界。可见范围由宿主按会话判:私聊里只看你在这个私聊的单元,群里看本群成员在本群的单元。结果直接作为工具结果返回,不是动作。",
+    fields: {
+      id: f("text", true, "台账里单元的 id"),
+      roomId: f("text", true, "在哪个会话里查(决定你能看到哪些单元)"),
+    },
+  },
 });
 
 const schemaOf = (s: FieldSpec): Record<string, unknown> => {
@@ -181,7 +190,8 @@ export type Registered =
   | { readonly kind: "action"; readonly action: MindAction }
   | { readonly kind: "note"; readonly note: string }
   | { readonly kind: "read"; readonly id: string }
-  | { readonly kind: "read-quote"; readonly roomId: string; readonly seq: number };
+  | { readonly kind: "read-quote"; readonly roomId: string; readonly seq: number }
+  | { readonly kind: "progress-get"; readonly id: string; readonly roomId: string };
 export type ParseResult = { readonly ok: true; readonly value: Registered } | { readonly ok: false; readonly why: string };
 
 const isRecord = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
@@ -250,6 +260,7 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
     case "memory_feedback": return act({ kind: "memory-use", id: s("id"), good: v.good as boolean, note: sn("note") });
     case "read_memory": return { ok: true, value: { kind: "read", id: s("id") } };
     case "read_quote_parent": return { ok: true, value: { kind: "read-quote", roomId: s("roomId"), seq: n("seq") } };
+    case "progress_get": return { ok: true, value: { kind: "progress-get", id: s("id"), roomId: s("roomId") } };
   }
 }
 const act = (action: MindAction): ParseResult => ({ ok: true, value: { kind: "action", action: Object.freeze(action) } });

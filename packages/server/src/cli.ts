@@ -6,6 +6,7 @@
 // 选项:--mind fake|pi(默认 fake 规则脑子;pi 需要 @g-group/adapter-pi-contact 与模型网关环境变量)
 //       --compute fake|claude(默认 fake;claude 起真实 Claude Code CLI)  --cwd 目录(Compute 工作目录)  --timeout 秒
 //       --repo 仓库 --target 分支 [--verify "命令 参数…"](AC-22:每个任务一个 worktree 作 Compute 工作目录)  --accept(交付后豁免审查并验收,代码任务随即合入)
+//       --no-progress-ms 毫秒 --first-byte-ms 毫秒(AC-43 ⑯ 卡死阈值的基础层,默认 15 分钟 / 120 秒)
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -15,6 +16,7 @@ import type { ContactCompactor, ContactMind } from "@g-group/kernel";
 import { ensureGroup, sendAndWait, senderAudit } from "./drive.ts";
 import { scriptedCompute, scriptedMind } from "./fakes.ts";
 import { Host } from "./host.ts";
+import { cliRunThresholds } from "./runtime-config.ts";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -35,6 +37,8 @@ const { values, positionals } = parseArgs({
     target: { type: "string", default: "main" },
     verify: { type: "string" },
     accept: { type: "boolean", default: false },
+    "no-progress-ms": { type: "string" },
+    "first-byte-ms": { type: "string" },
   },
 });
 const [cmd, ...rest] = positionals;
@@ -130,6 +134,7 @@ async function main() {
   }
   const compute = makeCompute(values.compute);
   const cwdRoot = values.cwd ? path.resolve(values.cwd) : undefined;
+  const runThresholds = cliRunThresholds({ noProgressMs: values["no-progress-ms"], firstByteMs: values["first-byte-ms"] });
   const host = new Host({
     file: path.resolve(values.db),
     ...(await makeMind(values.mind)),
@@ -146,6 +151,7 @@ async function main() {
       ? { codeRepo: { repo: path.resolve(values.repo), targetBranch: values.target, ...(values.verify ? { verify: { command: values.verify.split(/\s+/)[0]!, args: values.verify.split(/\s+/).slice(1) } } : {}) } }
       : {}),
     maxDeferMs: 200,
+    ...(runThresholds ? { runThresholds } : {}),
     onReport: (what, detail) => console.error(`[宿主] ${what}`, typeof detail === "object" ? JSON.stringify(detail) : detail),
   });
   try {

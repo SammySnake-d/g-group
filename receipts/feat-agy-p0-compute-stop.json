@@ -1,0 +1,77 @@
+{
+  "slice": "B1：停止确认与持久租约隔离；按 Harness 路由、可配置卡死阈值、PID 孤儿核对、联系人只读 progress_get 与工件原子写入。",
+  "acceptance": [
+    {
+      "id": "AC-23",
+      "status": "通过",
+      "evidence": "packages/server/proof/b1-compute-stop.txt"
+    },
+    {
+      "id": "AC-43",
+      "status": "未测",
+      "reason": "本片 D 层已验证私聊/群 progress_get、PID 存活与孤儿核对、动态阈值、拒收轮次记账；未做 X 层真实上游断流/卡死、全景画板及真实 Codex CLI 端到端验收，留 B8/B9。"
+    },
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "本片 D 层验证按 Harness 选路、Codex 未接入时阻止派活及切模被拒的台账；真实 Codex CLI 适配器、跨 Harness 接续、网关逐请求模型与同 PID/会话的 X 层热切换留 B8/B9。"
+    },
+    {
+      "id": "R-17",
+      "status": "通过",
+      "evidence": "packages/server/proof/b1-compute-stop.txt"
+    }
+  ],
+  "author": {
+    "agent": "codex-cli",
+    "session": "codex-cli:01a1ec1b-5225-7370-80a4-3596ddbad3a4",
+    "model": "shayu/gpt-6.2-sol"
+  },
+  "red": {
+    "commit": "eb1744c444a7469a06e20ea33cfc2d46452c48cf"
+  },
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "approve",
+    "reviewed_hash": "6eb4a7937a27ab36a9a0c0df0a262e9eda2c8f5355133da41da429d58635dff7",
+    "notes": "Round 2 APPROVE (see reviews/feat-agy-p0-compute-stop.md): Verified both Round 1 P1 fixes (AC-23/AC-36 durable gg_compute_legacy_holds migration + detachedStopConfirmed/recoverReleasedStops/ledgerResume restart paths, and R-17/AC-51/AC-26 reviewer Harness resolution/persistence without silent claude-code substitution) plus leavingRooms filtering on progress_get. Independent typecheck, lint, 1767/1767 tests, R2 incremental Red (14/14), combined Red (73/73), and 4/4 R2 single-site fault injections all passed."
+  },
+  "waiver": null,
+  "unverifiable": "R-02：R1 Red ba39ad48b6c00a0f266e441da5435f9fa3a4aac7（ba39ad48）；R2 incremental Red bbf69bf8cbe920e19e22a8120b270ce9814ed766 在 R1 9d38e306a908aafcb748f4e135c1d253ad881954（9d38e306）实现上实跑；combined branch Red eb1744c444a7469a06e20ea33cfc2d46452c48cf 将相同测试放在 R1 Red 非测试源码上重放，供 G-RED 使用，不替代增量红证据。AC-23 / AC-36 / R-17 是确定性执行器与 SQLite 持久状态及迁移的 D 层结果；真实 CLI 跨宿主续接或进程回收、真实网关及 AC-43 / AC-51 的 X 层仍未测。Round 1 审查原样保留；Round 2 尚无独立审查，不请求豁免。",
+  "verification": {
+    "baseline": "926956560af22959c726953cfb4248f4056e3155",
+    "implementation": "8f7a8da04cfa75f3fb57623ac1eed3cd079f0aae",
+    "red_tests": {
+      "files": 12,
+      "named_failures": 73,
+      "unchanged_passed": 42,
+      "missing": 0,
+      "skipped": 0
+    },
+    "targeted_tests": {
+      "passed": 51,
+      "failed": 0,
+      "skipped": 0
+    },
+    "root_tests": {
+      "passed": 1767,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "cancelled": 0
+    },
+    "round1": {
+      "red": "ba39ad48b6c00a0f266e441da5435f9fa3a4aac7",
+      "implementation": "2afdf13b2f97cbde3044a4ca0ee397f013813eeb",
+      "reviewed_state": "9d38e306a908aafcb748f4e135c1d253ad881954"
+    },
+    "incremental_red_tests": {
+      "commit": "bbf69bf8cbe920e19e22a8120b270ce9814ed766",
+      "assertion_failures": 14,
+      "unchanged_passed": 7,
+      "skipped": 0
+    }
+  }
+}

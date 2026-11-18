@@ -7,6 +7,7 @@
 //   - 失败轮次容错(AC-36):gg_failures 每个联系人/任务一行在途失败(自动重试中、已出卡、被熔断暂停),失败批次末尾与卡片代次;
 //     gg_breakers 每个上游一行共享熔断状态;gg_round_guard 每个联系人一行在途轮次标记与 crash_recovery_count(启动回收防毒丸)。
 import { type SqliteStore, closeStore, commitDoc, openStore, readDoc, transaction } from "@g-group/adapter-sqlite";
+import type { Task } from "@g-group/domain";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS gg_rooms (
@@ -31,6 +32,15 @@ CREATE TABLE IF NOT EXISTS gg_inbox (id INTEGER PRIMARY KEY AUTOINCREMENT, conta
 CREATE TABLE IF NOT EXISTS gg_compute (
   compute_id TEXT PRIMARY KEY, task_id TEXT NOT NULL, contact_id TEXT NOT NULL, room_id TEXT NOT NULL, harness TEXT NOT NULL, model TEXT NOT NULL,
   status TEXT NOT NULL, started_at TEXT NOT NULL, ended_at TEXT, result TEXT
+);
+-- 物理占用:授予先落盘、确认停止后删除;重启不能按当前配额重新猜个人/群作用域。
+CREATE TABLE IF NOT EXISTS gg_compute_leases (
+  lease_id TEXT PRIMARY KEY, task_id TEXT NOT NULL UNIQUE, scope TEXT NOT NULL,
+  contact_id TEXT NOT NULL, room_id TEXT NOT NULL, stopping INTEGER NOT NULL CHECK (stopping IN (0, 1))
+);
+-- 旧库不知道精确作用域;保留个人及原群的疑似占用,不能按当前配额猜租约。
+CREATE TABLE IF NOT EXISTS gg_compute_legacy_holds (
+  task_id TEXT PRIMARY KEY, contact_id TEXT NOT NULL, room_id TEXT NOT NULL, is_group INTEGER NOT NULL CHECK (is_group IN (0, 1))
 );
 CREATE TABLE IF NOT EXISTS gg_progress (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, compute_id TEXT NOT NULL, kind TEXT NOT NULL, stage TEXT, summary TEXT NOT NULL, at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gg_schedules (
@@ -69,7 +79,7 @@ CREATE TABLE IF NOT EXISTS gg_round_guard (
   batch_end TEXT NOT NULL DEFAULT '{}', inbox_end INTEGER NOT NULL DEFAULT 0, crash_key TEXT, crash_count INTEGER NOT NULL DEFAULT 0, started_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS gg_reviews (
-  compute_id TEXT PRIMARY KEY, task_id TEXT NOT NULL, reviewer_id TEXT NOT NULL, owner_id TEXT NOT NULL, room_id TEXT NOT NULL, model TEXT NOT NULL,
+  compute_id TEXT PRIMARY KEY, task_id TEXT NOT NULL, reviewer_id TEXT NOT NULL, owner_id TEXT NOT NULL, room_id TEXT NOT NULL, model TEXT NOT NULL, harness TEXT,
   round INTEGER NOT NULL, commit_ref TEXT NOT NULL, constraint_ver INTEGER NOT NULL, status TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '',
   started_at TEXT NOT NULL, ended_at TEXT
 );
@@ -82,8 +92,23 @@ export interface Db {
 
 export function openDb(file: string): Db {
   const store = openStore(file);
-  store.db.exec(SCHEMA);
-  return { store, close: () => closeStore(store) };
+  const db = { store, close: () => closeStore(store) };
+  try {
+    tx(db, () => {
+      const hadLeases = one(db, "SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'gg_compute_leases'");
+      store.db.exec(SCHEMA);
+      // 表的创建与旧占用迁移必须同时提交:中途失败下次还能识别旧库重试,升级后不再按任务状态猜占用。
+      if (!hadLeases) migrateLegacyHolds(db);
+      if (!one(db, "SELECT 1 FROM pragma_table_info('gg_reviews') WHERE name = 'harness'")) {
+        // 旧记录不伪造来源,保留 NULL;新审查在 spawn 时记录实际 Harness。
+        store.db.exec("ALTER TABLE gg_reviews ADD COLUMN harness TEXT");
+      }
+    });
+    return db;
+  } catch (error) {
+    db.close();
+    throw error;
+  }
 }
 
 export const tx = <T>(db: Db, fn: () => T): T => transaction(db.store, fn);
@@ -115,6 +140,18 @@ export function listDocs<T>(db: Db, prefix: string): { key: string; value: T; ve
     ver: r.ver,
     value: JSON.parse(r.value) as T,
   }));
+}
+
+function migrateLegacyHolds(db: Db) {
+  for (const { value: { task, roomId } } of listDocs<{ task: Task; roomId: string }>(db, "task:")) {
+    if (task.state !== "T9_StopRequested" && task.state !== "T3_Running" && task.state !== "T4b_BlockedOnHuman") continue;
+    // 仅排队或只有已完成的实例不占槽;若另外还有未完成的孤儿,仍保留占用。
+    if (![task.computeId, ...task.orphans].some((id) => id && !one(db, "SELECT 1 FROM gg_compute WHERE compute_id = ? AND task_id = ? AND status = 'completed'", id, task.id))) continue;
+    if (!task.owner) throw new HostError("internal", `任务 ${task.id} 的未确认计算占用缺少联系人,拒绝启动`);
+    const room = one<{ kind: string }>(db, "SELECT kind FROM gg_rooms WHERE id = ?", roomId);
+    if (!room) throw new HostError("internal", `任务 ${task.id} 的未确认计算占用缺少会话,拒绝启动`);
+    run(db, "INSERT INTO gg_compute_legacy_holds (task_id,contact_id,room_id,is_group) VALUES (?,?,?,?)", task.id, task.owner, roomId, room.kind === "group" ? 1 : 0);
+  }
 }
 
 export type HostErrorCode = "invalid_params" | "not_found" | "conflict" | "forbidden" | "unavailable" | "unknown_method" | "internal";

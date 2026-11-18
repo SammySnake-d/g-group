@@ -1,0 +1,782 @@
+Slice B1 — Compute stop / runtime config / progress_get / atomic snapshots
+Base: 926956560af22959c726953cfb4248f4056e3155
+RED: ba39ad48b6c00a0f266e441da5435f9fa3a4aac7
+GREEN: 2afdf13b2f97cbde3044a4ca0ee397f013813eeb
+
+RED compile: npm exec -- tsc -p tsconfig.json (exit 0)
+RED targeted replay: node --test (11 files, exit 1 as intended)
+59/59 changed tests failed on named assertions
+# tests 101
+# suites 4
+# pass 42
+# fail 59
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5913.67625
+
+Test parity: git diff --exit-code RED GREEN -- packages/**/*.test.ts (exit 0; byte-for-byte unchanged)
+
+GREEN typecheck (exit 0)
+> typecheck
+> tsc -p tsconfig.json
+
+GREEN lint (exit 0)
+> lint
+> biome lint --error-on-warnings
+
+Checked 244 files in 235ms. No fixes applied.
+
+GREEN npm test (exit 0)
+# tests 1753
+# suites 4
+# pass 1753
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+GREEN sandboxed pre-receipt gate spot-check (0 problems each)
+G-RED 0
+G-STUB 0
+G-TAUTO 0
+
+GREEN R-17 / Block-1 prompt budget / review-Compute regression tests (exit 0)
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+ok 1 - 私聊:联系人改了 Compute 模型,下一次转给 Compute 的输入就带新模型;同一 Compute 续接不另起,适配器实例按 Harness 复用
+ok 2 - 群聊主流、任务话题与退回重试:改了全局默认后,继承它的联系人每种入口的下一次输入都带新模型(埋雷:重试走另一条路径不带模型必红)
+ok 3 - 只改 effort:下一轮 effort 变、模型不变;模型和 effort 都没改,下一轮照原值带上(由适配器判定无需切换)
+ok 4 - 切换失败不静默:适配器拒绝新模型时这一轮不算发出、账本不追加,联系人拿到两条修复路径;不退回旧模型继续跑
+ok 5 - 续接前同样拦不兼容的生效模型(启动前校验覆盖每一轮)
+ok 6 - harness 回报这一轮实际用过的模型进账本,累积厂商集合含新旧两家(埋雷:只记启动模型必红)
+ok 7 - 没声明按轮换模型能力的旧适配器:模型变了这一轮拦下并说明,不沿用启动时的旧模型继续跑
+ok 8 - 保存时机:把全局 Compute 默认改成 Harness 不支持的模型,未确认时被拒并列出受影响下游,确认后才保存
+ok 9 - 保存时机:联系人改 Harness 让自己的 Compute 不兼容,保存被拒并给出两条修复路径;改说话模型影响跟随者同样预检
+ok 10 - 启动前拦截:生效模型与 Harness 不兼容时不启动 Compute,任务失败并说明两条修复路径,联系人照常回话(埋雷:静默退回 Harness 默认模型必红)
+ok 11 - 启动快照与尝试账本:启动写入不可变快照;批量把 X 换成 Y 后配置跟着换,在途任务快照和账本不变,固定在其他模型的不动
+ok 12 - models.preview 只预览不落盘,与之后真实保存的结果一致
+ok 13 - AC-26 ④ 有跨厂商审查联系人:交付后用它的 Compute 模型起只读审查 Compute,审过 → T8a 待确认,reviewGate 记 compliant
+ok 14 - AC-28 审过后提出者确认 → T8_Accepted,reviewGate 仍是 compliant,承诺了结;沉默不自动通过
+ok 15 - AC-26 TaskView.reviews 记下审查人、实际审查模型与厂商、结论和意见
+ok 16 - AC-26 ② 只有同厂商的联系人 → 不起审查 Compute,交给提出者本人豁免,记 waived-by-user
+ok 17 - AC-26 ③ 审查联系人的模型认不出厂商(unknown)→ 不当审查人
+ok 18 - AC-26 ① 作者自己不当审查人:负责联系人的 Compute 模型跨厂商也不行,换别的合格联系人
+ok 19 - AC-26 审查打回 → 回 T3,原 Compute 带审查意见续改;改完再交付重新送审,第二次审过才进 T8a
+ok 20 - AC-26 打回后、Compute 重新完成前,联系人拿旧结果再交付被拒:任务留在 T3,不重新送审(旧结果已作废)
+ok 21 - 审查 Compute 失败 → 不当通过,交给提出者本人豁免或退回,说明审查没做成
+ok 22 - 审查结论既不是 APPROVE 也不是 REJECT → 当审查没做成,不猜成通过
+ok 23 - 审查中取消任务 → 审查 Compute 也被停止
+ok 24 - 重启时审查 Compute 已不在 → 这次审查记中断,交给提出者本人豁免或退回,任务不卡在 T5
+ok 25 - pickReviewer:排除作者、unknown、与累积生产厂商任一同源(F13 半途换模 {A,B} 都不行);同会话成员优先
+ok 26 - parseVerdict:结论行以 APPROVE / REJECT 开头,或在冒号后以它结尾(去掉加粗等标记,大小写不敏感);前后矛盾或认不出返回 null
+
+GREEN B1 targeted TAP (11 files; exit 0)
+
+TAP version 13
+# Subtest: 首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十四个具名工具(含 read_quote_parent、progress_rerun、progress_get)
+ok 1 - 首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十四个具名工具(含 read_quote_parent、progress_rerun、progress_get)
+  ---
+  duration_ms: 191.12475
+  type: 'test'
+  ...
+# Subtest: 同一轮工具往返后的二次请求保留本轮的工具调用和结果,五块原样不重拼
+ok 2 - 同一轮工具往返后的二次请求保留本轮的工具调用和结果,五块原样不重拼
+  ---
+  duration_ms: 57.333666
+  type: 'test'
+  ...
+# Subtest: 七个工具的调用按出现顺序登记成对应的 MindAction 与状态笔记,状态笔记以最后一次为准
+ok 3 - 七个工具的调用按出现顺序登记成对应的 MindAction 与状态笔记,状态笔记以最后一次为准
+  ---
+  duration_ms: 25.410542
+  type: 'test'
+  ...
+# Subtest: 参数不合形状的工具调用不登记,以错误结果告知模型;同批合格的照常登记
+ok 4 - 参数不合形状的工具调用不登记,以错误结果告知模型;同批合格的照常登记
+  ---
+  duration_ms: 8.733208
+  type: 'test'
+  ...
+# Subtest: 每轮重拼:第二轮的请求里没有第一轮的任何消息,只有第二轮的五块
+ok 5 - 每轮重拼:第二轮的请求里没有第一轮的任何消息,只有第二轮的五块
+  ---
+  duration_ms: 8.131333
+  type: 'test'
+  ...
+# Subtest: signal 已中止时不发请求,直接抛 RoundAbortedError
+ok 6 - signal 已中止时不发请求,直接抛 RoundAbortedError
+  ---
+  duration_ms: 0.377417
+  type: 'test'
+  ...
+# Subtest: 请求进行中 abort:本轮立即放弃并抛 RoundAbortedError,已登记的动作不返回
+ok 7 - 请求进行中 abort:本轮立即放弃并抛 RoundAbortedError,已登记的动作不返回
+  ---
+  duration_ms: 7.40825
+  type: 'test'
+  ...
+# Subtest: apiKey 只出现在发给端点的请求头里,不出现在返回值、mind 对象和错误里
+ok 8 - apiKey 只出现在发给端点的请求头里,不出现在返回值、mind 对象和错误里
+  ---
+  duration_ms: 5.166583
+  type: 'test'
+  ...
+# Subtest: authHeader 为 bearer 时密钥放进 Authorization: Bearer,不发 x-api-key
+ok 9 - authHeader 为 bearer 时密钥放进 Authorization: Bearer,不发 x-api-key
+  ---
+  duration_ms: 7.165333
+  type: 'test'
+  ...
+# Subtest: 五块不合格或说话模型对不上:整轮拒绝且不发请求
+ok 10 - 五块不合格或说话模型对不上:整轮拒绝且不发请求
+  ---
+  duration_ms: 1.913583
+  type: 'test'
+  ...
+# Subtest: 选项不合格时 createPiContactMind 抛 invalid-options,错误里不带密钥
+ok 11 - 选项不合格时 createPiContactMind 抛 invalid-options,错误里不带密钥
+  ---
+  duration_ms: 0.636792
+  type: 'test'
+  ...
+# Subtest: 一轮请求数到上限模型仍在调工具:整轮以 request-limit 失败,不再发请求
+ok 12 - 一轮请求数到上限模型仍在调工具:整轮以 request-limit 失败,不再发请求
+  ---
+  duration_ms: 7.295959
+  type: 'test'
+  ...
+# Subtest: 第 1 块 cacheBreakpoint 为 false 时请求里不设缓存断点
+ok 13 - 第 1 块 cacheBreakpoint 为 false 时请求里不设缓存断点
+  ---
+  duration_ms: 1.1375
+  type: 'test'
+  ...
+# Subtest: verdict 工具:通过与修改意见都登记成 verdict 动作,修改意见可省略
+ok 14 - verdict 工具:通过与修改意见都登记成 verdict 动作,修改意见可省略
+  ---
+  duration_ms: 0.2045
+  type: 'test'
+  ...
+# Subtest: verdict 工具:应失败的输入——结论不是 accept/revise、缺来源、来源不是整数——都判参数错误
+ok 15 - verdict 工具:应失败的输入——结论不是 accept/revise、缺来源、来源不是整数——都判参数错误
+  ---
+  duration_ms: 0.049458
+  type: 'test'
+  ...
+# Subtest: remember 与 memory_feedback 登记成 remember / memory-use 动作;参数形状不对(锚点为空、关系不在枚举、good 不是布尔)不登记
+ok 16 - remember 与 memory_feedback 登记成 remember / memory-use 动作;参数形状不对(锚点为空、关系不在枚举、good 不是布尔)不登记
+  ---
+  duration_ms: 8.378833
+  type: 'test'
+  ...
+# Subtest: read_memory 在本轮内经宿主给的读取口取全文,结果作为工具结果进下一次请求;没有这条或没给读取口时以错误结果告知
+ok 17 - read_memory 在本轮内经宿主给的读取口取全文,结果作为工具结果进下一次请求;没有这条或没给读取口时以错误结果告知
+  ---
+  duration_ms: 12.720875
+  type: 'test'
+  ...
+# Subtest: 记忆工具参数在登记口逐字段校验(不只靠模型侧 schema):锚点为空或含空白、关系不在枚举、good 不是布尔都判参数错误
+ok 18 - 记忆工具参数在登记口逐字段校验(不只靠模型侧 schema):锚点为空或含空白、关系不在枚举、good 不是布尔都判参数错误
+  ---
+  duration_ms: 0.294
+  type: 'test'
+  ...
+# Subtest: read_quote_parent 经宿主的本轮查询口往上读一级,结果作为工具结果;参数形状不对不调用
+ok 19 - read_quote_parent 经宿主的本轮查询口往上读一级,结果作为工具结果;参数形状不对不调用
+  ---
+  duration_ms: 7.299417
+  type: 'test'
+  ...
+# Subtest: AC-45 forward 可带来源消息 seq:用户中途改条件时登记 sourceSeq,宿主据此升版;不带就是联系人自己的话
+ok 20 - AC-45 forward 可带来源消息 seq:用户中途改条件时登记 sourceSeq,宿主据此升版;不带就是联系人自己的话
+  ---
+  duration_ms: 0.076458
+  type: 'test'
+  ...
+# Subtest: progress_get 追加在工具清单末尾:id 与 roomId 都必填、不许多余字段;形状合格登记成只读查询,应失败的输入(缺 roomId、id 为空白、多余字段、id 不是字符串)不登记
+ok 21 - progress_get 追加在工具清单末尾:id 与 roomId 都必填、不许多余字段;形状合格登记成只读查询,应失败的输入(缺 roomId、id 为空白、多余字段、id 不是字符串)不登记
+  ---
+  duration_ms: 0.891875
+  type: 'test'
+  ...
+# Subtest: progress_get 在本轮内经宿主的台账查询口取单元详情,结果作为工具结果进下一次请求、不是动作;看不到的单元和没给查询口时以错误结果告知
+ok 22 - progress_get 在本轮内经宿主的台账查询口取单元详情,结果作为工具结果进下一次请求、不是动作;看不到的单元和没给查询口时以错误结果告知
+  ---
+  duration_ms: 184.561917
+  type: 'test'
+  ...
+# Subtest: 等人回答的单元不按执行进程判定:受阻时进程已经不在(或常驻进程被回收)也不判 orphaned,回答后续接照常;还在跑的单元进程不在才判(AC-43 ②)
+ok 23 - 等人回答的单元不按执行进程判定:受阻时进程已经不在(或常驻进程被回收)也不判 orphaned,回答后续接照常;还在跑的单元进程不在才判(AC-43 ②)
+  ---
+  duration_ms: 1.140875
+  type: 'test'
+  ...
+# Subtest: writeFileAtomic
+    # Subtest: writes the file
+    ok 1 - writes the file
+      ---
+      duration_ms: 11.617042
+      type: 'test'
+      ...
+    # Subtest: replaces existing contents in full
+    ok 2 - replaces existing contents in full
+      ---
+      duration_ms: 9.084542
+      type: 'test'
+      ...
+    # Subtest: leaves no temp files behind
+    ok 3 - leaves no temp files behind
+      ---
+      duration_ms: 18.857583
+      type: 'test'
+      ...
+    # Subtest: preserves unicode across the write
+    ok 4 - preserves unicode across the write
+      ---
+      duration_ms: 4.228208
+      type: 'test'
+      ...
+    # Subtest: applies the requested mode when replacing a file
+    ok 5 - applies the requested mode when replacing a file
+      ---
+      duration_ms: 8.8835
+      type: 'test'
+      ...
+    # Subtest: cleans up the temporary file when replacement fails
+    ok 6 - cleans up the temporary file when replacement fails
+      ---
+      duration_ms: 6.198
+      type: 'test'
+      ...
+    1..6
+ok 24 - writeFileAtomic
+  ---
+  duration_ms: 60.2235
+  type: 'suite'
+  ...
+# Subtest: writeFileAtomic durability
+    # Subtest: fsyncs by default
+    ok 1 - fsyncs by default
+      ---
+      duration_ms: 8.489792
+      type: 'test'
+      ...
+    # Subtest: still replaces atomically without the fsync when durable is false
+    ok 2 - still replaces atomically without the fsync when durable is false
+      ---
+      duration_ms: 7.351292
+      type: 'test'
+      ...
+    1..2
+ok 25 - writeFileAtomic durability
+  ---
+  duration_ms: 16.121667
+  type: 'suite'
+  ...
+# Subtest: writeFileAtomicIfChanged
+    # Subtest: leaves the file alone when it already holds exactly these bytes
+    ok 1 - leaves the file alone when it already holds exactly these bytes
+      ---
+      duration_ms: 7.120833
+      type: 'test'
+      ...
+    # Subtest: writes and fsyncs when the bytes differ
+    ok 2 - writes and fsyncs when the bytes differ
+      ---
+      duration_ms: 8.561584
+      type: 'test'
+      ...
+    # Subtest: does not read the old contents when the size already differs
+    ok 3 - does not read the old contents when the size already differs
+      ---
+      duration_ms: 8.080334
+      type: 'test'
+      ...
+    # Subtest: writes a file that does not exist yet
+    ok 4 - writes a file that does not exist yet
+      ---
+      duration_ms: 19.246959
+      type: 'test'
+      ...
+    # Subtest: passes durable through to the write
+    ok 5 - passes durable through to the write
+      ---
+      duration_ms: 0.671792
+      type: 'test'
+      ...
+    # Subtest: rewrites identical bytes whose permissions are broader than requested
+    ok 6 - rewrites identical bytes whose permissions are broader than requested
+      ---
+      duration_ms: 7.902333
+      type: 'test'
+      ...
+    # Subtest: replaces a symlink holding identical bytes instead of following it
+    ok 7 - replaces a symlink holding identical bytes instead of following it
+      ---
+      duration_ms: 6.268
+      type: 'test'
+      ...
+    # Subtest: does not hang on a FIFO planted at the path
+    ok 8 - does not hang on a FIFO planted at the path
+      ---
+      duration_ms: 33.206875
+      type: 'test'
+      ...
+    # Subtest: still fails like writeFileAtomic when the path cannot be replaced
+    ok 9 - still fails like writeFileAtomic when the path cannot be replaced
+      ---
+      duration_ms: 4.719959
+      type: 'test'
+      ...
+    1..9
+ok 26 - writeFileAtomicIfChanged
+  ---
+  duration_ms: 96.177333
+  type: 'suite'
+  ...
+# Subtest: renameWithRetry
+    # Subtest: survives a transient EPERM instead of losing the write
+    ok 1 - survives a transient EPERM instead of losing the write
+      ---
+      duration_ms: 49.8805
+      type: 'test'
+      ...
+    # Subtest: retries EACCES and EBUSY the same way
+    ok 2 - retries EACCES and EBUSY the same way
+      ---
+      duration_ms: 15.915125
+      type: 'test'
+      ...
+    # Subtest: gives up rather than retrying forever
+    ok 3 - gives up rather than retrying forever
+      ---
+      duration_ms: 163.069041
+      type: 'test'
+      ...
+    # Subtest: does not retry an error that will never clear
+    ok 4 - does not retry an error that will never clear
+      ---
+      duration_ms: 0.132208
+      type: 'test'
+      ...
+    1..4
+ok 27 - renameWithRetry
+  ---
+  duration_ms: 229.137625
+  type: 'suite'
+  ...
+# Subtest: ArtifactStore durably syncs content before publishing and reuses a snapshotted file
+ok 28 - ArtifactStore durably syncs content before publishing and reuses a snapshotted file
+  ---
+  duration_ms: 20.439833
+  type: 'test'
+  ...
+# Subtest: scriptedCompute 默认停止核验:未知和正在运行不成功,实际 stopped 后才成功
+ok 29 - scriptedCompute 默认停止核验:未知和正在运行不成功,实际 stopped 后才成功
+  ---
+  duration_ms: 2.220208
+  type: 'test'
+  ...
+# Subtest: scriptedCompute 默认停止核验:失败终态仍须等待 settled 的退出门
+ok 30 - scriptedCompute 默认停止核验:失败终态仍须等待 settled 的退出门
+  ---
+  duration_ms: 10.473625
+  type: 'test'
+  ...
+# Subtest: scriptedCompute 默认停止核验:即使曾有 failed,空 settled 也不得成功
+ok 31 - scriptedCompute 默认停止核验:即使曾有 failed,空 settled 也不得成功
+  ---
+  duration_ms: 0.8555
+  type: 'test'
+  ...
+# Subtest: scriptedCompute haltOnStop:取消自己的长等待,生产队列真结束后才确认停止
+ok 32 - scriptedCompute haltOnStop:取消自己的长等待,生产队列真结束后才确认停止
+  ---
+  duration_ms: 3.947166
+  type: 'test'
+  ...
+# Subtest: 取消后进程没确认退出前:任务停在 T9、槽位不归还、排队的不开工;确认后才 T10、归还并让排队的开工
+ok 33 - 取消后进程没确认退出前:任务停在 T9、槽位不归还、排队的不开工;确认后才 T10、归还并让排队的开工
+  ---
+  duration_ms: 224.813625
+  type: 'test'
+  ...
+# Subtest: 停不干净(进程没全退出):不确认停止、不归还槽位,任务视图写明停止未确认
+ok 34 - 停不干净(进程没全退出):不确认停止、不归还槽位,任务视图写明停止未确认
+  ---
+  duration_ms: 42.95425
+  type: 'test'
+  ...
+# Subtest: 群临时 Compute 不跨群:个人满了借本群临时槽位;B 群没有临时槽位就排队,不挪用 A 群的
+ok 35 - 群临时 Compute 不跨群:个人满了借本群临时槽位;B 群没有临时槽位就排队,不挪用 A 群的
+  ---
+  duration_ms: 178.271125
+  type: 'test'
+  ...
+# Subtest: 排队中的任务被取消:不再排队、直接落 T10,之后空出的槽位不会再起它
+ok 36 - 排队中的任务被取消:不再排队、直接落 T10,之后空出的槽位不会再起它
+  ---
+  duration_ms: 183.161125
+  type: 'test'
+  ...
+# Subtest: 正常完成:CLI 主进程退出(settled)后才归还槽位
+ok 37 - 正常完成:CLI 主进程退出(settled)后才归还槽位
+  ---
+  duration_ms: 34.616416
+  type: 'test'
+  ...
+# Subtest: AC-23 重启:未确认停止的个人槽保留原租约,同联系人新任务不能开工
+ok 38 - AC-23 重启:未确认停止的个人槽保留原租约,同联系人新任务不能开工
+  ---
+  duration_ms: 75.642958
+  type: 'test'
+  ...
+# Subtest: AC-23 重启:个人与群临时槽按原租约恢复,不跨联系人或跨群占用
+ok 39 - AC-23 重启:个人与群临时槽按原租约恢复,不跨联系人或跨群占用
+  ---
+  duration_ms: 54.624708
+  type: 'test'
+  ...
+# Subtest: AC-23 重启:已确认停止并归还的租约不复活,后继可开工
+ok 40 - AC-23 重启:已确认停止并归还的租约不复活,后继可开工
+  ---
+  duration_ms: 79.691459
+  type: 'test'
+  ...
+# Subtest: AC-23 升级旧库:未知原槽位的 T9 保守拦截相关个人和原群,不堵其他群
+ok 41 - AC-23 升级旧库:未知原槽位的 T9 保守拦截相关个人和原群,不堵其他群
+  ---
+  duration_ms: 43.571083
+  type: 'test'
+  ...
+# Subtest: AC-23 崩溃重启:在跑任务不能仅凭宿主退出确认停止,且保留原租约
+ok 42 - AC-23 崩溃重启:在跑任务不能仅凭宿主退出确认停止,且保留原租约
+  ---
+  duration_ms: 26.628542
+  type: 'test'
+  ...
+# Subtest: AC-23 失败后选择不重试:停止未确认不得直接转终态或释放租约
+ok 43 - AC-23 失败后选择不重试:停止未确认不得直接转终态或释放租约
+  ---
+  duration_ms: 31.767
+  type: 'test'
+  ...
+# Subtest: AC-23 失败后用户取消:停止未确认仍留 T9 并保留租约
+ok 44 - AC-23 失败后用户取消:停止未确认仍留 T9 并保留租约
+  ---
+  duration_ms: 39.673334
+  type: 'test'
+  ...
+# Subtest: 个人槽位满了借本群临时槽位;本群也满就排队并写明原因;别的群有空槽也不借
+ok 45 - 个人槽位满了借本群临时槽位;本群也满就排队并写明原因;别的群有空槽也不借
+  ---
+  duration_ms: 2.508084
+  type: 'test'
+  ...
+# Subtest: 停止请求不归还槽位;确认停下后才释放,并按先来先到授予排队者
+ok 46 - 停止请求不归还槽位;确认停下后才释放,并按先来先到授予排队者
+  ---
+  duration_ms: 2.141875
+  type: 'test'
+  ...
+# Subtest: 同一任务不重复授予;重复释放、迟到的旧租约号释放都幂等忽略
+ok 47 - 同一任务不重复授予;重复释放、迟到的旧租约号释放都幂等忽略
+  ---
+  duration_ms: 0.242584
+  type: 'test'
+  ...
+# Subtest: 排队先来先到不插队;能借本群临时槽位的不必等个人槽位;别的联系人不受影响
+ok 48 - 排队先来先到不插队;能借本群临时槽位的不必等个人槽位;别的联系人不受影响
+  ---
+  duration_ms: 0.1705
+  type: 'test'
+  ...
+# Subtest: 取消排队后不再被授予
+ok 49 - 取消排队后不再被授予
+  ---
+  duration_ms: 0.084958
+  type: 'test'
+  ...
+# Subtest: AC-23 租约持久化写入失败:不授予、不改变内存中的占用和排队
+ok 50 - AC-23 租约持久化写入失败:不授予、不改变内存中的占用和排队
+  ---
+  duration_ms: 0.257792
+  type: 'test'
+  ...
+# Subtest: AC-23 恢复租约后禁止未确认的 lease_id 直接释放,也不能复用同任务
+ok 51 - AC-23 恢复租约后禁止未确认的 lease_id 直接释放,也不能复用同任务
+  ---
+  duration_ms: 0.116542
+  type: 'test'
+  ...
+# Subtest: 私聊派活:台账里有联系人轮次 → Compute 会话 → Compute 轮次 → 子代理 / 后台任务,带来源会话、消息序号、属于谁;Compute 在跑时轮次不记 done;验收后全部收口,画板与查询读同一份(AC-43 ①③⑥⑧)
+ok 52 - 私聊派活:台账里有联系人轮次 → Compute 会话 → Compute 轮次 → 子代理 / 后台任务,带来源会话、消息序号、属于谁;Compute 在跑时轮次不记 done;验收后全部收口,画板与查询读同一份(AC-43 ①③⑥⑧)
+  ---
+  duration_ms: 169.9155
+  type: 'test'
+  ...
+# Subtest: 重放 2430 号:宿主重启后台单元变 orphaned,任务无停止确认保持 T9 和原租约,联系人主动报卡点(AC-43 ①②、AC-23、AC-14)
+ok 53 - 重放 2430 号:宿主重启后台单元变 orphaned,任务无停止确认保持 T9 和原租约,联系人主动报卡点(AC-43 ①②、AC-23、AC-14)
+  ---
+  duration_ms: 111.761125
+  type: 'test'
+  ...
+# Subtest: 同一夹具不杀进程:全部单元正常结束为 done,没有误报 orphaned;重启后核对不改已结束的单元;没有失败时 runs.rerun 没有可重跑项
+ok 54 - 同一夹具不杀进程:全部单元正常结束为 done,没有误报 orphaned;重启后核对不改已结束的单元;没有失败时 runs.rerun 没有可重跑项
+  ---
+  duration_ms: 93.746958
+  type: 'test'
+  ...
+# Subtest: 重放 2734 号上游无响应:Compute 调用发出后既不回应也不断开,过了首字节窗口在一个核对周期内判 failed no_response;先停这一轮再写失败,带原因原文、用时、最后进展、阈值;任务走 ExecFailed,负责联系人收到停滞事件在会话里报卡点(AC-43 ⑦⑩、AC-14)
+ok 55 - 重放 2734 号上游无响应:Compute 调用发出后既不回应也不断开,过了首字节窗口在一个核对周期内判 failed no_response;先停这一轮再写失败,带原因原文、用时、最后进展、阈值;任务走 ExecFailed,负责联系人收到停滞事件在会话里报卡点(AC-43 ⑦⑩、AC-14)
+  ---
+  duration_ms: 191.546916
+  type: 'test'
+  ...
+# Subtest: 重放断流重试:harness 每隔几秒报一次「正在重试」但始终没有输出,重试公告不刷新计时,到整轮阈值判 stream_dropped,原文带最近一次重试(AC-43 ⑪)
+ok 56 - 重放断流重试:harness 每隔几秒报一次「正在重试」但始终没有输出,重试公告不刷新计时,到整轮阈值判 stream_dropped,原文带最近一次重试(AC-43 ⑪)
+  ---
+  duration_ms: 455.364875
+  type: 'test'
+  ...
+# Subtest: 合法等待不误判:Compute 受阻等用户回答、一个工具子进程持续运行,都超过阈值也不判卡死、不发停滞事件;工具结束后从结束时刻重新计时(AC-43 ⑫、AC-14 等慢工具不报停滞)
+ok 57 - 合法等待不误判:Compute 受阻等用户回答、一个工具子进程持续运行,都超过阈值也不判卡死、不发停滞事件;工具结束后从结束时刻重新计时(AC-43 ⑫、AC-14 等慢工具不报停滞)
+  ---
+  duration_ms: 1072.399625
+  type: 'test'
+  ...
+# Subtest: 卡死阈值默认 15 分钟 / 120 秒;按联系人、按上游单独设都生效,判定按单独设的值走并在失败详情写明来源(AC-43 ⑯)
+ok 58 - 卡死阈值默认 15 分钟 / 120 秒;按联系人、按上游单独设都生效,判定按单独设的值走并在失败详情写明来源(AC-43 ⑯)
+  ---
+  duration_ms: 348.575916
+  type: 'test'
+  ...
+# Subtest: 联系人轮次卡死:脑子一直不返回,超过阈值宿主中止这一轮并记 failed stalled,交 AC-36 原位出失败卡、不再静默重试同一轮;关闭宿主不被卡住的脑子拖住(AC-43 ⑦)
+ok 59 - 联系人轮次卡死:脑子一直不返回,超过阈值宿主中止这一轮并记 failed stalled,交 AC-36 原位出失败卡、不再静默重试同一轮;关闭宿主不被卡住的脑子拖住(AC-43 ⑦)
+  ---
+  duration_ms: 481.134542
+  type: 'test'
+  ...
+# Subtest: 可见范围:联系人第 5 块只列它在私聊里自己的单元和所在群里全部成员的单元;别的群、别人私聊的不列;用户本人在 runs.list 看全部(AC-43 ④)
+ok 60 - 可见范围:联系人第 5 块只列它在私聊里自己的单元和所在群里全部成员的单元;别的群、别人私聊的不列;用户本人在 runs.list 看全部(AC-43 ④)
+  ---
+  duration_ms: 99.136333
+  type: 'test'
+  ...
+# Subtest: 重跑:只接受失败 / 中断 / 没跑完的;用户明确发起开新任务和新会话并留重跑事件,同一 clientActionId 幂等;同一单元租约期内第二次重跑被拒;人停的联系人不能自动重跑、用户明确要求才执行(AC-43 ⑤⑥⑦)
+ok 61 - 重跑:只接受失败 / 中断 / 没跑完的;用户明确发起开新任务和新会话并留重跑事件,同一 clientActionId 幂等;同一单元租约期内第二次重跑被拒;人停的联系人不能自动重跑、用户明确要求才执行(AC-43 ⑤⑥⑦)
+  ---
+  duration_ms: 167.157708
+  type: 'test'
+  ...
+# Subtest: 重放 1663 号:cyber_policy 平台拒绝的 Compute 重跑开新任务、新会话,带原任务引用与上次原因,不在原会话「继续」(AC-43 坏实现 ⑤)
+ok 62 - 重放 1663 号:cyber_policy 平台拒绝的 Compute 重跑开新任务、新会话,带原任务引用与上次原因,不在原会话「继续」(AC-43 坏实现 ⑤)
+  ---
+  duration_ms: 63.517666
+  type: 'test'
+  ...
+# Subtest: 自己名下自动重跑到上限 2 次后在群里报「未做:原因」;别人名下不自动重跑,有人明确要求才执行并在群里留记录:发起人、任务归属、依据的失败记录(AC-43 坏实现 ⑦b ⑦c)
+ok 63 - 自己名下自动重跑到上限 2 次后在群里报「未做:原因」;别人名下不自动重跑,有人明确要求才执行并在群里留记录:发起人、任务归属、依据的失败记录(AC-43 坏实现 ⑦b ⑦c)
+  ---
+  duration_ms: 150.142458
+  type: 'test'
+  ...
+# Subtest: 画板:同一上游同一原因的多条失败在 runs.list 里合并成一条群级提示;人停的显示「已停止」且色调与失败不同(AC-43 ⑨⑮)
+ok 64 - 画板:同一上游同一原因的多条失败在 runs.list 里合并成一条群级提示;人停的显示「已停止」且色调与失败不同(AC-43 ⑨⑮)
+  ---
+  duration_ms: 108.354083
+  type: 'test'
+  ...
+# Subtest: 确定不会自愈的错误不等阈值:harness 的重试公告带 401,宿主当场停这一轮并记 auth_or_quota,任务走 ExecFailed
+ok 65 - 确定不会自愈的错误不等阈值:harness 的重试公告带 401,宿主当场停这一轮并记 auth_or_quota,任务走 ExecFailed
+  ---
+  duration_ms: 61.431084
+  type: 'test'
+  ...
+# Subtest: 联系人选 codex:派活在启动前被拦,任务可重跑地失败并给两条修复路径(改用 claude-code / 等 Codex 接入),没有起 Claude Code;改回 claude-code 后重跑照常起(AC-51 ⑦ 拦截部分)
+ok 66 - 联系人选 codex:派活在启动前被拦,任务可重跑地失败并给两条修复路径(改用 claude-code / 等 Codex 接入),没有起 Claude Code;改回 claude-code 后重跑照常起(AC-51 ⑦ 拦截部分)
+  ---
+  duration_ms: 120.744417
+  type: 'test'
+  ...
+# Subtest: Compute 工厂按 (Harness, 模型) 取:两种 Harness 都接入时各走各的适配器,codex 联系人的活不落到 Claude Code 上,也不带 warning
+ok 67 - Compute 工厂按 (Harness, 模型) 取:两种 Harness 都接入时各走各的适配器,codex 联系人的活不落到 Claude Code 上,也不带 warning
+  ---
+  duration_ms: 72.128542
+  type: 'test'
+  ...
+# Subtest: settings 与 contacts 选没有适配器的 Harness:保存照常、返回 warning 带两条修复路径;改回已接入的不带 warning;能力声明不兼容时仍按保存前预检拦(沿用 AC-32)
+ok 68 - settings 与 contacts 选没有适配器的 Harness:保存照常、返回 warning 带两条修复路径;改回已接入的不带 warning;能力声明不兼容时仍按保存前预检拦(沿用 AC-32)
+  ---
+  duration_ms: 12.003166
+  type: 'test'
+  ...
+# Subtest: 改 settings.runThresholds 后下一次判定就用新值:Compute 轮次已跑 2 分钟时把整轮阈值改成 3 分钟,再过约 1 分钟判 stalled、阈值写 3 分钟;未设时默认 15 分钟 / 120 秒(AC-43 ⑦⑯)
+ok 69 - 改 settings.runThresholds 后下一次判定就用新值:Compute 轮次已跑 2 分钟时把整轮阈值改成 3 分钟,再过约 1 分钟判 stalled、阈值写 3 分钟;未设时默认 15 分钟 / 120 秒(AC-43 ⑦⑯)
+  ---
+  duration_ms: 627.14175
+  type: 'test'
+  ...
+# Subtest: 联系人 stall 覆盖与按上游单独设:contacts.update stall 后按联系人值判、清掉后回到默认;settings 按上游设首字节窗口后,调用发出按上游值判 no_response(AC-43 ⑯、U92)
+ok 70 - 联系人 stall 覆盖与按上游单独设:contacts.update stall 后按联系人值判、清掉后回到默认;settings 按上游设首字节窗口后,调用发出按上游值判 no_response(AC-43 ⑯、U92)
+  ---
+  duration_ms: 604.879
+  type: 'test'
+  ...
+# Subtest: startServer 透传卡死阈值的基础层:Electron 主进程给的值生效,用户在设置里改的覆盖它;cli 的 --no-progress-ms / --first-byte-ms 解析成同一形状、不合格的拒收
+ok 71 - startServer 透传卡死阈值的基础层:Electron 主进程给的值生效,用户在设置里改的覆盖它;cli 的 --no-progress-ms / --first-byte-ms 解析成同一形状、不合格的拒收
+  ---
+  duration_ms: 11.030917
+  type: 'test'
+  ...
+# Subtest: progress_get 可见范围:私聊里只见自己在这个私聊的单元,群里见本群成员在本群的单元,别的群、别人私聊、不在的会话都看不到;返回状态、原因类别、子单元与最近事件且条数有界(AC-43 ①④、U91)
+ok 72 - progress_get 可见范围:私聊里只见自己在这个私聊的单元,群里见本群成员在本群的单元,别的群、别人私聊、不在的会话都看不到;返回状态、原因类别、子单元与最近事件且条数有界(AC-43 ①④、U91)
+  ---
+  duration_ms: 47.847375
+  type: 'test'
+  ...
+# Subtest: 同一次启动里 Compute 执行进程被杀:一个核对周期内这一轮与会话变 orphaned「执行进程已不在」,任务按失败收口、负责联系人收到停滞事件;进程活着时同一核对不误报,续接的新一轮沿用这个 pid(AC-43 ②)
+ok 73 - 同一次启动里 Compute 执行进程被杀:一个核对周期内这一轮与会话变 orphaned「执行进程已不在」,任务按失败收口、负责联系人收到停滞事件;进程活着时同一核对不误报,续接的新一轮沿用这个 pid(AC-43 ②)
+  ---
+  duration_ms: 133.049208
+  type: 'test'
+  ...
+# Subtest: 存活核对的边界:进程被杀的一次性实例在等人回答时不被判孤儿,进程活着的在跑单元照常不被判(存活核对用真实进程判定),没报 pid 的在跑单元也不受影响
+ok 74 - 存活核对的边界:进程被杀的一次性实例在等人回答时不被判孤儿,进程活着的在跑单元照常不被判(存活核对用真实进程判定),没报 pid 的在跑单元也不受影响
+  ---
+  duration_ms: 119.089625
+  type: 'test'
+  ...
+# Subtest: 换模型被拒:这一轮没发出,台账记一条 failed 的 Compute 轮次,原因类别 invalid_request、原文是 harness 的拒绝原文;会话不收口,改回兼容模型后同一会话照常续接(D27 第 4 节第 4 条、AC-43 ⑧)
+ok 75 - 换模型被拒:这一轮没发出,台账记一条 failed 的 Compute 轮次,原因类别 invalid_request、原文是 harness 的拒绝原文;会话不收口,改回兼容模型后同一会话照常续接(D27 第 4 节第 4 条、AC-43 ⑧)
+  ---
+  duration_ms: 92.604041
+  type: 'test'
+  ...
+# Subtest: AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继
+ok 76 - AC-23 停止未确认后重试被拒:原租约不能复用或释放给后继
+  ---
+  duration_ms: 129.0705
+  type: 'test'
+  ...
+# Subtest: AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认
+ok 77 - AC-23 重启无原执行器后放弃失败任务:不得虚构停止确认
+  ---
+  duration_ms: 43.95275
+  type: 'test'
+  ...
+# Subtest: AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位
+ok 78 - AC-23 执行器未提供停止核验:轮次 settled 不得确认停止或归还槽位
+  ---
+  duration_ms: 42.596666
+  type: 'test'
+  ...
+# Subtest: AC-23 停止未确认后用户重试:执行器愿意续接也不得调用 resume
+ok 79 - AC-23 停止未确认后用户重试:执行器愿意续接也不得调用 resume
+  ---
+  duration_ms: 29.674459
+  type: 'test'
+  ...
+# Subtest: AC-23 确认原执行器已退出后用户重试:允许同会话续接且申请新租约
+ok 80 - AC-23 确认原执行器已退出后用户重试:允许同会话续接且申请新租约
+  ---
+  duration_ms: 51.786916
+  type: 'test'
+  ...
+# Subtest: AC-23 没有宿主停止状态表时:配额仍拒绝同任务复用 stopping 租约
+ok 81 - AC-23 没有宿主停止状态表时:配额仍拒绝同任务复用 stopping 租约
+  ---
+  duration_ms: 0.176083
+  type: 'test'
+  ...
+# Subtest: AC-15 停止确认前的同任务续接须真排队:确认释放后授予新租约且不丢续接
+ok 82 - AC-15 停止确认前的同任务续接须真排队:确认释放后授予新租约且不丢续接
+  ---
+  duration_ms: 0.19375
+  type: 'test'
+  ...
+# Subtest: AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用户 retry 不得复用
+ok 83 - AC-23 失败卡已提交但停止标记落盘失败:原租约仍未知,用户 retry 不得复用
+  ---
+  duration_ms: 59.902042
+  type: 'test'
+  ...
+# Subtest: AC-23 停止标记落盘失败后仍须真核验:确认成功才释放,合法 retry 仍可续接
+ok 84 - AC-23 停止标记落盘失败后仍须真核验:确认成功才释放,合法 retry 仍可续接
+  ---
+  duration_ms: 38.963167
+  type: 'test'
+  ...
+1..84
+# tests 101
+# suites 4
+# pass 101
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6151.716916
+
+Round 2 — restart lease recovery, review Harness routing and leaving-room visibility
+R1 reviewed state retained: 9d38e306a908aafcb748f4e135c1d253ad881954
+R2 incremental RED: bbf69bf8cbe920e19e22a8120b270ce9814ed766
+R2 combined branch RED (receipt.red.commit): eb1744c444a7469a06e20ea33cfc2d46452c48cf
+R2 GREEN: 8f7a8da04cfa75f3fb57623ac1eed3cd079f0aae
+
+Incremental RED replay on R1 implementation 9d38e306a908aafcb748f4e135c1d253ad881954
+node --test packages/server/src/compute-stop-restart.test.ts packages/server/src/stop-confirmation.test.ts (exit 1 as intended)
+14/14 new tests failed by name with ERR_ASSERTION. All 7 inherited controls passed, including the recovered-lease stop quarantine control.
+# tests 21
+# suites 0
+# pass 7
+# fail 14
+# cancelled 0
+# skipped 0
+# todo 0
+not ok 1 - B1 R2 AC-23: failure-card restart leaves personal and group capacity free and dispatches a new task
+not ok 2 - B1 R2 AC-36: retry on a quiesced failure card after restart reaches the original session adapter
+not ok 3 - B1 R2 AC-36: rerunRun after restart retires the quiesced failure card and starts a fresh task
+not ok 4 - B1 R2 AC-23: give-up confirms the quiesced failed Compute after restart without an adapter
+not ok 5 - B1 R2 AC-23: stopTask confirms an already-quiesced failure-card Compute after restart
+not ok 6 - B1 R2 AC-23: restart retires a queued-only T9 whose launch never held a lease
+not ok 7 - B1 R2 AC-36: completion released before deliver stays out of quarantine on restart
+not ok 8 - B1 R2 AC-23: pre-B1 migration excludes completed Compute and a launch with no process
+not ok 9 - B1 R2 AC-23: migrated T3/T4b/T9 holds survive a second boot and still protect both scopes
+not ok 10 - B1 R2 R-17: disconnected Codex reviewer does not spawn on Claude Code and gives an explicit reason
+not ok 11 - B1 R2 R-17: connected but incompatible Codex reviewer is not spawned on any adapter
+not ok 12 - B1 R2 R-17: migrated gg_reviews records Codex and consumes the connected review adapter verdict
+not ok 13 - B1 R2 R-17: cancelling T5 stops the review on the persisted Codex adapter
+not ok 14 - B1 R2 AC-43: progress_get hides a leaving room while membership is still present
+
+Combined branch RED replay on ba39ad48b6c00a0f266e441da5435f9fa3a4aac7 non-test packages/*/src files
+npm exec -- tsc -p tsconfig.json (exit 0)
+G-RED changedTests + sandboxed runNodeTests replay: 12 files, 115 named leaf tests; 73/73 changed tests failed by name exactly once, 42 unchanged controls passed, 0 skipped, 0 missing. The underlying test replay intentionally failed.
+Test-file parity: no changes under packages/**/*.test.ts from incremental RED through combined RED and GREEN (git diff exit 0).
+
+GREEN typecheck: npm run typecheck (exit 0)
+GREEN lint: rtk bypass npm run lint (exit 0; 245 files)
+GREEN focused restart / lease / stop-confirmation / review / review-actual TAP (exit 0)
+# tests 51
+# suites 0
+# pass 51
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+GREEN npm test (exit 0)
+# tests 1767
+# suites 4
+# pass 1767
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+Boundary: deterministic Compute adapters and SQLite state/upgrade fixtures, not live Codex or Claude Code CLI, real gateway or cross-host process reconciliation. A persisted unconfirmed hold still blocks reuse without trusted stop evidence. Round 1 review is unchanged; Round 2 awaits independent review.
