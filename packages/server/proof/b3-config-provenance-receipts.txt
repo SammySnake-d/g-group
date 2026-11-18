@@ -31,3 +31,19 @@ Scoped mutations: 19/19 killed by ERR_ASSERTION in the designated named test; un
   activity-no-replying → B302 committed visible contact reply emits thinking then replying in its room then idle
   forward-consent-no-provenance → forward provenance vetoes consent when the resolver sees a forwarded row with bare approval text
 Boundary: AC-05 proof is for this slice’s append-only history/timeline and unchanged ledger bytes. AC-01/08/20/32/46 live/UI/model checks are not claimed; no in-flight-task cancellation on retract was added.
+
+Round 2 — Host.readLinked (AC-08 / G4b and U24); Round 1 review at c3d25d4d12514b2cabdd20c1bbd0edd659c09efd rejected by carbon-agy and remains unchanged.
+Incremental Red: 8264ebe4ffe33837997c1ca23a30f4dfa40df5a1 (two appended tests only; Round 1 implementation unchanged).
+  node --test packages/server/src/forward-link.test.ts: exit 1, 12 existing tests passed, both R2 tests failed by name with ERR_ASSERTION; no skip/cancel/todo.
+  AC-08 G4b: read_linked scrubs echoed retracted bodies and pre-retract edits before filtering query
+  U24: read_linked enforces static uptoSeq bound against post-link edits while honoring post-link retracts
+Combined Red: ff8e700236ae677ad1a06ff9521fcce294f7e6c5
+  All 8 test files are byte-identical to incremental Red. Non-test packages/ diff against Round 1 Red d2e38ab3d6a8c1924c9ed4fb45aca551cae762d4: 0 lines.
+  npm run typecheck: exit 0. All 8 changed test files: node --test exit 1; 72/72 changed tests failed by name (66 assertion failures, 5 B3-not-implemented failures, 1 missing stub schema table); 23/23 unchanged controls passed. No file-level failure, skip, cancel, or todo.
+Green: 8f9d547cd621c57415360e83e9a1c1d04c05d1b7
+  Same test bytes as both R2 Red commits. Linked reads scrub echoes of retracted versions before query matching; post-link edits become visible only after refresh, while post-link retractions take effect immediately.
+  npm run typecheck and npm run lint: exit 0. npm test: exit 0; 1973 passed / 0 failed / 0 skipped / 0 cancelled / 0 todo.
+Round 2 spot mutations: 2/2 killed independently by ERR_ASSERTION, each with 13 other tests passing; restored control 14/14 passed, no mutation kept.
+  A (omit scrubLineBody) → AC-08 G4b: read_linked scrubs echoed retracted bodies and pre-retract edits before filtering query
+  B (restore unbounded this.projected) → U24: read_linked enforces static uptoSeq bound against post-link edits while honoring post-link retracts
+Boundary: D-layer evidence only; Round 2 awaits fresh independent review, with no waiver.

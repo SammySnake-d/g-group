@@ -44,45 +44,62 @@
   ],
   "author": {
     "agent": "codex-cli",
-    "session": "codex-cli:01a1ecc3-7e14-7b60-98ad-3684ffa7bb7b",
+    "session": "codex-cli:01a1ecef-0b2a-7b20-8837-b3f7345344c2",
     "model": "shayu/gpt-6.2-sol"
   },
   "red": {
-    "commit": "d2e38ab3d6a8c1924c9ed4fb45aca551cae762d4"
+    "commit": "ff8e700236ae677ad1a06ff9521fcce294f7e6c5"
   },
-  "review": {
-    "agent": "carbon-agy",
-    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
-    "model": "gemini-4-carbon-high",
-    "verdict": "reject",
-    "reviewed_hash": "b8198350a59df2538b1b8c39282e008131a982ee8f1e4ea3cddc8924ae125228",
-    "notes": "Round 1 REJECT (see reviews/feat-agy-p0-config-provenance-receipts.md): Blocking P1 in Host.readLinked (packages/server/src/host.ts:1605-1635) — (1) missing retractedBodies + scrubLineBody scrub and unscrubbed query term filter leak echoed retracted message bodies across rooms (AC-08 / G4b); (2) unbounded this.projected(link.linkedRoomId) leaks post-uptoSeq editMessage revisions across the static room link upper bound (U24). All other B3 components (config history WITHOUT ROWID + triggers, task timeline seams/actors/cursors, retract disclosure, forward provenance & consent veto, and contract polish) verified clean with 1971/1971 tests, 70/70 Red failures, and 8/8 fault injections killed."
-  },
+  "review": null,
   "waiver": null,
-  "unverifiable": "AC-01、AC-08、AC-20、AC-32、AC-46：本片的证据仅为 D 层受控替身和真实宿主/SQLite；真实供应商、UI 与端到端 X 层留 B4/B9，C-US09 撤回取消在途任务留 B6。独立跨厂商审查尚未执行，不请求豁免。",
+  "unverifiable": "AC-01、AC-08、AC-20、AC-32、AC-46：本片证据仅为 D 层受控替身和真实宿主/SQLite；真实供应商、UI 与端到端 X 层留 B4/B9，C-US09 撤回取消在途任务留 B6。R1 Red=d2e38ab3d6a8c1924c9ed4fb45aca551cae762d4；R1 由 carbon-agy 拒绝（c3d25d4d12514b2cabdd20c1bbd0edd659c09efd）；R2 incremental Red=8264ebe4ffe33837997c1ca23a30f4dfa40df5a1；R2 combined Red=ff8e700236ae677ad1a06ff9521fcce294f7e6c5。R2 等待新的独立跨厂商审查，不请求豁免。",
   "verification": {
     "baseline": "491c26c3bfe44892276569fb46bbde38c525e151",
-    "implementation": "48549293263154fe26cec41e878a65b1da64d275",
+    "implementation": "8f9d547cd621c57415360e83e9a1c1d04c05d1b7",
     "red_tests": {
       "files": 8,
-      "named_failures": 70,
+      "named_failures": 72,
       "unchanged_passed": 23,
       "missing": 0,
       "skipped": 0
     },
     "root_tests": {
-      "passed": 1971,
+      "passed": 1973,
       "failed": 0,
       "skipped": 0,
       "todo": 0,
       "cancelled": 0
     },
     "spot_mutants": {
-      "killed": 19,
-      "total": 19
+      "killed": 2,
+      "total": 2
     },
     "actual_host_block1_bytes": 3471,
     "recall_near_limit_fixture_bytes": 3997,
-    "read_linked_description_bytes": 101
+    "read_linked_description_bytes": 101,
+    "incremental_red": {
+      "commit": "8264ebe4ffe33837997c1ca23a30f4dfa40df5a1",
+      "files": 1,
+      "named_failures": 2,
+      "unchanged_passed": 12,
+      "missing": 0,
+      "skipped": 0
+    },
+    "round_1_evidence": {
+      "red": "d2e38ab3d6a8c1924c9ed4fb45aca551cae762d4",
+      "implementation": "48549293263154fe26cec41e878a65b1da64d275",
+      "review_commit": "c3d25d4d12514b2cabdd20c1bbd0edd659c09efd",
+      "root_tests": {
+        "passed": 1971,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "spot_mutants": {
+        "killed": 19,
+        "total": 19
+      }
+    }
   }
 }
