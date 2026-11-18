@@ -15,9 +15,13 @@
     "@g-group/api-contract": "*",
     "@g-group/domain": "*",
     "@g-group/kernel": "*",
-    "@g-group/adapter-codex-compute": "*"
+    "@g-group/adapter-codex-compute": "*",
+    "ws": "^8.23.0"
   },
   "gGroup": {
     "layer": "app"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2"
   }
 }

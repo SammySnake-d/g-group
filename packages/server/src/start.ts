@@ -14,6 +14,8 @@ import { type IpcMainLike, type Service, bindIpc, createService } from "./servic
 export interface StartOptions extends PiRuntimeOptions {
   /** 数据目录:gg.db、插件包、附件、Compute 工作目录都在这下面。 */
   readonly dataDir: string;
+  /** Optional database path; defaults to dataDir/gg.db. */
+  readonly db?: string;
   readonly stateNoteMaxBytes?: number | null;
   /** fake:规则替身(不连模型,开发前端用);pi:真实联系人脑子。默认 fake。 */
   readonly mind?: "fake" | "pi";
@@ -56,7 +58,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
       };
   const work = path.join(o.dataDir, "compute");
   const host = new Host({
-    file: path.join(o.dataDir, "gg.db"),
+    file: o.db ?? path.join(o.dataDir, "gg.db"),
     dataDir: o.dataDir,
     catalogFile: o.catalogFile ?? SAMPLE_CATALOG,
     ...speaking,

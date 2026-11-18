@@ -1,0 +1,93 @@
+{
+  "slice": "P1-C：HTTP/WS Bridge 的离线 D 层合同、上传、鉴权、CORS、续订/重同步、背压、心跳及 CLI 生命周期。",
+  "author": {
+    "agent": "codex-cli",
+    "session": "codex-cli:01a1f0a2-30c5-7282-9fe7-b1bd1996a12a",
+    "model": "fnqtz-gpt/gpt-6.2-sol"
+  },
+  "red": {
+    "commit": "774485ef35685d19a10c5e12c8fdc0b00d831c4f"
+  },
+  "review": {
+    "agent": "carbon-agy",
+    "session": "antigravity:a4bfdfec-aaac-4a0e-b215-c3d5f158ba98",
+    "model": "gemini-4-carbon-high",
+    "verdict": "approve",
+    "reviewed_hash": "d853764d7237224e52a180808cea0912f90c69d4a6fe3f73f545772d82cfef5c",
+    "notes": "Round 1 APPROVE (see reviews/feat-agy-http-ws-bridge.md): Audited HTTP/WS bridge (packages/server/src/http-ws.ts, bus.ts, cli.ts, start.ts) covering SHA-256 timingSafeEqual Bearer & WS query/header auth, loopback-default + explicit/wildcard CORS, ~35 MB base64 attachment upload + declared/streamed 413 cap, /api/events sinceEventSeq safe-integer cursor validation + ordered replay + ring-overflow stream.resync bounds, maxBufferedBytes 1008 backpressure (including synchronous replay unsubscribe), ping/pong liveness, idempotent close, and cli.ts serve --compute codex SIGINT/SIGTERM lifecycle. Independent typecheck, lint (0 diagnostics across 328 files), 2171/2171 offline tests, 13/13 Red failures, CLI codex smoke, and 4/4 single-site fault injections all passed; AC-05/AC-31/AC-46/AC-51 remain honestly '未测'."
+  },
+  "waiver": null,
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/p1c-http-ws-bridge.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/p1c-http-ws-bridge.txt"
+    },
+    {
+      "id": "AC-05",
+      "status": "未测",
+      "reason": "仅验证 HTTP/WS 传输的 D 层子边界；真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3，原条目整项未验证。"
+    },
+    {
+      "id": "AC-31",
+      "status": "未测",
+      "reason": "仅验证 HTTP/WS 传输的 D 层子边界；真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3，原条目整项未验证。"
+    },
+    {
+      "id": "AC-46",
+      "status": "未测",
+      "reason": "仅验证 HTTP/WS 传输的 D 层子边界；真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3，原条目整项未验证。"
+    },
+    {
+      "id": "AC-51",
+      "status": "未测",
+      "reason": "仅验证 HTTP/WS 传输的 D 层子边界；真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3，原条目整项未验证。"
+    }
+  ],
+  "unverifiable": "AC-05/AC-31/AC-46/AC-51：合同与传输测试不证明产品整体验收、真实模型或 Electron UI；前端端到端手动 UI smoke 留前端启动/P3。CLI serve 已接通 P1-B codexCompute 装配；真实模型/Electron UI 端到端留 P3。R-01 独立审查待完成，review=null；G-PROVENANCE 在 review=null 时不核验来源，不把其绿当作独立身份认证。",
+  "verification": {
+    "implementation": "2aef1b1d239e68d302ac55c445835ec0a33c9e40",
+    "red_tests": {
+      "named_failures": 13,
+      "passed": 0
+    },
+    "bridge_tests": {
+      "passed": 13,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "root_tests": {
+      "passed": 2171,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "selftest_cases": 255,
+    "spot_mutants": {
+      "detected": 9,
+      "total": 9,
+      "named_deadline_failures": 2
+    },
+    "offline_ci_ignore_scripts": true,
+    "real_paused_client_buffered_bytes": 400424,
+    "gate_sandbox": "GATE_SANDBOX_IMAGE=asset-discovery-clean-c3:0.163.0 (pre-existing local image, Node v22.23.3); Docker --network none. Native macOS Seatbelt blocks loopback listen with EPERM.",
+    "local_gates": {
+      "passed": 7,
+      "total": 8,
+      "failed": [
+        "G-REVIEW"
+      ],
+      "reason": "Independent review pending. review=null, waiver=null."
+    },
+    "typecheck": "passed",
+    "lint": "passed",
+    "cli_codex_smoke": "serve --compute codex returned defaultHarness=codex via settings.get and exited 0 on SIGTERM."
+  }
+}

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { createHttpWsBridge } from "./http-ws.ts";
+import { createService } from "./service.ts";
 import { assembleSpeaking } from "./speaking.ts";
 // gg:P0 闭环的命令行驱动器(技术栈文档阶段一「先用 CLI/测试驱动跑通」)。
 //   node packages/server/src/cli.ts dm --db ./gg.db --name 小克 "帮我在 /tmp/gg-demo 写 hello.txt"
@@ -22,6 +24,11 @@ const { values, positionals } = parseArgs({
   allowPositionals: true,
   allowNegative: true,
   options: {
+    port: { type: "string", default: "3489" },
+    host: { type: "string", default: "127.0.0.1" },
+    token: { type: "string" },
+    "cors-origin": { type: "string", multiple: true },
+    "data-dir": { type: "string" },
     db: { type: "string", default: "./gg.db" },
     name: { type: "string", default: "小克" },
     mind: { type: "string", default: "fake" },
@@ -119,8 +126,8 @@ async function runGroup(host: Host, model: string | undefined) {
 }
 
 async function main() {
-  if (cmd !== "dm" && cmd !== "log" && cmd !== "group") {
-    console.log("用法: cli.ts dm|log|group --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--api 协议 | --protocols 协议,协议] [--magpie | --no-magpie] [--note-max-bytes 字节|none] [--compute fake|claude|codex] [--cwd 目录] \"消息\"");
+  if (cmd !== "serve" && cmd !== "dm" && cmd !== "log" && cmd !== "group") {
+    console.log("用法: cli.ts serve|dm|log|group [--port 3489 --host 127.0.0.1 --token TOKEN --cors-origin ORIGIN --data-dir DIR] --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--api 协议 | --protocols 协议,协议] [--magpie | --no-magpie] [--note-max-bytes 字节|none] [--compute fake|claude|codex] [--cwd 目录] \"消息\"");
     process.exit(2);
   }
   const { defaultModel: model, ...mind } = await makeMind(values.mind);
@@ -128,8 +135,13 @@ async function main() {
   const compute = makeCompute(values.compute);
   const cwdRoot = values.cwd ? path.resolve(values.cwd) : undefined;
   const runThresholds = cliRunThresholds({ noProgressMs: values["no-progress-ms"], firstByteMs: values["first-byte-ms"] });
+  const dataDir = values["data-dir"] ? path.resolve(values["data-dir"]) : undefined;
+  const db = dataDir && !process.argv.includes("--db") && !process.argv.some(arg => arg.startsWith("--db=")) ? path.join(dataDir, "gg.db") : path.resolve(values.db);
+  mkdirSync(path.dirname(db), { recursive: true });
+  if (dataDir) mkdirSync(dataDir, { recursive: true });
   const host = new Host({
-    file: path.resolve(values.db),
+    file: db,
+    ...(dataDir ? { dataDir } : {}),
     ...mind,
     stateNoteMaxBytes,
     compute: compute.factory,
@@ -151,6 +163,22 @@ async function main() {
   try {
     if (values.compute === "codex") host.updateSettings({ defaultHarness: "codex", confirmAffected: true });
     if (model) host.updateSettings({ defaultComputeModel: model, defaultSpeakingModel: model, confirmAffected: true });
+    if (cmd === "serve") {
+      if (!/^\d+$/.test(values.port)) throw new Error("--port expects an integer from 0 to 65535");
+      const bridge = await createHttpWsBridge({ host, service: createService(host) }, {
+        port: Number(values.port), host: values.host,
+        ...(values.token ? { token: values.token } : {}),
+        ...(values["cors-origin"] ? { corsOrigins: values["cors-origin"].flatMap(origins => origins.split(",").map(origin => origin.trim()).filter(Boolean)) } : {}),
+      });
+      try {
+        await new Promise<void>(resolve => {
+          const stop = () => { process.off("SIGINT", stop); process.off("SIGTERM", stop); resolve(); };
+          process.once("SIGINT", stop); process.once("SIGTERM", stop);
+          console.log(JSON.stringify({ httpUrl: bridge.httpUrl, wsUrl: bridge.wsUrl, eventSeq: host.bus.head() }));
+        });
+      } finally { await bridge.close(); }
+      return;
+    }
     if (cmd === "group") return await runGroup(host, model);
     let contact = host.listContacts().find((c) => c.name === values.name);
     contact ??= host.createContact({ name: values.name });

@@ -32,7 +32,7 @@ export function createBus(now: () => string, capacity = 2000): Bus {
     subscribe(listener, since) {
       if (since !== undefined && since < seq) {
         const oldest = ring[0]?.eventSeq ?? seq + 1;
-        if (since + 1 < oldest) deliver(listener, { type: "stream.resync", eventSeq: seq, at: now(), reason: `续订点 ${since} 早于保留窗口 ${oldest}` } as ServerEvent);
+        if (since + 1 < oldest) deliver(listener, { type: "stream.resync", eventSeq: seq, at: now(), reason: `续订点 ${since} 早于保留窗口 ${oldest}`, oldestEventSeq: oldest, latestEventSeq: seq } as ServerEvent);
         else for (const e of ring) if (e.eventSeq > since) deliver(listener, e);
       }
       listeners.add(listener);

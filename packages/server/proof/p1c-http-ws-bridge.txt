@@ -1,0 +1,190 @@
+P1-C HTTP/WS bridge — offline D-layer execution evidence
+Red: 774485ef35685d19a10c5e12c8fdc0b00d831c4f
+Green: bb8a0fb427d20ab3892681b38d79d53aaca697f1
+Branch: feat/agy-http-ws-bridge
+Frontend references read only; no frontend modifications.
+Red was amended before green to correct missing clientApiVersion fixtures and make the factory explicit for G-TAUTO; final tests are byte-identical in red and green.
+
+Offline clean install
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+
+added 102 packages, and audited 111 packages in 2s
+
+7 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+Red typecheck (exit 0)
+
+> typecheck
+> tsc -p tsconfig.json
+
+
+Red named failures (exit 1; zero passed)
+not ok 1 - P1-C HTTP contract: hello, contact, DM and message round trip
+not ok 2 - P1-C upload: near 35 MB base64 accepted; oversized declared and streamed bodies return 413
+not ok 3 - P1-C malformed envelopes return 400; unknown RPC and paths preserve JSON errors
+not ok 4 - P1-C CORS: preflight, loopback only defaults, explicit origins and wildcard
+not ok 5 - P1-C auth: HTTP and WS reject missing/wrong tokens; header/query accepted without leaks
+not ok 6 - P1-C WS replay: only missed events, ordered, contract-valid; disconnect unsubscribes
+not ok 7 - P1-C WS resync: ring overflow reports bounds and stays subscribed
+not ok 8 - P1-C WS cursor: invalid safe-integer inputs rejected before subscription
+not ok 9 - P1-C WS backpressure closes consumer and removes listener, including synchronous replay
+not ok 10 - P1-C WS liveness: pongs keep connection alive; missing pong terminates and unsubscribes
+not ok 11 - P1-C close drains sockets, subscriptions, HTTP listener; idempotent
+not ok 12 - P1-C serve owns host and closes database after transport
+not ok 13 - P1-C CLI serve emits endpoints, honors data-dir/db and shuts down on SIGTERM and SIGINT
+# tests 13
+# pass 0
+# fail 13
+# cancelled 0
+# skipped 0
+# todo 0
+
+Green typecheck (exit 0)
+
+> typecheck
+> tsc -p tsconfig.json
+
+
+Lint (exit 0)
+
+> lint
+> biome lint --error-on-warnings
+
+Checked 312 files in 222ms. No fixes applied.
+
+Green bridge tests (exit 0)
+ok 13 - P1-C CLI serve emits endpoints, honors data-dir/db and shuts down on SIGTERM and SIGINT
+  ---
+  duration_ms: 639.770417
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1485.809958
+
+Full suite (exit 0)
+  ---
+  duration_ms: 13.711208
+  type: 'test'
+  ...
+1..2087
+# tests 2104
+# suites 4
+# pass 2104
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 56357.513541
+test-runner:实际执行并通过 2104 条用例
+
+Gate self-tests (exit 0)
+✓ vendorOf(shayu/gpt-6.2-sol) = openai
+✓ vendorOf(gpt-oss-120b-medium) = openai
+✓ vendorOf(claude-opus-5-5) = anthropic
+✓ vendorOf(claude-opus-4-6-thinking) = anthropic
+✓ vendorOf(grok-4.7) = xai
+✓ vendorOf(gemini-4-argon) = google
+✓ vendorOf(gemini-4-carbon-high) = google
+✓ vendorOf(gemini-4-hydrogen-xhigh) = google
+✓ vendorOf(gemini-pro-orchestrator) = google
+✓ vendorOf(gemini-pro-orchestrator-argon) = google
+✓ vendorOf(stealth/crouton-alpha) = unknown
+✓ vendorOf(undefined) = unknown
+自检通过
+自检耗时 135s:用例 255/255,并发 4(GATE_SELFTEST_JOBS),CPU 8,node v22.22.0
+
+Real paused socket backpressure
+(node:40255) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"pausedRealClient":true,"maximumObservedBufferedBytes":400424,"cap":500000,"closed":true}
+
+Spot mutations: temporary copy of packages/server; unchanged tests, real sockets; original copy restored after each fault and removed. All 9 detected; two missing-progress faults fail the named test deadline, not a module load error.
+{"mutation": "HTTP authorization bypass", "killed": true, "exit": 1}
+{"mutation": "body limit removed", "killed": true, "exit": 1}
+{"mutation": "WS authorization bypass", "killed": true, "exit": 1}
+{"mutation": "replay cursor discarded", "killed": true, "exit": 1}
+{"mutation": "resync bounds corrupted", "killed": true, "exit": 1}
+{"mutation": "backpressure cap removed", "killed": true, "exit": 1}
+{"mutation": "disconnect subscription leaked", "killed": true, "exit": 1}
+{"mutation": "dead sockets never terminated", "killed": true, "exit": 1}
+{"mutation": "untrusted CORS accepted", "killed": true, "exit": 1}
+
+not ok 1 - P1-C WS backpressure closes consumer and removes listener, including synchronous replay
+  failureType: 'testTimeoutFailure'
+  error: 'test timed out after 10000ms'
+
+not ok 1 - P1-C WS liveness: pongs keep connection alive; missing pong terminates and unsubscribes
+  failureType: 'testTimeoutFailure'
+  error: 'test timed out after 10000ms'
+
+Reproducible spot-mutation recipe (temporary paths deleted after execution):
+import pathlib, shutil, subprocess, json
+root=pathlib.Path.cwd()
+tmp=pathlib.Path('/tmp/p1c-evidence/mutant')
+shutil.copytree(root/'packages/server',tmp,ignore=shutil.ignore_patterns('node_modules','proof'))
+(tmp/'node_modules').symlink_to(root/'node_modules',target_is_directory=True)
+f=tmp/'src/http-ws.ts'; original=f.read_text()
+bus=tmp/'src/bus.ts'; original_bus=bus.read_text()
+mutations=[
+ ('HTTP authorization bypass','auth:',f,'if (!matches(bearer(req)))','if (false)'),
+ ('body limit removed','upload:',f,'const BODY_LIMIT = ATTACHMENT_UPLOAD_IPC_BYTES + 4096;','const BODY_LIMIT = ATTACHMENT_UPLOAD_IPC_BYTES + 100_000_000;'),
+ ('WS authorization bypass','auth:',f,'if (!matches(bearer(req)) && !matches(url.searchParams.get("token") ?? undefined))','if (false)'),
+ ('replay cursor discarded','WS replay:',f,'}, since);','}, undefined);'),
+ ('resync bounds corrupted','WS resync:',bus,'oldestEventSeq: oldest, latestEventSeq: seq','oldestEventSeq: 0, latestEventSeq: 0'),
+ ('backpressure cap removed','WS backpressure',f,'if (ws.bufferedAmount + Buffer.byteLength(data) > maxBufferedBytes)','if (false)'),
+ ('disconnect subscription leaked','WS replay:',f,'state.disposed = true; state.off?.(); clients.delete(ws);','state.disposed = true; clients.delete(ws);'),
+ ('dead sockets never terminated','WS liveness:',f,'if (!state.alive || ws.bufferedAmount > maxBufferedBytes)','if (ws.bufferedAmount > maxBufferedBytes)'),
+ ('untrusted CORS accepted','CORS:',f,'const originAllowed = (origin: string | undefined): boolean => {','const originAllowed = (origin: string | undefined): boolean => { return true;'),
+]
+results=[]
+for name,pattern,file,before,after in mutations:
+ assert before in file.read_text(),name
+ file.write_text(file.read_text().replace(before,after))
+ log=pathlib.Path('/tmp/p1c-evidence')/('mutant-'+str(len(results)+1)+'.log')
+ try:
+  with log.open('w') as stream:
+   run=subprocess.run(['node','--test','--test-name-pattern',pattern,str(tmp/'src/http-ws.test.ts')],cwd=root,stdout=stream,stderr=subprocess.STDOUT,timeout=20)
+  output=log.read_text()
+  killed=run.returncode!=0 and 'not ok ' in output and 'not ok 1 - /tmp/' not in output and 'ERR_MODULE_NOT_FOUND' not in output
+  results.append({'mutation':name,'killed':killed,'exit':run.returncode})
+ except subprocess.TimeoutExpired:
+  results.append({'mutation':name,'killed':False,'timeout':True})
+ finally:
+  f.write_text(original);bus.write_text(original_bus)
+ print(json.dumps(results[-1]),flush=True)
+pathlib.Path('/tmp/p1c-evidence/mutations.json').write_text(json.dumps(results,indent=2)+'\n')
+shutil.rmtree(tmp)
+assert all(r['killed'] for r in results),results
+
+Test/contract boundary:
+- Upload fixture is exactly 25 MiB decoded / 34,952,536 base64 bytes, near the 35,000,000 schema limit; existing host decoded-byte limit is preserved.
+- POST requires valid contract params, returns service ApiResult unchanged; health exposes API_VERSION/head only without configured auth.
+- WS resync retains reason/eventSeq/at; bus adds oldestEventSeq/latestEventSeq without changing the contract schema or frontend.
+- Real HTTP/WS tests exit naturally with zero skipped/cancelled tests on the green implementation; close asserts no listening HTTP server, no tracked WS clients, no subscriptions and closed owned SQLite.
+- AC-05/AC-31/AC-46/AC-51 complete product criteria remain unverified. Real Electron UI smoke awaits frontend launch/P3. Real pi/Claude gateway behavior is not asserted. Codex Compute requires absent P1-B and fails explicitly.
+- review=null and waiver=null: no independent review or merge authorization is claimed.
+Gate environment: native macOS Seatbelt denies ALL sockets, including loopback. Initial native run: 5/8, G-REVIEW pending; G-RED/G-STUB blocked by listen EPERM (not a product failure). Use the existing Docker sandbox mode with network none; no gate-policy changes.
+Final command after proof/receipt commit:
+GATE_SANDBOX_IMAGE=asset-discovery-clean-c3:0.163.0 node scripts/gates/run-all.ts --local --branch=feat/agy-http-ws-bridge --base=origin/dev/agy-backend
+Validated result: 7/8 passed; only G-REVIEW failed because independent review is pending. Docker image is locally available, Node v22.23.3, --network none. Gate source/isolation policy unchanged. Final proof-only amendment is rerun with the same command.
+
+Docker-mode gate result (before final proof-only amendment; identical source/tests):
+✓ G-PROVENANCE  R-01 R-07 R-10:作者与审查的厂商以会话原始记录为准;豁免必须是仓库所有者对这个 PR 这一版的结构化批准
+✓ G-TRACE  R-06 R-08 R-15:受管改动必须有收据,条目对上验收文档,状态四选一,通过要有证据
+✗ G-REVIEW  R-01:审查人限 Codex/Astra/Claude/Argon(g-group#1531、g-group#2943、g-group#3199 原则 68,默认 Codex;Claude 审 Codex 写的 PR,Argon 备用),审查人≠作者,自报厂商不同且都认得出,审查钉在当前内容 hash 上(来源真伪由 G-PROVENANCE 核对)
+    - 还没有独立审查
+✓ G-RED  R-02:先红后绿,红提交上的测试与现在相同,现在的测试放到红提交实现上按名字失败、现在按名字通过
+✓ G-STUB  R-03 R-04:空实现红基线 + 返回值变异校准,桩下或错值下仍通过、没执行、加载失败的测试都判无效
+✓ G-TAUTO  R-04:拒绝同语反复测试(按 node:test 真实导入识别;无断言、自比较、恒真、不可达、不判源码结果、skip/only;运行时与静态逐条计数一致)
+✓ G-WORKFLOW  R-18:PR 的 workflow 不得冒充受保护检查、不得申请写权限、不得写提交状态、不得用 pull_request_target
+✓ G-LAYER  插件化:包分层只能向下依赖,插件互不依赖,禁止相对路径跨包(import 与依赖声明都查)
