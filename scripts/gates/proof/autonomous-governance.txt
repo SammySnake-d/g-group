@@ -1,0 +1,45 @@
+G0 — Backend autonomous governance
+
+Feature map
+  Entry: npm run check, also run by the installed Git hooks.
+  Drive: node --test scripts/gates/autonomous-governance.test.ts.
+  Observe: invalid fixture trees fail with the specific doc, contract or
+  structure errors. Repair those same fixtures and the checks pass.
+  Sources: AGENTS.md, docs/subsystems, packages/api-contract/src, scripts/*-baseline.json.
+  Boundary: scripts/gates/*.test.ts runs in npm test. The existing G-RED,
+  G-STUB and G-TAUTO branch selectors cover packages/**/*.test.ts. The red
+  assertion failures here are direct evidence for the governance test file.
+
+R-02 / Red b400d0dcc644f7af95a5c369faf4e0d12b5fad72
+  npm run typecheck → exit 0
+  node --test scripts/gates/autonomous-governance.test.ts → exit 1
+  not ok 1 - documentation rejects long agent guides, broken links, missing ownership and deleted spec IDs
+    code: 'ERR_ASSERTION'
+  not ok 2 - contract checks protect baseline keys and permit backend additions ahead of frontend
+    code: 'ERR_ASSERTION'
+  not ok 3 - structure rejects I/O, skipped tests and new or growing oversized sources
+    code: 'ERR_ASSERTION'
+  # pass 0
+  # fail 3
+
+R-05 / Green 2954b6729702fb226d52ca55ca6c4e02d2467ce0
+  Same governance test file, 3 passed, 0 failed.
+  Docs: long guide, broken link, missing owner and missing spec ID are rejected.
+  Contracts: deleted RPC/event/export and frontend-only keys are rejected.
+  Backend additions pass and refreshing the baseline makes them durable.
+  Structure: Node I/O imports, skipped tests and both oversized-file paths are
+  rejected. The 450-line boundary, existing legacy limit and test exemption pass.
+  npm run typecheck, npm run lint, npm run check → exit 0.
+  npm test → 2189 passed, 0 failed.
+  npm run gates:selftest → exit 0, 255/255.
+  Branch gates → 7/8. G-REVIEW awaits independent review.
+  Actual sibling frontend RPC/event parity checked read-only → exit 0.
+  The commit hook rejected a missing Verified trailer and accepted a valid one.
+  The suite lock blocked a concurrent holder and recovered a dead PID.
+  The recall fixture test passed after its comment-only clarification.
+
+Author provenance
+  Session identifier passed Python re.fullmatch.
+  The repository loadSession and turnTouchesRepo helpers found repository
+  turns attributed to OpenAI in the actual Codex CLI rollout.
+  The separate review field is pending. Full review provenance requires it.

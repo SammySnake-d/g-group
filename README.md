@@ -93,8 +93,10 @@ CORS 默认只放行 HTTP(S) 的 localhost/127.0.0.1/[::1] 来源；拒绝其它
 ```sh
 npm ci
 git config core.hooksPath .githooks
-npm run typecheck && npm run lint && npm test && npm run gates:selftest
+npm run check && npm run lint && npm test && npm run gates:selftest
 ```
+
+`npm run check` 校验治理文档与链接、共享合同、包结构和类型。前端合同在相邻工作目录时自动核对，也可用 `--frontend-dir=<path>` 指定前端的 `src/contracts`。开发前先从 [子系统索引](docs/subsystems/README.md) 找到模块归属。
 
 ## 第三方代码
 

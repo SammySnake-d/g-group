@@ -1,3 +1,4 @@
+// The 3,997B prefix is a synthetic fixture. Block 1 has no length cap (AC-42 ⑥, #2391).
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { BLOCK_LABELS, type BlockNo } from "@g-group/kernel";

@@ -1,0 +1,26 @@
+{
+  "slice": "G0 backend autonomous governance: documentation and ownership, append-only contracts, structure ratchet, and Git verification hooks.",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/autonomous-governance.txt"
+    },
+    {
+      "id": "R-05",
+      "status": "通过",
+      "evidence": "scripts/gates/proof/autonomous-governance.txt"
+    }
+  ],
+  "author": {
+    "agent": "codex-cli",
+    "session": "codex-cli:01a1f0f5-ce75-7d12-8c7a-f0525c23cc53",
+    "model": "fnqtz-gpt/gpt-6.2-sol"
+  },
+  "red": {
+    "commit": "b400d0dcc644f7af95a5c369faf4e0d12b5fad72"
+  },
+  "review": null,
+  "waiver": null,
+  "unverifiable": "R-01/R-10: 独立跨厂商审查待完成。review=null 时来源门禁跳过审查核验；作者会话另用 loadSession 验证。R-02/R-05: 本片单测放在 scripts/gates，直接记录红绿与对照；现有 G-RED、G-STUB、G-TAUTO 的包级选择范围不含该文件。AC-39/AC-42: 只更正文档和合成夹具注释；真实缓存评测及 C0 后台压缩双游标未在本片验证。"
+}

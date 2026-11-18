@@ -10,6 +10,8 @@
 - [x] P1-A #124（0683b560，已合入）：不可变轮次配置、长期记忆卫生/证据/覆盖台账、协作观察及净室群克隆（后端候选实现）。
 - [x] P1-B #126（76dd7ce4，已合入）：D 层 Codex `app-server` Compute 适配与双向轮边界 handoff；真实二进制/模型 S+X 留 P3。
 - [x] P1-C #127：HTTP + WS Bridge（已列 D 层边界）；CLI serve 已接通 P1-B Codex Compute。
+- [x] G0：后端治理文档、合同与结构检查、Git hooks 及验证锁。D 层证据见 [proof](../scripts/gates/proof/autonomous-governance.txt)。独立审查待完成。
+- [ ] C0：后台压缩（`bg-compact`）双游标。
 - [ ] P2-A：Admin / Quota / Helper；C-US09 撤回取消在途任务。
 - [ ] P2-B：Plugins / Outbox / Commitments。
 - [ ] P3：完整 D+X 验收矩阵、真实模型 S+X 评测与前端联调。
