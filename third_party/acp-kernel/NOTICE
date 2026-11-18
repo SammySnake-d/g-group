@@ -1,0 +1,16 @@
+g-group 使用的第三方组件:acp-kernel(Billion Context 内核)
+
+本目录是 Billion Context(billion-context)主仓 kernel/ 目录(npm 包名 acp-kernel,版本 0.0.191)
+在上游提交 541cf260c4e0fcda5edb31e4de4485a3185f5589 上的原样拷贝,外加按上游自带命令构建的 dist/。
+g-group 只用其中的检索模块(searchBlocks / messageDocs,hybrid 检索),用于记忆排序和旧消息检索。
+
+  acp-kernel       https://github.com/ranxianglei/acp-kernel
+  billion-context  https://github.com/ranxianglei/billion-context
+
+Copyright (c) 2026 ranxianglei
+许可:MIT,另加「产品出处标注」附加条款,全文见同目录 LICENSE(上游原文,未改动)。
+来源、构建命令、逐文件校验和与本地补丁清单(目前为空)见同目录 UPSTREAM.md。
+
+This product uses acp-kernel (https://github.com/ranxianglei/acp-kernel), the kernel of
+billion-context (https://github.com/ranxianglei/billion-context), Copyright (c) 2026 ranxianglei,
+licensed under the MIT License with an additional attribution term (see LICENSE in this directory).

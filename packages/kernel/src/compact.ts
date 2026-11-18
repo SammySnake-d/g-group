@@ -9,7 +9,9 @@ import { renderInboundText } from "./rounds.ts";
 import type { Inbound, MindAction } from "./runtime-ports.ts";
 
 export const RETRACT_MIN_CHARS = 4;
-const PLACEHOLDER = "〔已撤回内容已移除〕";
+/** 精确替换撤回原文用的占位;找旧消息的正文过同一条规则时也用它(history-tools.ts) */
+export const RETRACT_PLACEHOLDER = "〔已撤回内容已移除〕";
+const PLACEHOLDER = RETRACT_PLACEHOLDER;
 
 function renderAction(a: MindAction): string {
   switch (a.kind) {

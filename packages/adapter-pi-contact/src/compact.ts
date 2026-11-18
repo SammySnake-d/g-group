@@ -139,6 +139,8 @@ export function createPiCompactor(opts: PiCompactorOptions): ContactCompactor {
       throw new PiContactMindError("provider-error", redact(`压缩请求失败:${e instanceof Error ? e.message : String(e)}`));
     }
     if (msg.stopReason === "error" || msg.stopReason === "aborted") throw new PiContactMindError("provider-error", redact(`压缩请求失败(${msg.stopReason}):${msg.errorMessage ?? "无错误信息"}`));
+    // 非空文本甚至看似完整的 JSON 都可能因输出上限截断;不能作为完整笔记替换原文。
+    if (msg.stopReason === "length") throw new PiContactMindError("provider-error", "压缩请求输出因长度上限截断(length)");
     const text = msg.content.map((c) => (c.type === "text" ? c.text : "")).join("").trim();
     if (text === "") throw new PiContactMindError("provider-error", "压缩器返回了空笔记");
     return text;
