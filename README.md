@@ -13,6 +13,12 @@
 
 主稿在 `/Users/snakesammy/.mirasim/assistants/deliverables/g-group-requirements` 由 Argon 维护,这里是快照;Argon 更新后同步进来(只改 docs/,不需要收据)。
 
+## dev/agy-backend 后端进度
+
+[docs/BACKEND-PROGRESS-CHECKLIST.md](docs/BACKEND-PROGRESS-CHECKLIST.md) 按优先级记录 B0–B4 与 P1-A 的实现、证据和未测边界。P1-A 提供每轮冻结说话配置、长期记忆卫生与证据台账、协作观察和净室群模板克隆；公告与协作观察分开，观察只在 Block 5 按需注入。
+
+当前勾选表示对应 D 层后端切片落地。B4 的 ling-jing 上游故障尚未形成 live 成功闭环；P1-B Codex、P1-C HTTP/WS、P2-A/B 和 P3 真实模型/前端 D+X 验收仍待完成。DM#2103 手册具体方案继续标为候选。
+
 ## 分工
 
 - Claude Code:主开发、拆 PR、合并。
