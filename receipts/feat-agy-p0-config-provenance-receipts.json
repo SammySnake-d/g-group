@@ -1,0 +1,81 @@
+{
+  "slice": "B3：联系人配置版本与回滚、只追加任务时间线、撤回副作用诚实披露、转发来源与显式关联、进度游标及回执兼容。",
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/b3-config-provenance-receipts.txt"
+    },
+    {
+      "id": "R-10",
+      "status": "通过",
+      "evidence": "packages/server/proof/b3-config-provenance-receipts.txt"
+    },
+    {
+      "id": "AC-05",
+      "status": "通过",
+      "evidence": "packages/server/proof/b3-config-provenance-receipts.txt"
+    },
+    {
+      "id": "AC-08",
+      "status": "未测",
+      "reason": "D 层已验证宿主撤回的台账披露（完成、运行中、失败、停止）、原文清理及搜索。C-US09 撤回取消在途任务留 B6，真实 X 层验收留 B9。"
+    },
+    {
+      "id": "AC-20",
+      "status": "未测",
+      "reason": "D 层已验证转发副本不放行、授权解析器拒绝转发标记且本人直接同意可放行；真实 X 层留 B9。"
+    },
+    {
+      "id": "AC-46",
+      "status": "未测",
+      "reason": "D 层验证转发/披露的回执、标记已读，以及联系人发言时 thinking → replying → idle；真实 UI/X 层留 B9。"
+    },
+    {
+      "id": "AC-01",
+      "status": "未测",
+      "reason": "D 层验证回滚保留联系人身份与相关状态；完整 AC-01 及 X 层留 B9。"
+    },
+    {
+      "id": "AC-32",
+      "status": "未测",
+      "reason": "D 层验证回滚重新预检并在不兼容时原子拒绝；真实模型热切换及 X 层留 B4/B9。"
+    }
+  ],
+  "author": {
+    "agent": "codex-cli",
+    "session": "codex-cli:01a1ecc3-7e14-7b60-98ad-3684ffa7bb7b",
+    "model": "shayu/gpt-6.2-sol"
+  },
+  "red": {
+    "commit": "d2e38ab3d6a8c1924c9ed4fb45aca551cae762d4"
+  },
+  "review": null,
+  "waiver": null,
+  "unverifiable": "AC-01、AC-08、AC-20、AC-32、AC-46：本片的证据仅为 D 层受控替身和真实宿主/SQLite；真实供应商、UI 与端到端 X 层留 B4/B9，C-US09 撤回取消在途任务留 B6。独立跨厂商审查尚未执行，不请求豁免。",
+  "verification": {
+    "baseline": "491c26c3bfe44892276569fb46bbde38c525e151",
+    "implementation": "48549293263154fe26cec41e878a65b1da64d275",
+    "red_tests": {
+      "files": 8,
+      "named_failures": 70,
+      "unchanged_passed": 23,
+      "missing": 0,
+      "skipped": 0
+    },
+    "root_tests": {
+      "passed": 1971,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "cancelled": 0
+    },
+    "spot_mutants": {
+      "killed": 19,
+      "total": 19
+    },
+    "actual_host_block1_bytes": 3471,
+    "recall_near_limit_fixture_bytes": 3997,
+    "read_linked_description_bytes": 101
+  }
+}
