@@ -1,0 +1,29 @@
+packages/adapter-pi-contact/src/compact.ts
+  s_0e283774ca8d6a::t_223a77cf6f576e 70
+packages/adapter-pi-contact/src/tools.ts
+  s_0e283774ca8d6a::t_6781af90c36eca 292
+packages/kernel/src/memory-capture.ts
+  s_0e283774ca8d6a::t_c3bf7cc4e1388c 69
+packages/kernel/src/memory.ts
+  s_0e283774ca8d6a::t_029799bbc73220 120
+packages/server/src/bg-compaction.ts
+  s_0e283774ca8d6a::t_b5114340a6af00 1-47
+packages/server/src/host.ts
+  s_0e283774ca8d6a::t_cd818a954c1ee3 185,426-427,534,542-548,2699,2738,2744,3306-3310,3313,3323-3340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3226847a91512d31f41dd5f50831267fa9f78452",
+  "prompts": {},
+  "sessions": {
+    "s_0e283774ca8d6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f11e-1071-7750-9770-ad9f76a2b200",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
