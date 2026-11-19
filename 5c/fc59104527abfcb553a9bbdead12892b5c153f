@@ -1,0 +1,31 @@
+AGENTS.md
+  s_4a257329788221::t_ee4770d3fdc572 28
+README.md
+  s_4a257329788221::t_08498f116099c8 22-23
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_4a257329788221::t_4616f2b3215259 14,29-30
+docs/spec/验收文档-v0.1.md
+  s_4a257329788221::t_d9bfb3ac0111df 319
+docs/subsystems/context-and-memory.md
+  s_4a257329788221::t_538642bdadf455 10-12
+packages/server/proof/c0-bg-compaction-provenance.txt
+  s_4a257329788221::t_42bef3b729fd3f 1-36
+receipts/feat-agy-bg-compaction-memory-provenance.json
+  s_4a257329788221::t_433e55042cabda 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5cfc59104527abfcb553a9bbdead12892b5c153f",
+  "prompts": {},
+  "sessions": {
+    "s_4a257329788221": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f25b-7b50-7a13-add4-c71bdda037a0",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
