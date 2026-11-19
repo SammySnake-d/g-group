@@ -265,12 +265,18 @@ test("P1A structured reflect ignores a source-retracted entry when planning rela
 
 test("P1A stale group reply during reflect abandons all structured capture writes", async () => {
   const o = fresh(); let roomId = ""; let otherId = ""; let seq = 0;
+  let injectPeer = true; let reflects = 0;
+  let entered!: () => void; let release!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const finish = new Promise<void>(resolve => { release = resolve; });
   const reports: { what: string; detail: unknown }[] = [];
   const host = new Host({ ...o, maxDeferMs: 1,
     onReport: (what, detail) => reports.push({ what, detail }),
-    mind: () => ({ async round() { return { actions: [{ kind: "reply" as const, roomId, text: "stale draft", replyToSeq: seq }], stateNote: null }; } }),
+    mind: () => ({ async round() {
+      if (injectPeer) appendEvent(host.db.store, `room:${roomId}`, { kind: "contact", id: otherId }, { kind: "message", text: "peer spoke during the round" }, new Date().toISOString());
+      return { actions: [{ kind: "reply" as const, roomId, text: "stale draft", replyToSeq: seq }], stateNote: null }; } }),
     compactor: () => ({ async compact() { return "note"; }, async reflect() {
-      appendEvent(host.db.store, `room:${roomId}`, { kind: "contact", id: otherId }, { kind: "message", text: "another contact spoke during reflect" }, new Date().toISOString());
+      reflects++; if (!injectPeer) { entered(); await finish; }
       return { note: "note", personaSuggestion: null, memories: [{ title: "stale preference", text: "中文回复", anchors: ["global"], relation: null, target: null, roomId, sourceSeq: seq, evidence: "以后都用中文回复" }] };
     } }),
   });
@@ -279,17 +285,30 @@ test("P1A stale group reply during reflect abandons all structured capture write
     roomId = host.createGroup("stale capture", [{ kind: "contact", id: c.id }, { kind: "contact", id: otherId }]).id;
     seq = appendEvent(host.db.store, `room:${roomId}`, { kind: "user", id: host.userId }, { kind: "message", text: "以后都用中文回复" }, new Date().toISOString()).seq;
     assert.equal(await host.runRound(c.id, new AbortController().signal), "stale");
+    const staleReflects = reflects;
     assert.ok(reports.some(r => r.what === "stale-round" && (r.detail as { newer?: number[] }).newer?.includes(seq + 1)), "commitRound detects the other contact's new message");
     assert.equal(host.listMessages(roomId, {}).messages.some(m => m.text === "stale draft"), false);
     const files = existsSync(path.join(o.dataDir, "memory")) ? readdirSync(path.join(o.dataDir, "memory"), { recursive: true }) : [];
     assert.deepEqual(files.filter(f => String(f).endsWith(".md")), [], "abandoned round leaves no md source");
     assert.deepEqual(all(host.db, "SELECT * FROM gg_memory"), [], "abandoned round leaves no memory index");
     assert.deepEqual(all(host.db, "SELECT * FROM docs WHERE key LIKE 'memory-coverage:%'"), [], "abandoned round leaves no coverage work");
-  } finally { await host.close(); }
+    injectPeer = false;
+    const round = host.runRound(c.id, new AbortController().signal);
+    try {
+      assert.equal(await Promise.race([round, new Promise(resolve => setTimeout(() => resolve("timeout"), 200))]), "done");
+      await started;
+      host.retractMessage(roomId, seq);
+    } finally { release(); await round; }
+    await host.idle();
+    assert.deepEqual(all(host.db, "SELECT * FROM gg_memory"), [], "retracted source cannot publish memory");
+    assert.equal(staleReflects, 0, "foreground rejection never starts reflection");
+  } finally { release(); await host.close(); }
 });
 
 test("P1A ask-user structured conflict passes its question through apply and notifies", async (t) => {
   const o = fresh(); let roomId = ""; let seq = 0; let target: string | null = null;
+  let release!: () => void;
+  const finish = new Promise<void>(resolve => { release = resolve; });
   const applied: CaptureWrite[] = []; const notified: { roomId: string; text: string }[] = [];
   const apply = MemoryCoverage.prototype.apply;
   t.mock.method(MemoryCoverage.prototype, "apply", function (this: MemoryCoverage, id: string, notify?: Parameters<MemoryCoverage["apply"]>[1]) {
@@ -297,16 +316,21 @@ test("P1A ask-user structured conflict passes its question through apply and not
     return apply.call(this, id, notify ? (question, actionId) => { notified.push(question); notify(question, actionId); } : undefined);
   });
   const host = new Host({ ...o, maxDeferMs: 1, mind: () => ({ async round() { return { actions: [], stateNote: null }; } }),
-    compactor: () => ({ async compact() { return "note"; }, async reflect() { return { note: "note", personaSuggestion: null, memories: [{ title: "reply preference", text: target ? "以后都用英文回复" : "以后都用中文回复", anchors: ["global"], relation: target ? "conflict" as const : null, target, roomId, sourceSeq: seq, evidence: target ? "以后都用英文回复" : "以后都用中文回复" }] }; } }),
+    compactor: () => ({ async compact() { return "note"; }, async reflect() { if (target) await finish; return { note: "note", personaSuggestion: null, memories: [{ title: "reply preference", text: target ? "以后都用英文回复" : "以后都用中文回复", anchors: ["global"], relation: target ? "conflict" as const : null, target, roomId, sourceSeq: seq, evidence: target ? "以后都用英文回复" : "以后都用中文回复" }] }; } }),
   });
   try {
     const c = host.createContact({ name: "c" }); roomId = host.openDm(c.id).id;
     const wake = t.mock.method(host.loop, "notify", () => {});
     seq = appendEvent(host.db.store, `room:${roomId}`, { kind: "user", id: host.userId }, { kind: "message", text: "以后都用中文回复" }, new Date().toISOString()).seq;
     assert.equal(await host.runRound(c.id, new AbortController().signal), "done");
+    await host.idle();
     target = host.listMemories(c.id)[0]!.id; const before = wake.mock.callCount();
     seq = appendEvent(host.db.store, `room:${roomId}`, { kind: "user", id: host.userId }, { kind: "message", text: "以后都用英文回复" }, new Date().toISOString()).seq;
-    assert.equal(await host.runRound(c.id, new AbortController().signal), "done");
+    const round = host.runRound(c.id, new AbortController().signal);
+    try {
+      assert.equal(await Promise.race([round, new Promise(resolve => setTimeout(() => resolve("timeout"), 200))]), "done");
+    } finally { release(); await round; }
+    await host.idle();
     const conflict = applied.find(w => w.after.some(e => e.conflictsWith.includes(target!)));
     assert.ok(conflict, "both direct user quotes produce an ask-user conflict");
     assert.deepEqual(conflict.question, { roomId, text: "记忆“reply preference”与已有记忆冲突，请确认是否保留这条新说法。" });

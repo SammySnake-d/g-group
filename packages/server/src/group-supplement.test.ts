@@ -80,7 +80,9 @@ test("并发群回复在提交时发现别人已发言须复核,无新信息不�
     let bystanderId = "";
     let roomId = "";
     let recheckedWithBoth = false;
-    let firstCompaction = true;
+    let releaseAddressedCompact!: () => void;
+    const addressedCompact = new Promise<void>((resolve) => { releaseAddressedCompact = resolve; });
+    let rendezvousError: Error | undefined;
     let enterCompaction!: () => void;
     const inCompaction = new Promise<void>((resolve) => { enterCompaction = resolve; });
     let host!: Host;
@@ -97,6 +99,19 @@ test("并发群回复在提交时发现别人已发言须复核,无新信息不�
             recheckedWithBoth = true;
             return { actions: supplement ? [{ kind: "reply", roomId, text: "补充:切换前还需要回滚路径", replyToSeq: null }] : [], stateNote: null };
           }
+          enterCompaction();
+          const deadline = Date.now() + 200;
+          try {
+            while (!host.listMessages(roomId, {}).messages.some(m => m.sender.kind === "contact" && m.sender.id === addressedId && m.text === "GRP_OK_2")) {
+              if (Date.now() >= deadline) {
+                rendezvousError = new Error("被点名者回复未在后台压缩前先行落盘");
+                throw rendezvousError;
+              }
+              await new Promise(resolve => setTimeout(resolve, 5));
+            }
+          } finally {
+            releaseAddressedCompact();
+          }
           return { actions: [{ kind: "reply", roomId, text: "GRP_OK_2", replyToSeq: null }], stateNote: null };
         }
         return { actions: [], stateNote: null };
@@ -106,15 +121,7 @@ test("并发群回复在提交时发现别人已发言须复核,无新信息不�
       file: path.join(dir, "test.db"), mind, maxDeferMs: 5,
       compactor: (contact) => ({
         async compact() {
-          if (contact.id === bystanderId && firstCompaction) {
-            firstCompaction = false;
-            enterCompaction();
-            for (let i = 0; i < 300; i++) {
-              if (host.listMessages(roomId, {}).messages.some((m) => m.sender.kind === "contact" && m.sender.id === addressedId)) return "";
-              await new Promise((resolve) => setTimeout(resolve, 5));
-            }
-            throw new Error("被点名者未在状态笔记整理期间发言");
-          }
+          if (contact.id === addressedId) await addressedCompact;
           return "";
         },
       }),
@@ -132,6 +139,7 @@ test("并发群回复在提交时发现别人已发言须复核,无新信息不�
         if (!host.loop.busy()) break;
       }
       const replies = host.listMessages(roomId, {}).messages.filter((m) => m.sender.kind === "contact").map((m) => [m.sender.id, m.text]);
+      if (rendezvousError) throw rendezvousError;
       assert.equal(recheckedWithBoth, true, "提交前新到的联系人消息须与原用户消息一同重新交给旁观者");
       assert.deepEqual(replies, supplement ? [[addressedId, "GRP_OK_2"], [bystanderId, "补充:切换前还需要回滚路径"]] : [[addressedId, "GRP_OK_2"]]);
     } finally {

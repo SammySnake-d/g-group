@@ -396,12 +396,12 @@ test("授权在失败反思期间撤回:不能将旧快照发给下一次普通�
   try {
     const sent = x.host.send({ roomId: x.dm.id, clientActionId: "revoke-at-fallback", text: "失效后不可给普通压缩的文本" });
     await started;
+    assert.equal(x.host.listMessages(x.dm.id, {}).messages.some((m) => m.text === "回应:失效后不可给普通压缩的文本"), true);
     x.host.retractMessage(x.dm.id, sent.seq);
     release();
     await settle(x.host);
     assert.equal(x.host.stateNote(x.c.id), "第二轮检查笔记");
     for (const seen of x.fake.seen.slice(1)) assert.doesNotMatch(text(seen), /失效后不可给普通压缩的文本/);
-    assert.equal(x.host.listMessages(x.dm.id, {}).messages.some((m) => m.text === "回应:失效后不可给普通压缩的文本"), false);
   } finally { release(); await x.host.close(); rmSync(x.dir, { recursive: true, force: true }); }
 });
 

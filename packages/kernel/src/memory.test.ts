@@ -194,3 +194,8 @@ test("用后反馈:记一笔 uses;同一条连续三次结果不好就降级,不
   const sup = recordMemoryUse(entry({ status: "superseded" }), { at: T1, good: false }, NOW);
   assert.equal(sup.status, "superseded", "已替代的不因反馈改状态");
 });
+
+test("write planning rejects an empty relation target even if it matches an entry", () => {
+  const plan = planMemoryWrite([entry({ id: "" })], write({ relation: { kind: "refine", target: "" } }), NOW, newId);
+  assert.equal(plan.kind, "invalid");
+});
