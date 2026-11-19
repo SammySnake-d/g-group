@@ -1,5 +1,5 @@
 import { validateCapture, messageRevision, type ReflectSource, type CompactMemory } from "@g-group/kernel";
-import { MemoryCoverage } from "./memory-coverage.ts";
+import { BgCompactionCoordinator, committedPiFailure, formatMemoryProvenance, noteWithPending, PERSONA_ANCHOR, readPendingNote, writePendingNote, scrubPendingNote } from "./bg-compaction.ts";
 import { purgeHiddenPrefix, rewoundTexts, rescrubNotes } from "./memory-hygiene.ts";
 import { PlaybookStore } from "./playbook.ts";
 // 本地宿主:把领域状态机、SQLite 存储、联系人注意循环、Compute 适配器和承诺账本拼成 P0 最小闭环(AC-30):
@@ -80,7 +80,6 @@ import {
   quoteParent,
   renderLevels,
   renderQuoteChain,
-  type ReflectResult,
   type RoundTools,
   planMemoryWrite,
   prefixMemories,
@@ -109,7 +108,6 @@ import {
   classifyFailure,
   crashRecover,
   DEFAULT_RERUN_LIMIT,
-  compactMaterial,
   createAttentionLoop,
   failFastOf,
   isLiveRun as isLive,
@@ -131,7 +129,6 @@ import {
 import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
 import {
   CONTACT_SYSTEM,
-  renderInbound,
   CONTACT_TOOLS,
   type LedgerLine,
   RECALL_BUDGET_BYTES,
@@ -142,7 +139,6 @@ import {
   kernelAssemble,
 } from "./assemble.ts";
 import { HistoryAccess, type HistoryPrefetchOptions, type HistorySearchFn } from "./history.ts";
-import { deterministicSummary, MAX_SUMMARY_BYTES } from "./compaction-summary.ts";
 import { decideRoomPost, emptyRoomPostBudget, type RoomPostBudget } from "./room-post-budget.ts";
 import { LoopGuard, type LoopLimits } from "./loop-guard.ts";
 import { type Bus, createBus } from "./bus.ts";
@@ -283,14 +279,7 @@ const GLOBAL_ANCHOR = "global";
 /** 引用链默认级数(用户 #2115 确认 K=3)与往上扫描深度上限(D24 建议 32) */
 const QUOTE_CHAIN_K = 3;
 const QUOTE_SCAN_CAP = 32;
-const PERSONA_ANCHOR = "persona-suggestion";
 /** 用户原话里说了这类词才允许记成全局(D25 第 10 节场景 B) */
-function committedPiFailure(error: unknown): boolean {
-  if (!(error instanceof Error) || error.name !== "PiContactMindError") return false;
-  const failure = error as Error & { committed?: boolean; retryableTruncation?: boolean };
-  return failure.committed === true && failure.retryableTruncation !== true;
-}
-
 const GLOBAL_WORDS = /以后|所有|一律|始终|永远|每次|always|from now on/i;
 
 /** 状态笔记含撤回原文且无法精确移除时,整份作废后的占位(撤回优先,AC-08) */
@@ -499,6 +488,7 @@ export class Host {
 
   readonly loopGuard: LoopGuard;
   private readonly history: HistoryAccess;
+  private readonly bgCompactor: BgCompactionCoordinator;
 
   constructor(opts: HostOptions) {
     this.opts = opts;
@@ -539,7 +529,7 @@ export class Host {
     const runWake = checkRunWake(opts.runCheckMs ?? DEFAULT_RUN_CHECK_MS, opts.runWakePolicy);
     this.clock = opts.clockMs ?? Date.now;
     this.random = opts.random ?? Math.random;
-    this.loop = createAttentionLoop({
+    const rawLoop = createAttentionLoop({
       maxDeferMs: opts.maxDeferMs ?? 1500,
       ...(opts.timers ? { timers: opts.timers } : {}),
       run: (id, signal) => this.runRound(id, signal),
@@ -547,6 +537,34 @@ export class Host {
       retryAfter: (_id, e) => (e instanceof RoundRetry ? e.delayMs : 1000),
       onReport: (id, what, detail) => this.report(`attention:${what}:${id}`, detail),
     });
+    this.bgCompactor = new BgCompactionCoordinator({
+      db: this.db, memory: this.memory, now: this.now, newId: this.newId,
+      rooms: id => this.noteRooms(id),
+      visible: (inputs, rooms, copies) => this.visibleNoteInputs(inputs, rooms, copies),
+      scrub: (id, note, rooms) => this.scrubNote(id, note, rooms),
+      sources: inputs => this.captureSources(inputs),
+      neighbors: (id, query) => this.memoryNeighbors(id, query),
+      remember: (id, action, rooms, actionId, appended, fresh) => this.rememberTx(id, action, rooms, actionId, appended, fresh),
+      afterAppend: (id, { roomId, seq }) => this.afterAppend(roomId, seq, { kind: "contact", id }),
+      notify: id => this.loop.notify(id, "now"),
+      report: (what, detail) => this.report(what, detail),
+    });
+    this.loop = {
+      notify: rawLoop.notify,
+      rounds: rawLoop.rounds,
+      busy: () => rawLoop.busy() || this.bgCompactor.busy(),
+      idle: async () => {
+        while (rawLoop.busy() || this.bgCompactor.busy()) {
+          await rawLoop.idle();
+          await this.bgCompactor.idle();
+        }
+      },
+      stop: async () => {
+        this.bgCompactor.abortAll();
+        await rawLoop.stop();
+        await this.bgCompactor.idle();
+      },
+    };
     const timers: TimerApi = opts.timers ?? { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) };
     this.timersApi = timers;
     this.scheduler = new Scheduler({
@@ -1457,6 +1475,7 @@ export class Host {
             }
           }
         }
+        for (const m of this.members(roomId)) if (m.kind === "contact") this.scrubContactPending(m.id);
         run(this.db, "UPDATE gg_rooms SET updated_at = ? WHERE id = ?", this.now(), roomId);
       });
     } catch (e) {
@@ -1768,6 +1787,7 @@ export class Host {
           throw new HostError("conflict", `联系人在这个群还有 ${live.length} 个在途任务,先停止或等它完成;要一并停止请带 stopTasks`, { tasks: live.map((t) => ({ taskId: t.id, title: t.title, state: t.state })) });
         }
         this.exits.begin(roomId, m.id);
+        this.dropPendingRoom(m.id, roomId);
         this.bus.emit({ type: "room.updated", room: this.roomView(roomId) });
         for (const t of live) {
           if (t.state === "T9_StopRequested") continue;
@@ -1962,6 +1982,7 @@ export class Host {
       }).seq;
       const r: RewindResult = { ...plan, tasks, markerSeq, at: this.now() };
       run(this.db, "INSERT INTO gg_rewinds (room_id, client_action_id, to_seq, upto_seq, marker_seq, result, at) VALUES (?, ?, ?, ?, ?, ?, ?)", roomId, input.clientActionId, input.toSeq, upto, markerSeq, JSON.stringify(r), r.at);
+      for (const m of this.members(roomId)) if (m.kind === "contact") this.scrubContactPending(m.id);
       return r;
     });
     rescrubNotes(this.db, this.members(roomId).filter(m => m.kind === "contact").map(m => m.id), (id, text) => this.scrubNote(id, text, this.roomsOfContact(id).map(r => r.id)));
@@ -2721,7 +2742,7 @@ export class Host {
       e.refines.length ? `细化 ${e.refines.join("、")}` : "",
       e.conflictsWith.length ? `与 ${e.conflictsWith.join("、")} 冲突,待用户拍板` : "",
     ].filter(Boolean);
-    return `〔记忆 ${e.id} · ${e.title}〕状态:${status}${rel.length ? `;${rel.join(";")}` : ""}\n锚点:${e.anchors.join(" ")}\n${e.body}`;
+    return `〔记忆 ${e.id} · ${e.title}〕状态:${status}${rel.length ? `;${rel.join(";")}` : ""};更新于:${e.updatedAt}${e.source ? `;来源:${e.source.roomId}#${e.source.seq}` : ""}\n锚点:${e.anchors.join(" ")}\n${e.body}`;
   }
   /** 本轮锚点:新输入所在会话、发送人、涉及的任务 */
   private roundAnchors(fresh: readonly Inbound[]): string[] {
@@ -2760,12 +2781,13 @@ export class Host {
     }
     const text = fresh.map((f) => (f.kind === "message" ? f.text : f.kind === "compute" ? f.summary : f.prompt)).join("\n");
     const sel = selectMemories(list, { anchors: this.roundAnchors(fresh), text, now });
-    for (const e of sel.expanded) pointers.push({ ref: `记忆 ${e.id} · ${e.title}`, text: `${e.body}${e.status === "degraded" ? "\n(降级:多次用后结果不好,仅供参考)" : ""}${e.conflictsWith.length ? `\n(与 ${e.conflictsWith.join("、")} 冲突,待用户拍板)` : ""}` });
+    for (const e of sel.expanded) pointers.push({ ref: `记忆 ${e.id} · ${e.title}`, text: `${e.body}\n${formatMemoryProvenance(e)}${e.status === "degraded" ? "\n(降级:多次用后结果不好,仅供参考)" : ""}${e.conflictsWith.length ? `\n(与 ${e.conflictsWith.join("、")} 冲突,待用户拍板)` : ""}` });
     if (sel.listed.length) pointers.push({ ref: "其余相关记忆(用 read_memory 按 id 读全文)", text: sel.listed.map((x) => `${x.id}:${x.title}`).join("\n") });
     return { prefix: snap, pointers };
   }
   /** 写一条记忆(remember 动作或压缩检查给的记忆点);不合规返回原因 */
   private rememberTx(contactId: string, a: Extract<MindAction, { kind: "remember" }>, roomIds: Set<string>, actionId: string, appended: { roomId: string; seq: number }[], fresh: readonly Inbound[]): string | null {
+    if ((a.relation === null) !== (a.target === null)) return "relation 和 target 必须一起提供";
     if (!roomIds.has(a.roomId)) return "不在这个会话里";
     let userQuote = false;
     if (a.sourceSeq !== null) {
@@ -2836,7 +2858,7 @@ export class Host {
   }
   /** 压缩没产出笔记时待保留的输入;重新检查会话权限、撤回和 rewind,不能把失权或撤回的原文送回模型。 */
   private pendingNoteInputs(contactId: string, roomIds: readonly string[]): Inbound[] {
-    const saved = getDoc<{ inputs: Inbound[] }>(this.db, `note-pending:${contactId}`)?.value.inputs ?? [];
+    const saved = readPendingNote(this.db, contactId).batches.flatMap(b => b.inputs);
     return this.visibleNoteInputs(saved, roomIds, true);
   }
   /** 对已保存输入和本轮新输入使用同一份权限及撤回核验。 */
@@ -2873,24 +2895,15 @@ export class Host {
     }
     return result;
   }
+  private noteRooms(contactId: string): string[] {
+    return this.roomsOfContact(contactId).filter(r => !this.exits.isLeaving(r.id, contactId)).map(r => r.id);
+  }
+  private scrubContactPending(contactId: string, roomIds = this.noteRooms(contactId)) {
+    scrubPendingNote(this.db, contactId, inputs => this.visibleNoteInputs(inputs, roomIds, true));
+  }
   private dropPendingRoom(contactId: string, roomId: string) {
-    const saved = getDoc<{ inputs: Inbound[] }>(this.db, `note-pending:${contactId}`);
-    if (saved?.value.inputs.some((f) => f.roomId === roomId)) putDoc(this.db, `note-pending:${contactId}`, saved.ver, { inputs: saved.value.inputs.filter((f) => f.roomId !== roomId) });
+    this.scrubContactPending(contactId, this.noteRooms(contactId).filter(id => id !== roomId));
   }
-  private noteWithPending(note: string | null, pending: readonly Inbound[], excerpt = true): string | null {
-    if (!pending.length) return note;
-    const material = compactMaterial(pending, []);
-    const prefix = note ?? "(没有旧状态笔记)";
-    if (!excerpt || Buffer.byteLength(material) <= MAX_SUMMARY_BYTES) return `${prefix}\n[之前压缩失败,保留的未压缩原文]\n${material}`;
-    // Only the main round gets bounded excerpts. The retrying compactor reads the full, revalidated material.
-    const summary = deterministicSummary(pending.map((item) => ({
-      id: item.kind === "message" ? `${item.roomId}#${item.seq}` : item.at,
-      role: item.kind === "message" && item.sender.kind === "user" ? "user" : "assistant",
-      text: renderInbound(item),
-    })));
-    return `${prefix}\n${summary}`;
-  }
-  /** 本轮要落盘的状态笔记:模型没写就请压缩器补写(同一说话模型的独立调用),超上限就缩写;最后移除撤回原文 */
   memoryNeighbors(contactId: string, q: { rooms: readonly string[]; text: string }): { id: string; title: string; body: string }[] {
     const now = this.now();
     const visible = this.memory.list(contactId).filter(e => (e.status === "active" || e.status === "degraded") && !e.anchors.includes(PERSONA_ANCHOR) && (e.validFrom === null || e.validFrom <= now) && (e.validTo === null || e.validTo > now) && e.anchors.some(a => a === GLOBAL_ANCHOR || q.rooms.some(r => a === `room:${r}`))).sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
@@ -2906,95 +2919,6 @@ ${e.body}` })), q.text, visible.length);
       if (!m || m.retracted || isRewound(this.db, f.roomId, f.seq)) return [];
       return [{ roomId: f.roomId, seq: f.seq, revision: messageRevision(log.events, f.seq), senderKind: m.sender.kind, senderId: m.sender.id, text: m.text, verifiedOutcome: false }];
     });
-  }
-  private async settleNote(contact: ContactDoc, speaking: modelConfig.EffectiveSpeakingConfig, fresh: readonly Inbound[], out: RoundOutput, roomIds: readonly string[], previous: string | null, pending: readonly Inbound[], signal: AbortSignal, sourcesChanged: () => boolean, roundId: string): Promise<{ note: string | null; remember: MindAction[]; persona: string | null; pending: Inbound[]; capture: (() => void) | null } | null> {
-    const contactId = contact.id;
-    const prev = previous;
-    const usageRooms = [...new Set(fresh.map((f) => f.roomId))];
-    const usage = (kind: "compact" | "reflect") => this.usage.sink({ kind, roundId, contactId, roomIds: usageRooms });
-    let compactor = this.opts.compactor?.(this.contactView(contact), speaking);
-    if (compactor?.model !== undefined && compactor.model !== speaking.model) {
-      this.report("compression-model-mismatch", { contactId, reason: `压缩必须用 ${speaking.model},拒绝改用 ${compactor.model}` });
-      compactor = undefined;
-    }
-    const profile = { id: contactId, name: contact.name, speakingModel: contact.speakingModel, persona: contact.persona };
-    const max = this.opts.stateNoteMaxBytes ?? null;
-    let note = out.stateNote;
-    const remember: MindAction[] = [];
-    let persona: string | null = null;
-    // 每轮结束、原文移出窗口前由代码固定发起一次检查(用户 #1196、协调 #1250):同一次调用写笔记、检查有没有值得记的、最多一条人格建议
-    let capture: (() => void) | null = null;
-    let reflected = false;
-    if (compactor?.reflect && fresh.length > 0) {
-      if (signal.aborted || sourcesChanged()) return null;
-      const neighbors = this.memoryNeighbors(contactId, { rooms: roomIds, text: [prev ?? "", ...fresh.map(f => f.kind === "message" ? f.text : f.kind === "compute" ? f.summary : f.prompt)].join("\n") });
-      const sources = this.captureSources(fresh);
-      try {
-        const r: ReflectResult = await compactor.reflect({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max, neighbors, sources, noteWritten: out.stateNote }, signal, usage("reflect"));
-        reflected = true;
-        if (note === null) note = r.note;
-        const lastUser = [...fresh].reverse().find((f): f is InboundMessage => f.kind === "message" && f.sender.kind === "user");
-        const roomId = lastUser?.roomId ?? fresh[0]!.roomId;
-        for (const m of r.memories) {
-          if (m.roomId === undefined && m.sourceSeq === undefined && m.evidence === undefined) remember.push({ kind: "remember", roomId, sourceSeq: lastUser?.seq ?? null, title: m.title, text: m.text, anchors: m.anchors, quote: null, relation: m.relation, target: m.target });
-        }
-        capture = () => {
-        const coverage = new MemoryCoverage(this.db, this.memory);
-        const work = coverage.begin(contactId, sources.map(s => ({ roomId: s.roomId, seq: s.seq, revision: s.revision })), [], roomIds, speaking.model);
-        let unresolved = 0;
-        const entries = this.memory.list(contactId);
-        const writes: import("./memory-coverage.ts").CaptureWrite[] = [];
-        for (const [index, m] of r.memories.entries()) {
-          const structured = m.roomId !== undefined || m.sourceSeq !== undefined || m.evidence !== undefined;
-          // Legacy summaries remain room-scoped; direct quote claims always require verified evidence.
-          if (!structured) continue;
-          const check = validateCapture(m, sources, this.captureSources(fresh));
-          if (!check.ok) { unresolved++; this.report("memory-capture-rejected", { contactId, reason: check.reason }); continue; }
-          const before = entries.slice();
-          const plan = planMemoryWrite(entries, { title: m.title, body: m.text, anchors: check.anchors, source: { roomId: check.source.roomId, seq: check.source.seq, revision: check.source.revision, userQuote: true, quote: m.evidence!, senderId: check.source.senderId }, relation: m.relation === null ? null : { kind: m.relation, target: m.target ?? "" } }, this.now(), () => this.newId("m"));
-          if (plan.kind === "invalid") { unresolved++; continue; }
-          const id = `${work.id}:${index}:${m.roomId}:${m.sourceSeq}:${m.title}`;
-          const after = plan.changed.map(e => ({ ...e, captureIds: [...(e.captureIds ?? []), id] }));
-          writes.push({ id, before: plan.changed.map(e => before.find(x => x.id === e.id) ?? null), after, question: plan.kind === "ask-user" ? { roomId: check.source.roomId, text: `记忆“${m.title}”与已有记忆冲突，请确认是否保留这条新说法。` } : null });
-          for (const e of after) {
-            const at = entries.findIndex(x => x.id === e.id);
-            if (at < 0) entries.push(e); else entries[at] = e;
-          }
-        }
-        coverage.prepare(work.id, writes, unresolved);
-        coverage.apply(work.id, () => this.loop.notify(contactId, "now"));
-        };
-        persona = r.personaSuggestion;
-      } catch (e) {
-        if (committedPiFailure(e)) reflected = true; // Keep the pending material; do not issue a replacement compaction.
-        this.report("reflect-failed", { contactId, error: e instanceof Error ? e.message : String(e) });
-      }
-    }
-    if (note === null && !reflected && compactor && fresh.length > 0) {
-      if (signal.aborted || sourcesChanged()) return null;
-      try {
-        note = await compactor.compact({ contact: profile, kind: "round-note", previous: prev, material: compactMaterial(fresh, out.actions), maxBytes: max }, signal, usage("compact"));
-      } catch (e) {
-        this.report("compact-failed", { contactId, kind: "round-note", error: e instanceof Error ? e.message : String(e) });
-        note = null;
-      }
-    }
-    if (note !== null && max !== null && Buffer.byteLength(note, "utf8") > max) {
-      if (signal.aborted || sourcesChanged()) return null;
-      if (compactor) {
-        try {
-          const shorter = await compactor.compact({ contact: profile, kind: "shrink", previous: note, material: "", maxBytes: max }, signal, usage("compact"));
-          if (Buffer.byteLength(shorter, "utf8") < Buffer.byteLength(note, "utf8")) note = shorter;
-        } catch (e) {
-          this.report("compact-failed", { contactId, kind: "shrink", error: e instanceof Error ? e.message : String(e) });
-        }
-      }
-      if (Buffer.byteLength(note, "utf8") > max) this.report("state-note-over-limit", { contactId, bytes: Buffer.byteLength(note, "utf8"), max });
-    }
-    // 没有可用笔记时,另存原始输入(不是重放动作);与游标同事务提交,下一轮仍可见,成功写笔记后清除。
-    if (signal.aborted || sourcesChanged()) return null;
-    const nextPending = note === null && (compactor || pending.length) ? [...pending, ...fresh] : [];
-    return { note: note === null ? null : this.scrubNote(contactId, note, roomIds), remember, persona, pending: nextPending, capture };
   }
   private cursor(contactId: string, roomId: string): number {
     return one<{ processed_seq: number }>(this.db, "SELECT processed_seq FROM gg_cursor WHERE contact_id = ? AND room_id = ?", contactId, roomId)?.processed_seq ?? 0;
@@ -3158,14 +3082,13 @@ ${e.body}` })), q.text, visible.length);
     }
     const pendingNote = this.pendingNoteInputs(contactId, rooms.map((r) => r.id));
     const noteAtStart = note?.value.text ?? null;
-    const fullNote = this.noteWithPending(noteAtStart, pendingNote, false);
-    const effectiveNote = this.noteWithPending(noteAtStart, pendingNote);
+    const effectiveNote = noteWithPending(noteAtStart, pendingNote);
     const roomIdsAtStart = rooms.map((r) => r.id);
     // 每次外部模型调用之后重读全部来源:既有待压缩输入、本轮新输入、成员权限与旧笔记的撤回状态。
     const noteSourcesChanged = (force = false) => {
       // 没有压缩器且没有待压缩原文时,没有后续检查调用;保留既有的逐动作拒绝及其可见报告。
       if (!force && !this.opts.compactor && pendingNote.length === 0) return false;
-      const nowRooms = this.roomsOfContact(contactId).filter((r) => !this.exits.isLeaving(r.id, contactId)).map((r) => r.id);
+      const nowRooms = this.noteRooms(contactId);
       if (JSON.stringify(nowRooms) !== JSON.stringify(roomIdsAtStart)) return true;
       if (nowRooms.some((id) => this.cursor(contactId, id) !== processedNow[id])) return true;
       if (JSON.stringify(this.pendingNoteInputs(contactId, nowRooms)) !== JSON.stringify(pendingNote)) return true;
@@ -3327,16 +3250,10 @@ ${e.body}` })), q.text, visible.length);
       this.runs.settle(unit.id, { stale: true, note: "压缩来源变化,放弃旧结果并重跑" });
       return "stale";
     }
-    const settled = await this.settleNote({ ...contact, speakingModel: model }, speaking, fresh, out, roomIdsAtStart, fullNote, pendingNote, signal, noteSourcesChanged, roundId);
-    if (signal.aborted || this.closed) return "done";
-    if (settled === null || noteSourcesChanged()) {
-      this.report("stale-round", { contactId, reason: "检查期间压缩来源发生变化" });
-      this.runs.settle(unit.id, { stale: true, note: "检查期间上下文变化,放弃旧结果并重跑" });
-      return "stale";
-    }
-    let done: { effects: HostEffect[]; replyRoomId: string | null };
+    const committedNote = out.stateNote === null ? null : this.scrubNote(contactId, out.stateNote, roomIdsAtStart);
+    let done: ReturnType<Host["commitRound"]>;
     try {
-      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, cursorSeen, recoveredPending, { actions: [...out.actions, ...settled.remember], stateNote: settled.note, personaSuggestion: settled.persona, pendingNote: settled.pending });
+      done = this.commitRound(contactId, contact, roundId, fresh, inbox, lastSeen, cursorSeen, recoveredPending, { ...out, stateNote: committedNote });
     } catch (e) {
       if (e instanceof GroupReplyStaleError) {
         this.report("stale-round", { contactId, roomId: e.roomId, newer: e.newer });
@@ -3346,7 +3263,14 @@ ${e.body}` })), q.text, visible.length);
       this.runs.end(unit.id, "failed", { failure: runFailure(classifyFailure({ text: errorText(e) })) });
       throw e;
     }
-    settled.capture?.();
+    const max = this.opts.stateNoteMaxBytes ?? null;
+    const compactor = this.opts.compactor?.(this.contactView({ ...contact, speakingModel: model }), speaking);
+    this.bgCompactor.enqueue({
+      contact: { id: contactId, name: contact.name, speakingModel: model, persona: contact.persona },
+      compactor, max, roundId, fresh, roomIdsAtStart, committedNote,
+      noteVerAfterCommit: done.noteVerAfterCommit, actions: out.actions,
+      usage: kind => this.usage.sink({ kind, roundId, contactId, roomIds: [...new Set(fresh.map(f => f.roomId))] }),
+    });
     this.expireRoundFailures(contactId);
     if (done.replyRoomId !== null) this.setActivity(contactId, done.replyRoomId, "replying");
     this.setActivity(contactId, null, "idle");
@@ -3433,8 +3357,8 @@ ${e.body}` })), q.text, visible.length);
     lastSeen: Record<string, number>,
     cursorSeen: Record<string, number>,
     recoveredPending: readonly InboundMessage[],
-    out: { actions: readonly MindAction[]; stateNote: string | null; personaSuggestion?: string | null; pendingNote: Inbound[] },
-  ): { effects: HostEffect[]; replyRoomId: string | null } {
+    out: RoundOutput,
+  ): { effects: HostEffect[]; replyRoomId: string | null; noteVerAfterCommit: number } {
     const roomIds = new Set(this.roomsOfContact(contactId).map((r) => r.id));
     // 移出中:这个群里的发言、登记承诺与接新活一律拒绝(D05「先禁止新群内接单与发言」)
     const leavingRooms = this.exits.leavingRoomsOf(contactId);
@@ -3445,9 +3369,10 @@ ${e.body}` })), q.text, visible.length);
     const touchedTasks = new Set<string>();
     const rejected: { action: MindAction; reason: string }[] = [];
     let hadFailure = false as boolean;
+    let noteVerAfterCommit = 0;
     const notifyAfter: string[] = [];
     tx(this.db, () => {
-      // 群回复的版本检查必须在实际提交事务里:整理状态笔记期间也可能有别的联系人先发言。
+      // 群回复在提交事务里检查其他联系人是否已先发言。
       // 不判断新消息是否有价值,也不机械禁言;回到注意循环后由联系人结合原消息与新消息复核。
       const replyRooms = new Set(out.actions.flatMap((a) => a.kind === "reply" && roomIds.has(a.roomId) && !leavingRooms.has(a.roomId) ? [a.roomId] : []));
       for (const roomId of replyRooms) {
@@ -3736,26 +3661,21 @@ ${e.body}` })), q.text, visible.length);
       // 这一批提交成功:在途失败(残留瞬态错误、换模覆盖)清掉,在途轮次标记与 crash_recovery_count 清零(F12「新成功轮次重置计数」)
       hadFailure = run(this.db, "DELETE FROM gg_failures WHERE scope = 'contact' AND subject = ?", contactId) > 0;
       run(this.db, "DELETE FROM gg_round_guard WHERE contact_id = ?", contactId);
-      if (out.personaSuggestion) {
-        // 人格不随压缩改(在固定前缀里,改了缓存全失效);只记一条建议,同一建议只挂佐证
-        const plan = planMemoryWrite(this.memory.list(contactId), { title: "建议改人格", body: out.personaSuggestion, anchors: [PERSONA_ANCHOR], source: null, relation: null }, this.now(), () => this.newId("m"));
-        if (plan.kind !== "invalid") for (const e of plan.changed) this.memory.put(contactId, e);
-        this.report("persona-suggestion", { contactId, text: out.personaSuggestion });
-      }
+      const noteKey = `note:${contactId}`;
+      const pending = readPendingNote(this.db, contactId);
       if (out.stateNote !== null) {
-        const cur = getDoc<{ text: string }>(this.db, `note:${contactId}`);
-        putDoc(this.db, `note:${contactId}`, cur?.ver ?? 0, { text: out.stateNote });
+        putDoc(this.db, noteKey, getDoc(this.db, noteKey)?.ver ?? 0, { text: out.stateNote });
+        writePendingNote(this.db, contactId, pending.ver, []);
+      } else if ((this.opts.compactor || pending.batches.length) && fresh.length) {
+        // Keep only replies actually committed. Pending inputs are context, never replayed actions.
+        const sent = appended.flatMap(({ roomId, seq }) => {
+          const msg = this.projected(roomId).find(m => m.seq === seq);
+          return msg?.sender.kind === "contact" && msg.sender.id === contactId ? [this.toInbound(roomId, msg)] : [];
+        });
+        const inputs = this.visibleNoteInputs([...fresh, ...sent], [...roomIds].filter(id => !leavingRooms.has(id)), true);
+        writePendingNote(this.db, contactId, pending.ver, [...pending.batches, { id: roundId, inputs }]);
       }
-      const pending = getDoc<{ inputs: Inbound[] }>(this.db, `note-pending:${contactId}`);
-      if (pending || out.pendingNote.length) {
-        // 只保存已经落盘的联系人发言,不保存被拒绝的模型动作,也不把它们当作下一轮的新输入执行。
-        const sent: Inbound[] = [];
-        if (out.pendingNote.length) for (const a of appended) {
-          const msg = project(loadLog(this.db.store, `room:${a.roomId}`).log).find((m) => m.seq === a.seq);
-          if (msg && !msg.retracted && msg.sender.kind === "contact" && msg.sender.id === contactId) sent.push(this.toInbound(a.roomId, msg));
-        }
-        putDoc(this.db, `note-pending:${contactId}`, pending?.ver ?? 0, { inputs: this.visibleNoteInputs([...out.pendingNote, ...sent], [...roomIds].filter((id) => !leavingRooms.has(id)), true) });
-      }
+      noteVerAfterCommit = getDoc(this.db, noteKey)?.ver ?? 0;
       for (const r of rejected) {
         run(this.db, "INSERT OR REPLACE INTO gg_effects (action_id, kind, payload, status, error, created_at) VALUES (?, ?, ?, 'rejected', ?, ?)", `${roundId}:rej:${rejected.indexOf(r)}`, r.action.kind, JSON.stringify(r.action), r.reason, this.now());
       }
@@ -3765,7 +3685,7 @@ ${e.body}` })), q.text, visible.length);
     for (const a of appended) this.afterAppend(a.roomId, a.seq, { kind: "contact", id: contactId });
     for (const id of touchedTasks) this.emitTask(id);
     for (const c of notifyAfter) this.loop.notify(c, "now");
-    return { effects, replyRoomId: appended.at(-1)?.roomId ?? null };
+    return { effects, replyRoomId: appended.at(-1)?.roomId ?? null, noteVerAfterCommit };
   }
 
   // ======================= Compute =======================

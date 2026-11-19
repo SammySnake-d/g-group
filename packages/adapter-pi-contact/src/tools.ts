@@ -289,6 +289,7 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
     case "progress_rerun": return act({ kind: "rerun", runId: s("runId"), roomId: s("roomId"), basisSeq: nn("basisSeq") });
     case "update_state_note": return { ok: true, value: { kind: "note", note: s("note") } };
     case "remember":
+      if ((sn("relation") === null) !== (sn("target") === null)) return { ok: false, why: "relation 和 target 必须一起提供" };
       return act({ kind: "remember", roomId: s("roomId"), sourceSeq: nn("sourceSeq"), title: s("title"), text: s("text"), anchors: v.anchors as readonly string[], quote: sn("quote"), relation: sn("relation") as "change" | "refine" | "conflict" | null, target: sn("target") });
     case "memory_feedback": return act({ kind: "memory-use", id: s("id"), good: v.good as boolean, note: sn("note") });
     case "read_memory": return { ok: true, value: { kind: "read", id: s("id") } };

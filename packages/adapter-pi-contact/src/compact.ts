@@ -68,6 +68,7 @@ function parseReflect(text: string, noteWritten: boolean): ReflectResult {
     if (relation !== null && !RELS.has(relation as string)) return bad(`memories[${i}].relation 只能是 change / refine / conflict / null`);
     const target = r.target ?? null;
     if (target !== null && !str(target)) return bad(`memories[${i}].target 必须是字符串或 null`);
+    if ((relation === null) !== (target === null)) return bad(`memories[${i}].relation 和 target 必须一起提供`);
     return Object.freeze({ ...(typeof r.roomId === "string" ? { roomId: r.roomId } : {}), ...(Number.isSafeInteger(r.sourceSeq) ? { sourceSeq: r.sourceSeq as number } : {}), ...(typeof r.evidence === "string" ? { evidence: r.evidence } : {}), title: r.title as string, text: r.text as string, anchors: Object.freeze([...(r.anchors as string[])]), relation: relation as "change" | "refine" | "conflict" | null, target: target as string | null });
   });
   return Object.freeze({ note: noteWritten ? null : ((o.note as string | null) ?? null), memories: Object.freeze(memories), personaSuggestion: (o.personaSuggestion as string | null | undefined) ?? null });

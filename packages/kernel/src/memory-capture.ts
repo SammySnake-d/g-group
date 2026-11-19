@@ -69,6 +69,7 @@ export function decodeReflect(input: unknown): { ok: true; value: ReflectResult 
     if (!str(m.title) || !str(m.text) || !Array.isArray(m.anchors) || m.anchors.length === 0 || !m.anchors.every(str)) return no("记忆 title/text/anchors 不合法");
     if (m.relation != null && !["change", "refine", "conflict"].includes(String(m.relation))) return no("关系不合法");
     if (m.target != null && !str(m.target)) return no("target 不合法");
+    if (((m.relation ?? null) === null) !== ((m.target ?? null) === null)) return no("relation 和 target 必须一起提供");
     if (m.roomId !== undefined && !str(m.roomId)) return no("roomId 不合法");
     if (m.sourceSeq !== undefined && (!Number.isSafeInteger(m.sourceSeq) || (m.sourceSeq as number) < 1)) return no("sourceSeq 不合法");
     if (m.evidence !== undefined && !str(m.evidence)) return no("evidence 不合法");
