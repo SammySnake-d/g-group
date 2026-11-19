@@ -1,0 +1,27 @@
+AGENTS.md
+  s_0e283774ca8d6a::t_2c15fe8c48eb23 28
+README.md
+  s_0e283774ca8d6a::t_2c4d99a2e39669 20
+docs/BACKEND-PROGRESS-CHECKLIST.md
+  s_0e283774ca8d6a::t_b5cdb770c6d02a 14
+docs/spec/验收文档-v0.1.md
+  s_0e283774ca8d6a::t_a78eac0ce24d1c 319-321
+docs/subsystems/context-and-memory.md
+  s_0e283774ca8d6a::t_99dfd84827de7f 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6cdfb691a7691917fd87f74b40dfe0d527f0846e",
+  "prompts": {},
+  "sessions": {
+    "s_0e283774ca8d6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f11e-1071-7750-9770-ad9f76a2b200",
+        "model": "unknown"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
