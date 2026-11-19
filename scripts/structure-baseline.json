@@ -1,0 +1,19 @@
+{
+  "oversizedFiles": {
+    "packages/adapter-cc-compute/src/adapter.ts": 514,
+    "packages/adapter-cc-compute/src/resident.ts": 739,
+    "packages/api-contract/src/api.ts": 490,
+    "packages/api-contract/src/entities.ts": 807,
+    "packages/domain/src/contact.ts": 452,
+    "packages/domain/src/task.ts": 592,
+    "packages/kernel/src/plugins.ts": 455,
+    "packages/kernel/src/run-ledger.ts": 469,
+    "packages/server/proof/q09-real/run.ts": 584,
+    "packages/server/src/host.ts": 6114,
+    "packages/server/src/runs.ts": 498,
+    "packages/ui-core/src/plugins.ts": 782,
+    "scripts/gates/gates.ts": 1013,
+    "scripts/gates/lib.ts": 485,
+    "scripts/gates/selftest.ts": 1577
+  }
+}

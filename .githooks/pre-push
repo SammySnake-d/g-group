@@ -1,7 +1,9 @@
 #!/bin/sh
-# 推送前本地跑:类型检查、lint、测试、门禁自检。变异校验较慢,交给 CI 的 self-check。
-set -e
-npm run -s typecheck
-npm run -s lint
-npm test --silent
-{ st=$( { { npm run -s gates:selftest 3>&- 4>&- && echo 0 >&3 || echo $? >&3; } | grep -v '^✓' >&4 || :; } 3>&1 ); } 4>&1; exit "$st"
+# 推送前跑快速检查、lint、测试和门禁自检。变异校验交给 CI。
+set -eu
+exec node scripts/suite-lock.ts pre-push -- sh -ec '
+  npm run -s check
+  npm run -s lint
+  npm test --silent
+  npm run -s gates:selftest
+'

@@ -1,0 +1,11 @@
+# Backend Code Standards
+
+Start with the [owning subsystem](subsystems/README.md). The [agent guide](../AGENTS.md) defines the five entities and package layers.
+
+- **Keep each micro-PR to one goal.** Aim for at most 300 changed lines of implementation and owning tests per slice. Split unrelated work. When the staged change exceeds 300 counted lines, include a nonempty `Verified:` commit trailer with the commands actually run. The count excludes `package-lock.json`, `scripts/*-baseline.json`, package proof files, `reviews/`, and `receipts/`.
+- **Check the target before transplanting changes.** Start from the current base, run `git diff --stat <base>...HEAD` and `git diff --cached --stat` as appropriate, and inspect broad or surprising changes before cherry-picking or reverting. Avoid restoring a stale tree over a newer feature.
+- **Keep the UI/API contract append-only.** Preserve RPC and event names, exported symbols, and compatible schema behavior. Frontend mirrors `@g-group/api-contract`. Run `npm run check:contracts -- --update-baseline` when adding keys. Review baseline changes with the owning docs.
+- **Extract host behavior into cohesive modules.** Put new features in a focused `<feature>.ts` under 450 lines. Keep `host.ts` as the composition boundary and reduce existing oversized files when splitting them. The [structure gate](../scripts/check-structure.ts) caps other new TypeScript source files at 450 lines. Run its `--update-baseline` only to record reductions or removals.
+- **Keep docs with code.** Update the subsystem reference in the same commit when adding, removing, renaming, or rewiring modules or contracts. Record actual progress and evidence at delivery.
+- **Prove the behavior.** Keep the same behavioral test from red to green, record the observed failure, and use a repaired input as the control. Run `npm run check`, `npm test`, and the gate self-test. An independent review and the protected merge flow remain required.
+- **Own verification resources.** Use [the suite lock](../scripts/suite-lock.ts) when serializing heavy local verification. Leave developer servers on ports 5173 and 3425 alone. Clean up the child processes and exact temporary paths you created.
