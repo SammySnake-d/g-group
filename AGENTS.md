@@ -25,7 +25,7 @@ Read from foundations toward composition: **domain → kernel / process → adap
 
 ## Unified memory architecture
 
-Working memory has two windows. The contact's five-block `CarryOn` admits global stable material into Block 1 and preserves those bytes across turns. Dynamic material belongs in later blocks. The Compute slot keeps its own execution window. Upcoming Slice **C0** (`bg-compact`) adds a dual cursor for background compaction. Its adoption contract preserves the lossless recent delta up to the compaction watermark and all newer turns across handoff.
+Working memory has two windows. The contact's five-block `CarryOn` admits global stable material into Block 1 and preserves those bytes across turns. Dynamic material belongs in later blocks. The Compute slot keeps its own execution window. Slice **C0** (`bg-compact`) is implemented. Foreground rounds commit before compaction. The dual cursors keep the recent inputs available until adoption and preserve newer batches across handoff. Expanded recall and `read_memory` show provenance, and memory writes validate relation targets.
 
 The **Consolidation Gate** joins these windows to three long-term memory types. Reflection (`reflect`), `statedIn` evidence, and `planMemoryWrite` decide what to record, with foreign-key integrity for source references. D29 isolation and pstack compiled gates enforce execution and engineering boundaries separately from memory admission.
 

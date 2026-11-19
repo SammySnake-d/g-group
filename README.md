@@ -19,6 +19,8 @@
 
 当前勾选表示对应 D 层后端切片落地。B4 的 ling-jing 上游故障尚未形成 live 成功闭环；P1-B（#126）的 Codex Compute 适配与轮边界 handoff 已完成 D 层验证；P1-C 的 HTTP/WS 合同、鉴权、背压、resync 与 CLI 生命周期已通过离线 D 层验证；真实 Electron 前端端到端手动 UI smoke 等待前端启动/P3。P2-A/B 和 P3 真实模型/前端 D+X 验收仍待完成。DM#2103 手册具体方案继续标为候选。
 
+C0 默认启用后台状态笔记压缩。联系人可在反思完成前回复和继续下一轮，后台只接纳来源仍有效的结果，并保留较新的未压缩输入。Block 5 与 `read_memory` 提供长期记忆溯源，记忆写入校验关系外键。D 层证据见 [C0 proof](packages/server/proof/c0-bg-compaction-provenance.txt)。
+
 ## HTTP + WebSocket 后端（P1-C）
 
 ```sh

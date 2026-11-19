@@ -1,0 +1,36 @@
+C0 · Host background compaction and memory provenance
+Red   bd3a7a481a890bb3b2f960703d2f9ca1cd6595dd
+Green ee948fddea6f1c1aac081fcc9678023f8fa8c188
+
+Red snapshot: npm run typecheck exited 0. The eight changed test files ran
+with node --test --experimental-strip-types: 79 passed, 11 failed as
+expected, 0 cancelled, 0 skipped.
+
+Named failures:
+  - Pi reflect rejects both incomplete relation pairs
+  - remember tool rejects both incomplete relation pairs
+  - decodeReflect requires relation and target together
+  - write planning rejects an empty relation target even if it matches an entry
+  - 授权在失败反思期间撤回:不能将旧快照发给下一次普通压缩
+  - foreground overlaps reflection and adoption only removes batches through its watermark
+  - expanded and read memory include source, update time and relations after the body or in the metadata
+  - foreground remember rejects a target without a relation and a relation without a target
+  - 并发群回复在提交时发现别人已发言须复核,无新信息不重复且有新信息可补充
+  - P1A stale group reply during reflect abandons all structured capture writes
+  - P1A ask-user structured conflict passes its question through apply and notifies
+
+The gated reflection checks timed out at 200 ms on Red. The group test
+observed that the addressed contact's reply had not committed before
+compaction released. On Green the foreground rounds finished while
+reflection was held, and the first adoption left the second batch intact.
+Retracting an in-flight source discarded its capture.
+
+Green: npm run check and npm run lint exited 0. npm test ran 2196 tests,
+with 2196 passed, 0 failures, 0 skips, 0 cancellations, and 0 todo.
+The test diff from Red to Green is empty. The structure baseline ratchets
+host.ts from 6114 to 6034 lines. bg-compaction.ts is 306 lines.
+
+The local session loader found OpenAI turns that touched this checkout.
+The receipt leaves review and waiver empty pending independent review.
+AC-08/AC-32/AC-42 evidence is limited to deterministic backend behavior.
+Live model quality, latency, and frontend rendering remain unmeasured.
