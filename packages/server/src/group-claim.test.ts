@@ -42,6 +42,29 @@ const greedy = (seen?: RoundInput[]): ContactMind => ({
 const rejections = (host: Host) =>
   all<{ kind: string; error: string }>(host.db, "SELECT kind, error FROM gg_effects WHERE status = 'rejected' ORDER BY created_at, action_id").map((r) => ({ kind: r.kind, error: r.error }));
 
+test("联系人发出的 @ 才以当前群的确切联系人身份入库", async (t) => {
+  const host = new Host({ file: file(), maxDeferMs: 5, mind: () => ({
+    async round(input) {
+      const source = input.fresh.find(f => f.kind === "message" && f.sender.kind === "user");
+      if (source?.kind !== "message" || !source.mentions.includes(input.contact.id)) return { actions: [], stateNote: null };
+      return { actions: [{ kind: "reply", roomId: source.roomId, replyToSeq: source.seq,
+        text: "@值班乙甲：请复核。谢谢 @值班乙甲。邮箱 demo@值班乙，群外 @旁群丁。" }], stateNote: null };
+    },
+  }) });
+  t.after(() => host.close());
+  const author = host.createContact({ name: "甲" });
+  const prefix = host.createContact({ name: "值班乙" });
+  const target = host.createContact({ name: "值班乙甲" });
+  host.createContact({ name: "旁群丁" });
+  const group = host.createGroup("值班群", [author, prefix, target].map(c => ({ kind: "contact", id: c.id })));
+  const sent = host.send({ roomId: group.id, clientActionId: "mention-receipt", text: "@甲 请找值班乙甲复核", mentions: [{ id: author.id, source: "manual" }] });
+  await host.idle();
+  const reply = host.listMessages(group.id, {}).messages.find(m => m.sender.id === author.id);
+  assert.ok(reply);
+  assert.equal(reply.replyToSeq, sent.seq);
+  assert.deepEqual(reply.mentions, [{ id: target.id, source: "auto" }]);
+});
+
 test("群里一条消息 @ 了别的联系人,没被 @ 的联系人提出接活被拒,只有被 @ 的人建任务", async () => {
   const compute = scriptedCompute();
   const host = new Host({ file: file(), mind: () => greedy(), compute: () => compute.adapter, maxDeferMs: 5 });
