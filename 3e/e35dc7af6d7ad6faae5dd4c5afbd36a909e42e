@@ -1,0 +1,23 @@
+docs/subsystems/compute-and-process.md
+  s_c105f303c99f6a::t_b6fd41d0be0927 6-7
+packages/adapter-codex-compute/src/adapter.ts
+  s_c105f303c99f6a::t_b6fd41d0be0927 32-37,48-55
+packages/adapter-codex-compute/src/protocol.ts
+  s_c105f303c99f6a::t_b6fd41d0be0927 20,270,279
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ee35dc7af6d7ad6faae5dd4c5afbd36a909e42e",
+  "prompts": {},
+  "sessions": {
+    "s_c105f303c99f6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f982-6773-7730-93f4-d59af5ac94d5",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
