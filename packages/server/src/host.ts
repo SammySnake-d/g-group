@@ -127,6 +127,7 @@ import {
   visibleRuns,
 } from "@g-group/kernel";
 import { type AnnouncementOrder, AnnouncementStore } from "./announcements.ts";
+import { replyAudienceRefusal, replyMentions } from "./contact-mentions.ts";
 import {
   CONTACT_SYSTEM,
   CONTACT_TOOLS,
@@ -137,6 +138,7 @@ import {
   type RoundAssembler,
   RoundAssembleError,
   kernelAssemble,
+  identityOf,
 } from "./assemble.ts";
 import { HistoryAccess, type HistoryPrefetchOptions, type HistorySearchFn } from "./history.ts";
 import { decideRoomPost, emptyRoomPostBudget, type RoomPostBudget } from "./room-post-budget.ts";
@@ -3397,13 +3399,24 @@ ${e.body}` })), q.text, visible.length);
             if (leavingRooms.has(a.roomId)) { reject(LEAVING_REASON); break; }
             if (!roomIds.has(a.roomId)) { reject("不在这个会话里"); break; }
             if (!a.text.trim()) { reject("空消息"); break; }
-            if (this.opts.roomPostBudget !== false && !humanRooms.has(a.roomId) && this.roomRow(a.roomId).kind === "group") {
+            const source = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.replyToSeq && m.sender.kind === "user");
+            const causeRoots = source ? this.loopGuard.rootsOf(source.roomId, source.seq) : this.loopGuard.rootsFor(fresh, a.roomId);
+            const group = this.roomRow(a.roomId).kind === "group";
+            if (group) {
+              const history = this.projected(a.roomId);
+              const fromRoot = (m: ProjectedMessage) => this.loopGuard.rootsOf(a.roomId, m.seq).some((root) => causeRoots.includes(root));
+              const origin = history.findLast((m) => !m.retracted && m.sender.kind === "user" && fromRoot(m));
+              const user = source ?? (origin && this.toInbound(a.roomId, origin));
+              const refusal = user && replyAudienceRefusal(user, contactId, a.replyToSeq, () => history.some((m) => !m.retracted && m.seq > user.seq && m.sender.id === contactId && m.text.trim() === a.text.trim() && fromRoot(m)));
+              if (refusal) { reject(refusal); break; }
+            }
+            if (this.opts.roomPostBudget !== false && !humanRooms.has(a.roomId) && group) {
               const refusal = this.roomPostRefusalTx(a.roomId, contact, a.text);
               if (refusal !== null) { reject(refusal); break; }
             }
-            const source = freshMsgs.find((m) => m.roomId === a.roomId && m.seq === a.replyToSeq && m.sender.kind === "user");
-            const causeRoots = source ? this.loopGuard.rootsOf(source.roomId, source.seq) : this.loopGuard.rootsFor(fresh, a.roomId);
-            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], causeRoots });
+            const peers = this.members(a.roomId).filter(m => m.kind === "contact" && m.id !== contactId && !this.exits.isLeaving(a.roomId, m.id));
+            const mentions = replyMentions(a.text, peers.map(m => ({ id: m.id, name: this.nameOf(m) })));
+            const r = this.appendMessageTx(a.roomId, { kind: "contact", id: contactId }, { text: a.text, actionKey: actionId, replyToSeq: a.replyToSeq, quotedSeqs: a.replyToSeq !== null ? [a.replyToSeq] : [], causeRoots, mentions });
             appended.push({ roomId: a.roomId, seq: r.seq });
             replies.push({ roomId: a.roomId, seq: r.seq, text: a.text });
             if (a.replyToSeq !== null) referenced.add(`${a.roomId}#${a.replyToSeq}`);
@@ -5831,10 +5844,6 @@ export class RoundStalledError extends Error {
   }
 }
 
-/** 第 1 块人设:先写明这位联系人是谁(群里据此分清 @ 的是不是自己),再接用户设的人设原文。只随改名/改人设变,前缀缓存不受每轮影响。 */
-function identityOf(contactId: string, c: { name: string; persona: string }): string {
-  return [`你是「${c.name}」(联系人 id ${contactId})。消息里的 @ 列的是联系人 id。`, c.persona].filter((x) => x.trim()).join("\n");
-}
 /** 保存被拒时给人看的说明:列出每位会冲突的联系人和原因。 */
 function incompatibleMessage(conflicts: readonly modelConfig.AffectedContact[]): string {
   const names = conflicts.map((a) => `${a.name}(${a.after.harness} 不支持 ${a.after.model})`).join("、");

@@ -156,7 +156,7 @@ test("第 4 块按到达顺序放 processed_seq 之后的全部输入:消息带 
     "[新消息](processed_seq 之后,按到达顺序,原文)\n" +
     `#2201 · g-group · Sammy(user:u1) · ${at}\n快捷键那个先停一下\n` +
     `〔Compute cmp-7 · 任务 T-4 · milestone〕 · g-group · ${at}\n变异分数 0.82,还剩 3 个存活\n` +
-    `#2203 · g-group · Sammy(user:u1) · ${at} · ↩ #2141 · 引 #2140 · @c-front\nPR#3 再看一遍变异\n  重点看存活的 3 个\n` +
+    `#2203 · g-group · Sammy(user:u1) · ${at} · ↩ #2141 · 引 #2140 · @收件人：c-front\nPR#3 再看一遍变异\n  重点看存活的 3 个\n` +
     `〔定时 sch-1〕 · g-group · ${at}\n每天 8 点汇总在途任务\n` +
     `#2204 · g-group · Astra(contact:c-astra) · ${at} · /stop {"taskId":"T-3"}\n/stop\n` +
     `#5 · dm-u1 · Sammy(user:u1) · ${at}\n私聊:今晚别发消息\n`;

@@ -65,6 +65,49 @@ test("联系人发出的 @ 才以当前群的确切联系人身份入库", async
   assert.deepEqual(reply.mentions, [{ id: target.id, source: "auto" }]);
 });
 
+test("群内引用加 @ 只允许被点名的原回复联系人继续回", async () => {
+  const seen: RoundInput[] = [];
+  const host = new Host({ file: file(), maxDeferMs: 5, mind: () => ({
+    async round(input) {
+      seen.push(input);
+      const user = input.fresh.find(f => f.kind === "message" && f.sender.kind === "user");
+      if (user?.kind !== "message") return { actions: [], stateNote: null };
+      return { actions: [{ kind: "reply", roomId: user.roomId, replyToSeq: user.seq, text: `${input.contact.name} 回执` }], stateNote: null };
+    },
+  }) });
+  const a = host.createContact({ name: "甲" });
+  const b = host.createContact({ name: "乙" });
+  const group = host.createGroup("引用群", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+  const parent = host.send({ roomId: group.id, clientActionId: "quote-parent", text: "@甲 先回复一次", mentions: [{ id: a.id, source: "manual" }] });
+  await host.idle();
+  const aReply = host.listMessages(group.id, {}).messages.find(m => m.sender.id === a.id)!;
+  const quoted = host.send({ roomId: group.id, clientActionId: "quote-followup", text: "@甲 接着上一条回复", mentions: [{ id: a.id, source: "manual" }], replyToSeq: aReply.seq, quotedSeqs: [aReply.seq] });
+  await host.idle();
+  const replies = host.listMessages(group.id, {}).messages.filter(m => m.seq > quoted.seq && m.sender.kind === "contact");
+  assert.deepEqual(replies.map(m => m.sender.id), [a.id]);
+  assert.ok(seen.some(r => r.contact.id === b.id));
+  await host.close();
+  void parent;
+});
+
+test("用户明确说其他人不用回复时,只允许被点名联系人回复一次", async () => {
+  const host = new Host({ file: file(), maxDeferMs: 5, mind: () => ({
+    async round(input) {
+      const user = input.fresh.find(f => f.kind === "message" && f.sender.kind === "user");
+      return user?.kind === "message" ? { actions: [{ kind: "reply", roomId: user.roomId, replyToSeq: user.seq, text: input.contact.name }], stateNote: null } : { actions: [], stateNote: null };
+    },
+  }) });
+  const a = host.createContact({ name: "甲" });
+  const b = host.createContact({ name: "乙" });
+  const group = host.createGroup("静默群", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+  const sent = host.send({ roomId: group.id, clientActionId: "silence", text: "@甲 请回复一次,其他人不用回复", mentions: [{ id: a.id, source: "manual" }] });
+  await host.idle();
+  const replies = host.listMessages(group.id, {}).messages.filter(m => m.sender.kind === "contact");
+  assert.deepEqual(replies.map(m => m.sender.id), [a.id]);
+  assert.equal(replies[0]?.replyToSeq, sent.seq);
+  await host.close();
+});
+
 test("群里一条消息 @ 了别的联系人,没被 @ 的联系人提出接活被拒,只有被 @ 的人建任务", async () => {
   const compute = scriptedCompute();
   const host = new Host({ file: file(), mind: () => greedy(), compute: () => compute.adapter, maxDeferMs: 5 });

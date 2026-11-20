@@ -46,9 +46,11 @@ test("未被点名者收到的群聊指引区分重复附和与有新信息的�
   const dir = mkdtempSync(path.join(tmpdir(), "gg-supplement-guide-"));
   let bystanderId = "";
   let guidance = "";
+  const freshBlocks = new Map<string, string>();
   const mind = (): ContactMind => ({
     async round(input) {
       if (input.contact.id === bystanderId) guidance = input.request.blocks.find((block) => block.block === 1)?.text ?? "";
+      freshBlocks.set(input.contact.id, input.request.blocks.find((block) => block.block === 4)?.text ?? "");
       return { actions: [], stateNote: null };
     },
   });
@@ -67,6 +69,8 @@ test("未被点名者收到的群聊指引区分重复附和与有新信息的�
     assert.ok(Buffer.byteLength(guidance) < 4000);
     assert.ok(guidance.includes("没有新信息"), "上下文提示没有新信息时不要重复回应");
     assert.ok(guidance.includes("有新信息"), "上下文也提示有新信息时可补充");
+    assert.match(freshBlocks.get(bystanderId) ?? "", new RegExp(`@收件人：${addressed.id}`));
+    assert.match(freshBlocks.get(addressed.id) ?? "", new RegExp(`@收件人：${addressed.id}`));
   } finally {
     await host.close();
     rmSync(dir, { recursive: true, force: true });
