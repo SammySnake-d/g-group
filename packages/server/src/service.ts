@@ -114,6 +114,7 @@ export function createService(host: Host): Service {
     "tasks.cancel": (p: { taskId: string; clientActionId: string }) => host.taskDecision(p.taskId, "cancel", p.clientActionId),
     "tasks.create": (p: Parameters<Host["createTask"]>[0]) => host.createTask(p),
     "tasks.assign": (p: Parameters<Host["assignTask"]>[0]) => host.assignTask(p),
+    "tasks.reassign": (p: Parameters<Host["reassignTask"]>[0]) => host.reassignTask(p),
     "tasks.integrate": (p: { taskId: string }) => host.integrateTask(p.taskId),
     "artifacts.get": (p: { ref: string }) => host.getArtifact(p.ref),
     "tasks.rebindFollowUp": (p: Parameters<Host["rebindFollowUp"]>[0]) => host.rebindFollowUp(p),

@@ -37,10 +37,11 @@ export interface AssembleContext {
 }
 export type RoundAssembler = (ctx: AssembleContext) => RoundRequest;
 
-/** 第 1 块人设只随联系人身份与设定变化。 */
 export function identityOf(contactId: string, c: { name: string; persona: string }): string {
   return [`你是「${c.name}」(联系人 id ${contactId})。消息里的 @ 列的是联系人 id。`, c.persona].filter((x) => x.trim()).join("\n");
 }
+
+const TASK_BOARD_POLICY = "群清单有任务时，先用 read_task 读要求、负责人和版本。有人招领就用 claim_task 带读到的版本和接单话，已有负责人时让位。放弃自己名下的任务用 release_task，带版本和群内说明。交付按原流程，需要其他联系人时按群里的 @ 规则发消息。";
 
 const block = (n: BlockNo, text: string): RoundBlock => ({ block: n, label: BLOCK_LABELS[n], text, cacheBreakpoint: n === 1 });
 
@@ -59,6 +60,8 @@ export function renderInbound(i: Inbound): string {
       return `[${i.roomId}] 任务 ${i.taskId} 的 Compute ${i.computeId} 报告 ${i.signal}: ${i.summary}`;
     case "schedule":
       return `[${i.roomId}] 定时 ${i.scheduleId} 触发: ${i.prompt}`;
+    case "claim-conflict":
+      return `[${i.roomId}] 认领任务 ${i.taskId} 未成功：${i.summary}`;
   }
 }
 
@@ -78,6 +81,7 @@ export const defaultAssemble: RoundAssembler = (ctx) => {
   const pointers = [
     ctx.tasks.length ? `在途任务:\n${ctx.tasks.map((t) => `- ${t}`).join("\n")}` : "在途任务:无",
     ...(ctx.runs?.length ? [`运行台账(你在这些会话里看得到的单元):\n${ctx.runs.map((r) => `- ${r}`).join("\n")}`] : []),
+    ...(ctx.tasks.length ? [TASK_BOARD_POLICY] : []),
     ...ctx.pointers.map((p) => `${p.ref} 原文:${p.text}`),
   ].join("\n");
   return {
@@ -168,7 +172,7 @@ export const kernelAssemble: RoundAssembler = (ctx) => {
     stateNote: ctx.stateNote === null ? null : { version: ctx.stateNoteVersion ?? 1, text: ctx.stateNote },
     processedSeq: { ...(ctx.processedSeq ?? {}) },
     fresh: [...ctx.fresh],
-    pointers: [...ctx.tasks.map((t) => ({ ref: `在途任务 ${t.split(" ")[0]}`, text: t })), ...(ctx.runs ?? []).map((r) => ({ ref: `运行台账 ${r.split(" ")[0]}`, text: r })), ...ctx.pointers],
+    pointers: [...(ctx.tasks.length ? [{ ref: "群清单操作", text: TASK_BOARD_POLICY }] : []), ...ctx.tasks.map((t) => ({ ref: `在途任务 ${t.split(" ")[0]}`, text: t })), ...(ctx.runs ?? []).map((r) => ({ ref: `运行台账 ${r.split(" ")[0]}`, text: r })), ...ctx.pointers],
     budgetBytes: ctx.budgetBytes ?? ROUND_BUDGET_BYTES,
   });
   if (!r.ok) throw r.reason === "over-budget" ? new RoundAssembleError(r.reason, r.detail, r.need, r.budget) : new RoundAssembleError(r.reason, r.detail);

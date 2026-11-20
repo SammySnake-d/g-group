@@ -260,8 +260,8 @@ export const METHODS = {
     obj({ clientActionId: id(), roomId: id(), title: str({ min: 1, max: 500 }), description: opt(str({ max: 20000 })), ownerContactId: opt(id()) }),
     TaskView,
   ),
-  /** 给还没人负责(T1_Open)的任务指定负责人:以用户一条对话消息记录并 @ 它,由它认领并起 Compute。已有负责人 conflict;不是本会话联系人 invalid_params。clientActionId 幂等。 */
   "tasks.assign": method(obj({ taskId: id(), contactId: id(), clientActionId: id() }), TaskView),
+  "tasks.reassign": method(obj({ taskId: id(), contactId: id(), clientActionId: id(), expectedRevision: int({ min: 1 }) }), TaskView),
   /** 代码任务受控合入目标分支(AC-22):审查通过、交付后才能合;主线未变快进,主线已推进则合并后重验;
    *  冲突或重验失败返回 workspace.state=W5_Conflict(目标分支未动)。验收交付卡时宿主会自动发起,这里是重试入口。 */
   "tasks.integrate": method(obj({ taskId: id(), clientActionId: id() }), TaskView),

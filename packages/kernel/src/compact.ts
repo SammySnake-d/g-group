@@ -14,6 +14,10 @@ function renderAction(a: MindAction): string {
   switch (a.kind) {
     case "reply":
       return `- reply → ${a.roomId}${a.replyToSeq === null ? "" : ` ↩#${a.replyToSeq}`}:${a.text}\n`;
+    case "claim":
+      return `- claim → 任务 ${a.taskId}:${a.text}\n`;
+    case "release":
+      return `- release → 任务 ${a.taskId}:${a.text}\n`;
     case "dispatch":
       return `- dispatch → ${a.roomId} #${a.sourceSeq}「${a.title}」:${a.task}\n`;
     case "commit":
