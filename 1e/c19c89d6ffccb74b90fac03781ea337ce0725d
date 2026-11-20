@@ -1,0 +1,22 @@
+receipts/feat-agy-taskboard-claim.json
+  s_b9ccea1f504419::t_1e8aa88c283d6c 1-20
+packages/server/proof/taskboard-claim-20261121.md
+  s_b9ccea1f504419::t_22ed38e147c1ec 8
+  s_b9ccea1f504419::t_1e8aa88c283d6c 1-7,9-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ec19c89d6ffccb74b90fac03781ea337ce0725d",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
