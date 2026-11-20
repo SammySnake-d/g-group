@@ -1,0 +1,34 @@
+{
+  "slice": "Remove the unverified default group follow-up caps while preserving message delivery identity.",
+  "author": {
+    "agent": "codex",
+    "model": "fnqtz-gpt/gpt-6.2-sol",
+    "session": "codex:cd5a827f-66ac-4411-9525-15782b923e1d"
+  },
+  "red": {
+    "commit": "278499aba538130713a8959e5c69ea0694c3d3b2",
+    "tests": [
+      "默认配置下同一用户消息派生的第 5 至第 8 次唤醒仍可送达",
+      "曾触及次数限额的旧因果根在默认配置下允许新的唤醒",
+      "two contacts can exchange six distinct posts without a human interrupting"
+    ]
+  },
+  "green": {
+    "commit": "f4b2167188cfa396d44ada2be59f4737cb757cd6"
+  },
+  "review": null,
+  "waiver": null,
+  "acceptance": [
+    {
+      "id": "R-02",
+      "status": "通过",
+      "evidence": "packages/server/proof/remove-default-mention-limits.txt"
+    },
+    {
+      "id": "AC-37",
+      "status": "未测",
+      "reason": "Focused backend tests exercise default wake delivery and group posting. The complete quoted-reply browser acceptance is separate."
+    }
+  ],
+  "unverifiable": "AC-37: This receipt establishes the two removed admission thresholds and preserved deduplication with seeded messages. It does not establish that real models always end a conversation or that the browser implements the full quotation workflow."
+}
