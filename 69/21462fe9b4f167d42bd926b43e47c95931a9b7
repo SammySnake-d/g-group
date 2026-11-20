@@ -1,0 +1,19 @@
+packages/server/proof/terra-compute-responses-20261120.txt
+  s_c105f303c99f6a::t_7a1fcbfb8be69a 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6921462fe9b4f167d42bd926b43e47c95931a9b7",
+  "prompts": {},
+  "sessions": {
+    "s_c105f303c99f6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f982-6773-7730-93f4-d59af5ac94d5",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
