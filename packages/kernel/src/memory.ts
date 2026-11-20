@@ -118,6 +118,7 @@ export function planMemoryWrite(entries: readonly MemoryEntry[], w: MemoryWrite,
   if (!isStr(w.body) || w.body.trim() === "") return { kind: "invalid", why: "正文不能为空" };
   if (!isStrs(w.anchors) || w.anchors.length === 0 || w.anchors.some((a) => a.trim() === "")) return { kind: "invalid", why: "至少要有一个非空锚点" };
   if (w.relation !== null) {
+    if (!isStr(w.relation.target) || !w.relation.target.trim()) return { kind: "invalid", why: "target 不能为空" };
     const target = entries.find((e) => e.id === w.relation?.target);
     if (!target) return { kind: "invalid", why: `没有记忆 ${w.relation.target}` };
     if (!live(target)) return { kind: "invalid", why: `记忆 ${target.id} 已${target.status === "superseded" ? "被替代" : "撤销"},只能对生效条目判关系` };

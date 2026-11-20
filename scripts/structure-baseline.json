@@ -9,7 +9,7 @@
     "packages/kernel/src/plugins.ts": 455,
     "packages/kernel/src/run-ledger.ts": 469,
     "packages/server/proof/q09-real/run.ts": 584,
-    "packages/server/src/host.ts": 6114,
+    "packages/server/src/host.ts": 6034,
     "packages/server/src/runs.ts": 498,
     "packages/ui-core/src/plugins.ts": 782,
     "scripts/gates/gates.ts": 1013,

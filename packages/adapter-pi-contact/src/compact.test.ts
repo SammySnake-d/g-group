@@ -135,3 +135,14 @@ test("reflect:一次调用同时出笔记、记忆点和人格建议;请求带�
   }
   await assert.rejects(c.reflect!({ ...req({ contact: { id: "c", name: "x", speakingModel: "other", persona: "" } }), neighbors: [], noteWritten: null }, new AbortController().signal), (e: unknown) => e instanceof PiContactMindError && e.code === "model-mismatch");
 });
+
+test("Pi reflect rejects both incomplete relation pairs", async () => {
+  const reflect = (relation: string | null, target: string | null) => {
+    const f = fake({ text: JSON.stringify({ note: "ok", memories: [{ title: "A", text: "B", anchors: ["global"], relation, target }], personaSuggestion: null }) });
+    const c = createPiCompactor({ provider: "fake", model: MODEL, baseUrl: "http://fake.invalid", apiKey: KEY, fetch: f.fetch });
+    return c.reflect!({ ...req(), neighbors: [], noteWritten: null }, new AbortController().signal);
+  };
+  assert.equal((await reflect("refine", "m-1")).memories[0]?.target, "m-1");
+  await assert.rejects(reflect("refine", null), /relation|target/);
+  await assert.rejects(reflect(null, "m-1"), /relation|target/);
+});

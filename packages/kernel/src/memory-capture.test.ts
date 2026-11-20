@@ -68,3 +68,9 @@ test("G1-03D 合法零结果与缺字段畸形结果分开判定", () => {
   assert.ok(yes.ok); assert.deepEqual(yes.value.memories, []);
   for (const bad of [null, "", {}, { note: 42, memories: [] }, { note: null, memories: null }]) assert.equal(decodeReflect(bad).ok, false);
 });
+
+test("decodeReflect requires relation and target together", () => {
+  const decode = (m: CompactMemory) => decodeReflect({ note: null, memories: [m], personaSuggestion: null });
+  assert.equal(decode(memory({ relation: "refine", target: "m-1" })).ok, true);
+  assert.deepEqual([decode(memory({ relation: "refine" })).ok, decode(memory({ target: "m-1" })).ok], [false, false]);
+});

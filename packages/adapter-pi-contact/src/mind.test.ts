@@ -525,3 +525,9 @@ test("AC-45 forward 可带来源消息 seq:用户中途改条件时登记 source
   assert.equal(Object.hasOwn(plain.value.action, "sourceSeq"), false);
   assert.equal(parseToolCall("forward", { taskId: "t-1", text: "x", sourceSeq: -1 }).ok, false);
 });
+
+test("remember tool rejects both incomplete relation pairs", () => {
+  const base = { roomId: "g1", title: "x", text: "y", anchors: ["room:g1"] };
+  assert.equal(parseToolCall("remember", { ...base, relation: "refine", target: "m-1" }).ok, true);
+  assert.deepEqual([parseToolCall("remember", { ...base, relation: "refine" }).ok, parseToolCall("remember", { ...base, target: "m-1" }).ok], [false, false]);
+});
