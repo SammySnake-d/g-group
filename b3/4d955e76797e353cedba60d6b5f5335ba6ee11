@@ -1,0 +1,20 @@
+packages/server/src/group-claim.test.ts
+  s_c105f303c99f6a::t_f8269d594f955c 49,60
+  s_c105f303c99f6a::t_adcf43c2f68509 45-48,50-59,61-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b34d955e76797e353cedba60d6b5f5335ba6ee11",
+  "prompts": {},
+  "sessions": {
+    "s_c105f303c99f6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f982-6773-7730-93f4-d59af5ac94d5",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
