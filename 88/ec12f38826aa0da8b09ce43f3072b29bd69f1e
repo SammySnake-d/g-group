@@ -1,0 +1,25 @@
+packages/server/src/host.ts
+  s_b9ccea1f504419::t_c7174e9cc98081 159,3426
+  s_b9ccea1f504419::t_a503da501febf4 3387-3391
+packages/server/src/task-doc.ts
+  s_b9ccea1f504419::t_c7174e9cc98081 2,4,50-63
+  s_b9ccea1f504419::t_45a7dc81e15682 64
+packages/server/src/group-claim.test.ts
+  s_b9ccea1f504419::t_c7174e9cc98081 99-100,135,143-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "88ec12f38826aa0da8b09ce43f3072b29bd69f1e",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "blueloon-gpt/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
