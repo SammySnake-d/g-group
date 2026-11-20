@@ -1,0 +1,8 @@
+2026-11-20 g-group native Compute route smoke
+
+Red: native app-server attempted the default OpenAI route and returned HTTP 401. The real task had a failed Compute run and did not deliver. The deterministic adapter test also observed missing modelProvider on thread/start and thread/resume.
+
+Green: the same adapter test passed and the adapter/protocol suite passed 40/40. In an isolated backend, the real Codex 0.170.0 Compute sent and received blueloon-gpt/gpt-6.1-terra on Responses. A test-only loopback observer forwarded the native stream to the configured gateway and recorded the request and completed response model fields. The contact delivered 17 x 23 = 391. Task state: T8a_Delivered. Compute run status: completed.
+
+Native response ID (first completed): resp_067d5c5757a4599c016b00681edabc87d29759ffba2bf87805
+Task ID: t-mwp51fpw-5
