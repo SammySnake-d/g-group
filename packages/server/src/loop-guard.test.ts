@@ -153,6 +153,9 @@ test("显式额度配置拒绝无穷、零和非整数", () => {
   assert.throws(() => new LoopGuard(d, { maxHops: 0 }), /maxHops/);
   assert.throws(() => new LoopGuard(d, { maxHops: 1.5 }), /maxHops/);
   assert.throws(() => new LoopGuard(d, { maxPerMinute: -1 }), /maxPerMinute/);
+  const guard = new LoopGuard(d);
+  for (let seq = 1; seq <= 5; seq++) guard.recordMessage("room-a", seq, ["root-default"]);
+  assert.deepEqual([1, 2, 3, 4, 5].map((seq) => guard.admit("room-a", seq, "b").allowed), [true, true, true, true, true]);
 });
 
 test("默认配置下同一用户消息派生的第 5 至第 8 次唤醒仍可送达", () => {
