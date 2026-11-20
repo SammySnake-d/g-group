@@ -1,0 +1,21 @@
+packages/server/src/loop-guard.test.ts
+  s_2cca368c709707::t_0b64b0e3f0808e 162-186
+packages/server/src/room-post-budget.test.ts
+  s_2cca368c709707::t_0b64b0e3f0808e 84-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "278499aba538130713a8959e5c69ea0694c3d3b2",
+  "prompts": {},
+  "sessions": {
+    "s_2cca368c709707": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f8ad-734d-79b0-9c3c-4fac458689b6",
+        "model": "fnqtz-gpt/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
