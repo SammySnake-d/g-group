@@ -17,6 +17,7 @@ export interface CodexProtocolOptions {
   readonly developerInstructions?: string;
   readonly trustOwnerModel?: boolean;
   readonly sandbox?: "read-only" | "workspace-write";
+  readonly modelProvider?: string;
   readonly config?: Readonly<Record<string, unknown>>;
 }
 export interface CodexComputeProtocol {
@@ -266,7 +267,7 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
     async startThread(turn, tools) {
       const refused = capability(turn, tools); if (refused) return refused;
       if (!initialized || closed || wireFailure) return no("initialize first");
-      const r = await request("thread/start", { model: turn.model, cwd: options.cwd, ephemeral: false, approvalPolicy: "never", sandbox: options.sandbox ?? "read-only", developerInstructions: options.developerInstructions ?? null, ...(options.config ? { config: options.config } : {}) });
+      const r = await request("thread/start", { model: turn.model, cwd: options.cwd, ephemeral: false, approvalPolicy: "never", sandbox: options.sandbox ?? "read-only", developerInstructions: options.developerInstructions ?? null, ...(options.modelProvider ? { modelProvider: options.modelProvider } : {}), ...(options.config ? { config: options.config } : {}) });
       if (!r.ok) return r;
       if (!record(r.value.thread) || typeof r.value.thread.id !== "string") return no("invalid native thread id");
       threadId = r.value.thread.id;
@@ -275,7 +276,7 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
     async resumeThread(wantedThread, turn, tools) {
       const refused = capability(turn, tools); if (refused) return refused;
       if (!initialized || closed || wireFailure || typeof wantedThread !== "string" || !wantedThread) return no("native thread id required");
-      const r = await request("thread/resume", { threadId: wantedThread, model: turn.model, cwd: options.cwd, approvalPolicy: "never", sandbox: options.sandbox ?? "read-only", developerInstructions: options.developerInstructions ?? null, ...(options.config ? { config: options.config } : {}) });
+      const r = await request("thread/resume", { threadId: wantedThread, model: turn.model, cwd: options.cwd, approvalPolicy: "never", sandbox: options.sandbox ?? "read-only", developerInstructions: options.developerInstructions ?? null, ...(options.modelProvider ? { modelProvider: options.modelProvider } : {}), ...(options.config ? { config: options.config } : {}) });
       if (!r.ok) return r;
       if (!record(r.value.thread) || r.value.thread.id !== wantedThread) return no("native resumed a different thread");
       threadId = wantedThread; resumed = true;

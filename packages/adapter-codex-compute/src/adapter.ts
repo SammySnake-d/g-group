@@ -29,6 +29,12 @@ function scope(tools: readonly string[]): "read-only" | "workspace-write" | stri
 export function createCodexComputeAdapter(options: CodexAdapterOptions = {}): ComputeAdapter {
   const slots = new Map<string, Slot>();
   const events = new Feed<ComputeEvent>(), activities = new Feed<ComputeActivity>();
+  const baseUrl = options.hostEnv?.OPENAI_BASE_URL;
+  const modelProvider = baseUrl ? "g-group-responses" : undefined;
+  const envKey = !options.hostEnv?.OPENAI_API_KEY && options.hostEnv?.CODEX_API_KEY ? "CODEX_API_KEY" : "OPENAI_API_KEY";
+  const modelProviders = modelProvider ? {
+    [modelProvider]: { name: "G-Group Responses", wire_api: "responses", base_url: baseUrl, env_key: envKey },
+  } : undefined;
   function clientFor(slot: Pick<Slot, "home" | "brief" | "opts">, turn: TurnModel) {
     const sandbox = scope(slot.brief.tools);
     if (sandbox !== "read-only" && sandbox !== "workspace-write") throw new Error(sandbox);
@@ -39,10 +45,14 @@ export function createCodexComputeAdapter(options: CodexAdapterOptions = {}): Co
       models: { [turn.model]: [turn.effort ?? "medium"] },
       developerInstructions: [...slot.brief.rules, "Report meaningful milestones through gg_progress/report_progress."].join("\n"),
       sandbox,
-      config: { mcp_servers: {
-        ...(slot.opts.mcpServers ?? {}),
-        gg_progress: { command: process.execPath, args: [path.resolve(import.meta.dirname, "../mcp/report.mjs")] },
-      } },
+      ...(modelProvider ? { modelProvider } : {}),
+      config: {
+        ...(modelProviders ? { model_providers: modelProviders } : {}),
+        mcp_servers: {
+          ...(slot.opts.mcpServers ?? {}),
+          gg_progress: { command: process.execPath, args: [path.resolve(import.meta.dirname, "../mcp/report.mjs")] },
+        },
+      },
       ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
       ...(options.reapForceMs === undefined ? {} : { reapForceMs: options.reapForceMs }),
     });
