@@ -1,0 +1,19 @@
+packages/adapter-pi-contact/src/text-request.ts
+  s_c105f303c99f6a::t_1b6ca0d016613f 1,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2e8c4cb361375d3e7a3337c68dc6846ed4f09de3",
+  "prompts": {},
+  "sessions": {
+    "s_c105f303c99f6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f982-6773-7730-93f4-d59af5ac94d5",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
