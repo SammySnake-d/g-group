@@ -3,3 +3,4 @@ export { PI_CONTACT_TOOL_NAMES, type PiContactToolName, parseToolCall, type Pars
 export * from "./compact.ts";
 export * from "./protocols.ts";
 export * from "./magpie.ts";
+export { createPiTextResponder } from "./text-request.ts";

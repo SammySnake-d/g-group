@@ -95,7 +95,7 @@ export class HelperDesk {
     const route = this.route(entry);
     if (!route.becomesMessage || entry.kind !== "mention") throw new HostError("invalid_params", "只有聊天里 @Helper 的回复会发成会话消息;侧栏和全局面板用 helper.note");
     const asked = this.host.listMessages(entry.roomId, { afterSeq: entry.seq - 1, limit: 1 }).messages[0];
-    if (!asked || asked.seq !== entry.seq || asked.sender.kind !== "user" || !asked.mentions.some((m) => m.id === HELPER_ID)) throw new HostError("invalid_params", `#${entry.seq} 不是用户 @Helper 的消息`);
+    if (!asked || asked.seq !== entry.seq || asked.retracted || asked.sender.kind !== "user" || !asked.mentions.some((m) => m.id === HELPER_ID)) throw new HostError("invalid_params", `#${entry.seq} 不是用户 @Helper 的消息`);
     return this.host.postAsHelper(entry.roomId, HELPER_ID, text, entry.seq, clientActionId);
   }
 }
