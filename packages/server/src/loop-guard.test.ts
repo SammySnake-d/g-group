@@ -147,16 +147,12 @@ test("跨会话派生保持原因果根，不借输出到另一群重新获额�
   assert.equal(guard.isStopped("room-b", 1), true);
 });
 
-test("配置拒绝无穷、零和非整数；省略次数时采用明确标候选的有限默认值", () => {
+test("显式额度配置拒绝无穷、零和非整数", () => {
   const d = db();
   assert.throws(() => new LoopGuard(d, { maxHops: Number.POSITIVE_INFINITY }), /maxHops/);
   assert.throws(() => new LoopGuard(d, { maxHops: 0 }), /maxHops/);
   assert.throws(() => new LoopGuard(d, { maxHops: 1.5 }), /maxHops/);
   assert.throws(() => new LoopGuard(d, { maxPerMinute: -1 }), /maxPerMinute/);
-  const guard = new LoopGuard(d);
-  for (let seq = 1; seq <= 5; seq++) guard.recordMessage("room-a", seq, ["root-default"]);
-  assert.deepEqual([1, 2, 3, 4, 5].map((seq) => guard.admit("room-a", seq, "b").allowed), [true, true, true, true, false]);
-  assert.equal(guard.isStopped("room-a", 5), true);
 });
 
 test("默认配置下同一用户消息派生的第 5 至第 8 次唤醒仍可送达", () => {

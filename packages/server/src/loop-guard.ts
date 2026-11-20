@@ -1,5 +1,5 @@
 // U15 / D07.0：联系人派生唤醒按稳定因果根共享总次数和滚动频率；不判断话题语义。
-// 默认 4 次只是候选运行参数，调用者可配置；达到任一限制后该根持久停止，用户新输入建立新根。
+// 默认不限制唤醒次数；显式设限时，达到限制的根持久停止，用户新输入建立新根。
 import type { Inbound } from "@g-group/kernel";
 import { type Db, all, getDoc, one, run, tx } from "./db.ts";
 
@@ -13,9 +13,9 @@ CREATE TABLE IF NOT EXISTS gg_loop_seen (room_id TEXT NOT NULL, seq INTEGER NOT 
 CREATE INDEX IF NOT EXISTS gg_loop_ticks_time ON gg_loop_ticks(root,at);
 `;
 export interface LoopLimits {
-  /** 每个因果根最多派生多少次联系人唤醒，默认 4（候选，待实测）。 */
+  /** 每个因果根最多派生多少次联系人唤醒；省略时不限。 */
   readonly maxHops?: number;
-  /** 滚动一分钟上限；null 不另加频率限制，总次数仍有限。 */
+  /** 滚动一分钟上限；省略或 null 时不限。 */
   readonly maxPerMinute?: number | null;
 }
 export interface WakeDecision {
@@ -39,11 +39,11 @@ const validLimit = (name: string, n: number) => {
 };
 export class LoopGuard {
   private readonly db: Db;
-  private readonly maxHops: number;
+  private readonly maxHops: number | null;
   private readonly maxPerMinute: number | null;
   private readonly clock: () => number;
   constructor(db: Db, limits: LoopLimits = {}, clock: () => number = Date.now) {
-    this.maxHops = validLimit("maxHops", limits.maxHops ?? 4);
+    this.maxHops = limits.maxHops === undefined ? null : validLimit("maxHops", limits.maxHops);
     this.maxPerMinute = limits.maxPerMinute == null ? null : validLimit("maxPerMinute", limits.maxPerMinute);
     this.db = db;
     this.clock = clock;
@@ -89,7 +89,9 @@ export class LoopGuard {
         run(this.db, "INSERT OR IGNORE INTO gg_loop_roots(root) VALUES(?)", root);
         const row = one<{ count: number; stopped: WakeDecision["reason"] }>(this.db, "SELECT count,stopped FROM gg_loop_roots WHERE root=?", root)!;
         const recent = one<{ n: number }>(this.db, "SELECT count(*) AS n FROM gg_loop_ticks WHERE root=? AND at>?", root, now - 60_000)!.n;
-        const why = row.stopped ?? (row.count >= this.maxHops ? "hops" : this.maxPerMinute !== null && recent >= this.maxPerMinute ? "rate" : null);
+        const hopsExhausted = this.maxHops !== null && row.count >= this.maxHops;
+        const rateExhausted = this.maxPerMinute !== null && recent >= this.maxPerMinute;
+        const why = this.activeStop(row.stopped) ?? (hopsExhausted ? "hops" : rateExhausted ? "rate" : null);
         if (why) {
           reason ??= why;
           run(this.db, "UPDATE gg_loop_roots SET stopped=? WHERE root=?", why, root);
@@ -104,8 +106,11 @@ export class LoopGuard {
     };
     return this.db.store.db.isTransaction ? apply() : tx(this.db, apply);
   }
+  private activeStop(reason: WakeDecision["reason"]): WakeDecision["reason"] {
+    return reason === "hops" && this.maxHops === null ? null : reason;
+  }
   stopReason(root: string): BlockedWake["reason"] | null {
-    return one<{ stopped: BlockedWake["reason"] | null }>(this.db, "SELECT stopped FROM gg_loop_roots WHERE root=?", root)?.stopped ?? null;
+    return this.activeStop(one<{ stopped: WakeDecision["reason"] }>(this.db, "SELECT stopped FROM gg_loop_roots WHERE root=?", root)?.stopped ?? null);
   }
   /** 运行入口只把没有触发停止根的新消息当作自动工作；原文仍保留供用户查询。 */
   isStopped(roomId: string, seq: number): boolean {
