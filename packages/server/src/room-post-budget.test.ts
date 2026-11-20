@@ -81,6 +81,18 @@ test("lets a different bot say the same words", () => {
   assert.equal(post(decideRoomPost, budget, "b", "same", T0 + 10).allowed, true);
 });
 
+test("two contacts can exchange six distinct posts without a human interrupting", () => {
+  let budget = emptyRoomPostBudget();
+  const decisions = [];
+  for (let i = 0; i < 6; i++) {
+    const decision = post(decideRoomPost, budget, i % 2 === 0 ? "a" : "b", `distinct point ${i}`, T0 + i * 1000);
+    decisions.push(decision.allowed);
+    budget = decision.budget;
+  }
+  assert.deepEqual(decisions, [true, true, true, true, true, true]);
+  assert.equal(budget.posts.length, 6);
+});
+
 test("trips the breaker when a third bot closes the ring back onto the first", () => {
   const closing = post(decideRoomPost, ringSetUp(), "a", "four", T0 + 3_000, RING_SPOKE_AT);
   assert.equal(closing.allowed, false);

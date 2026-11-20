@@ -159,6 +159,31 @@ test("配置拒绝无穷、零和非整数；省略次数时采用明确标候�
   assert.equal(guard.isStopped("room-a", 5), true);
 });
 
+test("默认配置下同一用户消息派生的第 5 至第 8 次唤醒仍可送达", () => {
+  const guard = new LoopGuard(db());
+  const decisions = Array.from({ length: 8 }, (_, i) => {
+    const seq = i + 2;
+    guard.recordMessage("room-a", seq, [root("room-a", 1)]);
+    return guard.admit("room-a", seq, "b").allowed;
+  });
+  assert.deepEqual(decisions, Array(8).fill(true));
+  assert.deepEqual(guard.blockedWakes(), []);
+  assert.equal(guard.admit("room-a", 9, "b").duplicate, true);
+});
+
+test("曾触及次数限额的旧因果根在默认配置下允许新的唤醒", () => {
+  const d = db();
+  const constrained = new LoopGuard(d, { maxHops: 1 });
+  constrained.recordMessage("room-a", 2, ["legacy"]);
+  assert.equal(constrained.admit("room-a", 2, "b").allowed, true);
+  constrained.recordMessage("room-a", 3, ["legacy"]);
+  assert.equal(constrained.admit("room-a", 3, "b").reason, "hops");
+  const current = new LoopGuard(d);
+  current.recordMessage("room-a", 4, ["legacy"]);
+  assert.equal(current.admit("room-a", 4, "b").allowed, true);
+  assert.equal(current.mayReceive("room-a", 4, "b"), true);
+});
+
 test("生产调度保留旁观者参与但同根自动往返到上限停止，只留一次停止说明；新用户消息可继续", async () => {
   const rounds: string[] = [];
   const h = new Host({ file: file(), mind: () => chatter(rounds), maxDeferMs: 2, roomPostBudget: false, loopGuard: { maxHops: 4 } }); hosts.push(h);
