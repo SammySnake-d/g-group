@@ -4,9 +4,6 @@ import { Search } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-/* 命令菜单原语(cmdk):过滤、上下键、回车、listbox/option 无障碍角色都由它管,样式换成产品 token。
-   焦点也可以留在外面的输入框里:value 受控 + shouldFilter={false},由输入框自己转发方向键(见 / 命令菜单)。
-   高频弹出的菜单不加入场动画(Emil:键盘触发、每天几十次的操作不动)。 */
 const Command = React.forwardRef<React.ElementRef<typeof CommandPrimitive>, React.ComponentPropsWithoutRef<typeof CommandPrimitive>>(
   ({ className, ...props }, ref) => <CommandPrimitive ref={ref} className={cn("flex w-full flex-col overflow-hidden text-fg", className)} {...props} />,
 )
@@ -44,7 +41,6 @@ const CommandSeparator = React.forwardRef<React.ElementRef<typeof CommandPrimiti
 )
 CommandSeparator.displayName = CommandPrimitive.Separator.displayName
 
-/** 选中 = data-selected(键盘或指针都会更新);禁用项灰掉、指针不选中 */
 const CommandItem = React.forwardRef<React.ElementRef<typeof CommandPrimitive.Item>, React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>>(
   ({ className, ...props }, ref) => (
     <CommandPrimitive.Item ref={ref} className={cn("relative flex cursor-default select-none items-center gap-2 rounded-lg px-2 py-[7px] text-[13px] outline-none data-[selected=true]:bg-hover data-[disabled=true]:cursor-not-allowed [&_svg]:shrink-0", className)} {...props} />

@@ -4,7 +4,6 @@ import { people, type Person, type PersonId } from '@/data'
 import { MODE_LABEL, harnessLabel, modelLabel, type ModelSettings } from '@/modelConfig'
 import { REF_LABEL } from './constants'
 
-/** 失配的一句话 */
 export const mismatchText = (m: Mismatch, s: ModelSettings) =>
   m.reason === 'unknown-model' ? (m.model ? `模型目录里没有「${m.model}」` : '还没选模型')
   : `${harnessLabel(m.harness)} 这个 Harness 跑不了 ${modelLabel(m.model, s)}`
@@ -16,7 +15,6 @@ export const sameSlot = (a: ModelSlot, b: ModelSlot) => a.mode === b.mode && (a.
 export const cleanSlot = (mode: ModelSlot['mode'], model: string | undefined, effort: string | undefined): ModelSlot =>
   ({ mode, ...(mode === 'explicit' && model !== undefined ? { model } : {}), ...(effort !== undefined ? { effort } : {}) })
 
-/* ---------------------------------------------------------------- 联系人草稿 */
 
 export interface Draft { speakingModel: string; harness: string; computeModel: ModelSlot; quota: number; stall: StallOverride | null }
 export const fromPerson = (p: Person): Draft => ({ speakingModel: p.model ?? '', harness: p.harness ?? 'claude-code', computeModel: p.computeModel ?? { mode: 'inherit' }, quota: p.computeQuota ?? 1, stall: p.stall ?? null })
@@ -24,7 +22,6 @@ export const sameStall = (a: StallOverride | null, b: StallOverride | null) => (
 export const sameDraft = (a: Draft, b: Draft) => a.speakingModel === b.speakingModel && a.harness === b.harness && sameSlot(a.computeModel, b.computeModel) && a.quota === b.quota && sameStall(a.stall, b.stall)
 export const asContact = (id: PersonId, d: Draft): ContactModels => ({ id, name: people[id]?.name ?? id, speakingModel: d.speakingModel, harness: d.harness, computeModel: d.computeModel })
 
-/** 保存时写进私聊记录的变更说明 */
 export function changeNote(b: Draft, a: Draft, s: ModelSettings): string {
   const out: string[] = []
   if (b.speakingModel !== a.speakingModel) out.push(`说话模型 ${b.speakingModel} → ${a.speakingModel}`)
@@ -36,9 +33,7 @@ export function changeNote(b: Draft, a: Draft, s: ModelSettings): string {
   return out.join('；')
 }
 
-/* ---------------------------------------------------------------- 批量替换 */
 
-/** 把确认后的变更落成「全局默认补丁 + 每位联系人的补丁」 */
 export function toPatches(changes: readonly Change[], contacts: readonly ContactModels[]) {
   const settings: Partial<ModelSettings> = {}
   const byContact = new Map<string, ContactModels>()

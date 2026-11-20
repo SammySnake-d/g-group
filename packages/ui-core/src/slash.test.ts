@@ -114,7 +114,6 @@ test("pluginBlock:没装 → 停用 → 授权失效 → 没挂在本会话 → 
   assert.equal(pluginBlock(feishu, plug("p-feishu", "飞书", { authorized: false, attached: false })), "飞书 的授权失效了,重新授权后才能用");
   assert.equal(pluginBlock(feishu, plug("p-feishu", "飞书", { attached: false })), "飞书 没挂在这个会话");
   assert.equal(pluginBlock(feishu, plug("p-feishu", "飞书", { version: "1.5.0" })), "飞书 已是 1.5.0,这条命令按 1.4.2 注册,要重新确认权限");
-  // 不带版本的命令不比版本
   assert.equal(pluginBlock(mail, plug("p-gmail", "Gmail", { version: "9.9.9" })), undefined);
 });
 
@@ -142,9 +141,7 @@ test("detectSlash:开头或空白后的 /xxx 才算,返回前缀和替换范围"
   assert.deepEqual(detectSlash("/sch", 4), { start: 0, end: 4, query: "sch" });
   assert.deepEqual(detectSlash("买牛奶 /to", 7), { start: 4, end: 7, query: "to" });
   assert.deepEqual(detectSlash("第一行\n/定时", 7), { start: 4, end: 7, query: "定时" });
-  // 光标在词中间:前缀只取到光标,替换范围到词尾
   assert.deepEqual(detectSlash("/schedule 每天", 4), { start: 0, end: 9, query: "sch" });
-  // 中文输入法:全角/任意位置都认,「、」只认整段开头
   assert.deepEqual(detectSlash("／todo", 5), { start: 0, end: 5, query: "todo" });
   assert.deepEqual(detectSlash("、定时", 3), { start: 0, end: 3, query: "定时" });
   assert.equal(detectSlash("苹果 、香蕉", 6), null);
@@ -170,7 +167,6 @@ test("matchTier:名字完全相同 0、前缀 1、名字或中文名包含 2、�
   assert.equal(matchTier(schedule, "助手"), 4);
   assert.equal(matchTier(schedule, "xyz"), -1);
   assert.equal(matchTier(schedule, "SCH"), 1);
-  // 别名也算名字
   assert.equal(matchTier(summary, "ketchup"), 0);
   assert.equal(matchTier(summary, "ket"), 1);
   assert.equal(matchTier(summary, "chu"), 2);
@@ -184,11 +180,9 @@ test("filterCommands:前缀 > 包含 > 模糊 > 说明,同档按原顺序;中文
   assert.deepEqual(names("公告"), ["notice"]);
   assert.deepEqual(names("飞书"), ["feishu"]);
   assert.deepEqual(names("ketchup"), ["summary"]);
-  // s 前缀:summary schedule;名字里含 s:files pins feishu;todo notice handoff 都没有 s
   assert.deepEqual(names("s"), ["summary", "schedule", "files", "pins", "feishu"]);
   // 子序列:sdl 只在 schedule 里按顺序出现
   assert.deepEqual(names("sdl"), ["schedule"]);
-  // 「群」:中文名包含的(改群公告、群文件)排在只有说明包含的(加到清单、记下的事、引用飞书消息)前面
   assert.deepEqual(names("群"), ["notice", "files", "todo", "pins", "feishu"]);
   assert.deepEqual(names(""), ["summary", "schedule", "todo", "notice", "handoff", "files", "pins", "feishu"]);
   assert.deepEqual(names("zzz"), []);
@@ -197,7 +191,6 @@ test("filterCommands:前缀 > 包含 > 模糊 > 说明,同档按原顺序;中文
 test("filterCommands:灰显的排在能用的后面,不管匹配档次", () => {
   const list: SlashEntry[] = [{ command: files, disabled: "插件已停用" }, { command: feishu }, { command: summary }, { command: pins, disabled: "没装" }];
   assert.deepEqual(filterCommands(list, "").map((e) => e.command.name), ["feishu", "summary", "files", "pins"]);
-  // files 是名字前缀匹配,feishu 只是包含,但 files 灰显,所以排在后面
   assert.deepEqual(filterCommands(list, "fi").map((e) => e.command.name), ["feishu", "files"]);
   assert.deepEqual(filterCommands(list, "s").map((e) => e.command.name), ["summary", "feishu", "files", "pins"]);
 });
@@ -228,7 +221,6 @@ test("parseInvocation:不是命令、不认识的命令返回 null;大小写和�
   assert.equal(parseInvocation("", ALL), null);
   assert.equal(parseInvocation("  /TODO 买菜", ALL)?.values.内容, "买菜");
   assert.equal(parseInvocation("、todo 买菜", ALL)?.command.name, "todo");
-  // 别名执行的是同一条命令
   assert.equal(parseInvocation("/ketchup", ALL)?.command.name, "summary");
 });
 
@@ -341,7 +333,6 @@ test("toRunParams:交给后端的执行参数是纯数据,和解析结果脱钩"
   assert.deepEqual(p, { conv: "g", command: "todo", source: "builtin", values: { 内容: "买一台测试机" } });
   p.values.内容 = "改掉";
   assert.equal(inv.values.内容, "买一台测试机");
-  // 插件命令带上注册时的版本,宿主执行前再核
   const fs = parseInvocation("/feishu", ALL)!;
   assert.deepEqual(toRunParams(fs, "g"), { conv: "g", command: "feishu", source: "plugin:p-feishu", version: "1.4.2", values: {} });
 });

@@ -1,5 +1,4 @@
 // AC-21 共享文档单一提交点:两人基于同一版本修改,后提交者收到版本冲突,禁止静默覆盖;改不同文档都成功。
-// 本文件只覆盖纯函数层的比较逻辑;同一事务内读版本、写入的原子性由存储适配器负责。
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { cell, commit, commitIn, type Store } from "./cas.ts";

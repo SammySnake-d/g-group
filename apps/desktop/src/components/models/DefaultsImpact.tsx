@@ -13,7 +13,6 @@ import { MismatchFix } from './MismatchFix'
 type Plan = ReturnType<typeof planDefaults>
 const name = (id: string) => people[id]?.name ?? id
 
-/** 改全局默认的影响预览:会动到谁(前后值)、谁会失配(两条修复路径)、只影响新建联系人的字段;修好才能保存 */
 export const DefaultsImpact = forwardRef<HTMLDivElement, {
   plan: Plan
   s: ModelSettings

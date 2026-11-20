@@ -1,7 +1,4 @@
 // 真实模型冒烟(不在测试 glob 内,手动跑):
-//   node packages/adapter-pi-contact/scripts/smoke.ts
-// 从环境变量读端点配置:ANTHROPIC_BASE_URL、ANTHROPIC_AUTH_TOKEN(按 Bearer 发)或 ANTHROPIC_API_KEY(按 x-api-key 发)、
-// ANTHROPIC_DEFAULT_SONNET_MODEL。读环境变量的是这个脚本(调用方),适配器本身不读。
 // 跑一轮:第 4 块是用户私聊「帮我在 /tmp/gg-smoke 下写一个 hello.txt，内容 hi」,期望模型调 dispatch_compute。
 // 输出只有动作列表、状态笔记、耗时与判定;不打印端点地址和密钥。适配器不做 I/O,所以不会真的写文件。
 import { BLOCK_LABELS, type BlockNo, type RoundBlock, type RoundInput } from "@g-group/kernel";
@@ -46,7 +43,6 @@ try {
   process.exit(dispatched ? 0 : 1);
 } catch (e) {
   const err = e as { name?: string; code?: string; message?: string };
-  // 端点地址里可能嵌着网关凭据,打印前一并隐去(密钥已由适配器隐去)
   const message = String(err.message ?? "").split(baseUrl).join("[端点已隐去]");
   console.log(JSON.stringify({ model, ms: Date.now() - started, error: { name: err.name, code: err.code, message } }, null, 2));
   process.exit(1);

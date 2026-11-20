@@ -12,7 +12,6 @@ import { useComputeView } from './useComputeView'
 
 export const OPEN_SESSION = '打开会话'
 
-/** 打开分屏并选中「会话」页签 */
 export function useOpenSession(id: string) {
   const { openSplit } = useApp()
   return () => openSplit({ t: 'compute', id, view: 'session' })

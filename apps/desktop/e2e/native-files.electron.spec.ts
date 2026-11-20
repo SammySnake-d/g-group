@@ -26,7 +26,6 @@ test("本地文件路径:选择的真实文件能取回原路径,内存 File 没
   writeFileSync(file, "来自本地文件\n");
   const { app, win } = await launch(dir);
   try {
-    // 只在输入框的真实 change 事件里读取 File,不以字符串假冒本地文件。
     await win.getByTestId("file-input").evaluate((el) => {
       el.addEventListener("change", () => {
         const bridge = (window as unknown as { ggApp: { getPathForFile?: (f: File) => string } }).ggApp;

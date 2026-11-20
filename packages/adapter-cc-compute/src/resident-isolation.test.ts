@@ -1,8 +1,4 @@
 // AC-29 联系人能力默认隔离加白名单(常驻适配器一侧,生产入口 start.ts / cli.ts 用的就是它;需求文档 D07 §3)。
-// 起真实子进程:假 CLI(test-support/fake-claude-resident.mjs)按 --mcp-config 真的和 report_progress 握手,
-// 勾选的 MCP 与 --plugin-dir 里的 skill 照真实 CLI 2.1.319 的实测行为列进每轮 init(packages/server/proof/v02-config-dir.txt):
-// 带 --bare 只加载 --plugin-dir 里的 skill,不带才读 CLAUDE_CONFIG_DIR/skills 或 HOME/.claude/skills。
-// 只用临时目录、假 HOME 与中性内容(NEUTRAL_FIXTURE_NO_CREDENTIALS),不读本机任何账户文件。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -44,7 +40,6 @@ function reapOwn() {
 afterEach(reapOwn);
 setTimeout(() => { reapOwn(); console.error("resident-isolation.test.ts 超过 120 秒,强制结束"); process.exit(1); }, 120_000).unref();
 
-/** 一个插件目录:.claude-plugin/plugin.json 的 name 作命名空间,skills/<skill>/SKILL.md 是中性正文 */
 function plugin(root: string, ns: string, skill: string): string {
   const d = path.join(root, `plugin-${ns}`);
   fs.mkdirSync(path.join(d, ".claude-plugin"), { recursive: true });
@@ -53,7 +48,6 @@ function plugin(root: string, ns: string, skill: string): string {
   fs.writeFileSync(path.join(d, "skills", skill, "SKILL.md"), `---\nname: ${skill}\ndescription: NEUTRAL_FIXTURE_NO_CREDENTIALS\n---\n`);
   return d;
 }
-/** 一个装了「全局」skill 的目录(假 HOME 的 .claude/skills 或个人配置目录的 skills) */
 function globalSkill(dir: string, skill: string) {
   fs.mkdirSync(path.join(dir, skill), { recursive: true });
   fs.writeFileSync(path.join(dir, skill, "SKILL.md"), `---\nname: ${skill}\ndescription: NEUTRAL_FIXTURE_NO_CREDENTIALS\n---\n`);
@@ -111,7 +105,6 @@ test("常驻适配器声明 isolation 能力;勾选能力进常驻进程:CLAUDE_
   assert.deepEqual(res.manifest.pluginDirs, [pluginDir]);
   assert.equal(res.manifest.configDir, r.configDir);
   assert.deepEqual(res.manifest.allowedTools, ["Read", REPORT, "mcp__notes"]);
-  // --bare 下没有 Skill 工具:首条输入列出勾选 skill 与 SKILL.md 绝对路径
   const skillFile = path.join(pluginDir, "skills", "notes-style", "SKILL.md");
   const first = r.recs().find((x) => x.kind === "in")!;
   assert.ok(first.text!.endsWith(`[可用 skill](联系人勾选的;要用时先用 Read 读对应 SKILL.md 再照做)\n- gg-skills:notes-style:NEUTRAL_FIXTURE_NO_CREDENTIALS —— ${skillFile}`), first.text);
@@ -135,7 +128,6 @@ test("未勾选的全局 skill 不进入:假 HOME 与个人配置目录里的 sk
   await r.until(() => r.ends(a.computeId).length === 1);
   assert.equal(r.launches()[0]!.configDir, r.configDir, "专属配置目录盖过 hostEnv 里的个人配置目录");
   assert.deepEqual(startedOf(r.events, a.computeId)?.loaded?.skills, ["gg-skills:notes-style"]);
-  // 不给专属配置目录:CLI 落回 hostEnv 的 HOME,靠 --bare 也不读 HOME/.claude/skills
   const r2 = rig(createResidentComputeAdapter, {}, {}, { HOME: home });
   const b = await r2.adapter.spawn(brief, { cwd: r2.dir, model: "model-A" });
   assert.ok(b.ok);

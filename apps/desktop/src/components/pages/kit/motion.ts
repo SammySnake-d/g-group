@@ -19,19 +19,16 @@ export const panelReduced = {
   exit: { opacity: 0, transition: transition.panelOut },
 } as const
 
-/** dir:1 = 压栈(从右来),-1 = 返回(从左来) */
 export const pageIn = (dir: 1 | -1, reduced: boolean | null) =>
   reduced
     ? { initial: { opacity: 1 }, animate: { opacity: 1 } }
     : { initial: { opacity: 0, x: shift.tabs * dir }, animate: { opacity: 1, x: 0, transition: { x: spring.slide, opacity: transition.fade } } }
 
-/** 卡片/行出现(确认卡、新消息):库里 handoff 的位移和弹簧 */
 export const appear = {
   initial: { opacity: 0, y: shift.handoff },
   animate: { opacity: 1, y: 0, transition: { y: spring.handoff, opacity: transition.fade } },
 } as const
 
-/** 侧栏/分屏打开:和浮层同一套,但只进不出(分屏的收起由布局直接让位) */
 export const paneIn = {
   initial: { opacity: 0, x: shift.navigation },
   animate: { opacity: 1, x: 0, transition: { x: spring.slide, opacity: transition.fade } },

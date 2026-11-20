@@ -13,7 +13,6 @@ type Plan = ReturnType<typeof planReplace>
 export const refName = (id: string | null) => (id === null || id === DEFAULTS_KEY ? '全局默认' : people[id]?.name ?? id)
 const ITEM = 'rounded-lg bg-bg px-2.5 py-1.5 text-[12.5px] ring-1 ring-line'
 
-/** 预览的一栏:标题 + 计数(冲突栏有冲突时整栏转红) */
 function Col({ title, n, testid, children, tone }: { title: string; n: number; testid: string; children: ReactNode; tone?: 'err' }) {
   const hot = tone === 'err' && n > 0
   return (

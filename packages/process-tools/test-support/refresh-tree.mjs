@@ -1,5 +1,3 @@
-// Owned neutral fixture: the main leaves a setsid child D (ignores SIGTERM); D starts a further setsid child G only when the
-// test sends it SIGUSR2, i.e. after the cleanup handle already captured the tree. Each pid is relayed to stdout as one JSON line.
 import { spawn } from "node:child_process";
 const grandchild = 'process.on("SIGTERM", () => {}); setInterval(() => {}, 1000);';
 const middle = `process.on("SIGTERM", () => {});

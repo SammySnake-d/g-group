@@ -25,7 +25,6 @@ export function CronDetail({ id }: { id: string }) {
   const loadRuns = useApp((s) => s.loadCronRuns)
   const now = useNow()
   const c = crons.find((x) => x.id === id)
-  /* 连上后端:运行记录读 schedules.history;后端推来新的一次运行(lastRun 变了)再读一遍 */
   const lastAt = c?.runs[0]?.at
   useEffect(() => { loadRuns(id) }, [id, lastAt, loadRuns])
   const [edit, setEdit] = useState(false)

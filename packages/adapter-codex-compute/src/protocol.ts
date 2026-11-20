@@ -36,7 +36,6 @@ const record = (x: unknown): x is Record<string, unknown> => x !== null && typeo
 
 const freezeDeep = <T>(value: T): T => { if (value && typeof value === "object") { for (const child of Object.values(value)) freezeDeep(child); Object.freeze(value); } return value; };
 
-/** Native wire bookkeeping only. Codex owns sessions, turns, history and persistence. */
 export function createCodexComputeProtocol(options: CodexProtocolOptions): CodexComputeProtocol {
   const snapshot = plainData(options, "protocol options");
   if (!snapshot.ok) throw new TypeError("protocol options must be plain data");
@@ -208,7 +207,6 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
         else p.finish(record(msg.result) && !Object.hasOwn(msg, "error") ? { ok: true, value: msg.result } : no("invalid native RPC response"));
       } catch { failWire("invalid native JSON"); }
     };
-    // Bounded bytes, including unterminated lines; no synchronous process enumeration per line.
     const decoder = new StringDecoder("utf8");
     let buffer = "";
     child.stdout.on("data", (chunk: Buffer) => {
@@ -299,8 +297,6 @@ export function createCodexComputeProtocol(options: CodexProtocolOptions): Codex
         activity({ computeId: wantedThread, kind: "model_call" });
         turns.set(id, { started: false, id, done, finish, result: null });
         acceptedId = id;
-        // Bind before consuming subsequent lines in the same stdout chunk. Otherwise
-        // a valid burst after its RPC response could exhaust the early-event buffer.
         starting = false;
         for (const note of notes.splice(0)) consume(note);
         return null;

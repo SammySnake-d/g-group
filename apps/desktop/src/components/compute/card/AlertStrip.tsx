@@ -40,7 +40,6 @@ function alertOf(c: Compute, state: ComputeState): Alert | null {
 const LINE = { err: 'border-err/30', warm: 'border-warm/30', neutral: 'border-line' }
 const INK = { err: 'text-err', warm: 'text-warm', neutral: 'text-fg-2' }
 
-/** 提示条右侧能做的事;没有对应动作就不画 */
 function Actions({ c, state, actions }: { c: Compute; state: ComputeState; actions: CardActions }) {
   const owner = people[c.owner]?.name ?? c.owner
   const items: ReactNode[] = []

@@ -19,7 +19,6 @@ export type AppState = LayoutSlice & ChatSlice & MessagesSlice & MembersSlice & 
 export type Slice<T> = StateCreator<AppState, [], [], T>
 type SetState = StoreApi<AppState>['setState']
 
-/** 对某一个字段做函数式更新:L.convs((cs) => …) 等价于原来的 setConvs((cs) => …)。任何字段都能用,加字段不用改这里 */
 export type Lens = { readonly [K in keyof AppState]: (f: (v: AppState[K]) => AppState[K]) => void }
 export function lens(set: SetState): Lens {
   const on = <K extends keyof AppState>(k: K) => (f: (v: AppState[K]) => AppState[K]) => set((s) => ({ [k]: f(s[k]) }) as Pick<AppState, K>)

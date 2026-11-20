@@ -1,4 +1,3 @@
-/* 气泡行里放什么:按消息种类分派到各自的展示组件 */
 import { useApp } from '@/ctx'
 import { cn } from '@/lib/utils'
 import { MsgFiles } from './cards/MsgFiles'
@@ -12,14 +11,11 @@ import { SummaryCard } from './cards/SummaryCard'
 import { AuthFix } from './cards/AuthFix'
 import type { Bodied } from './types'
 
-/** compact:完整过程面板这类只读的紧凑消息流,Compute 显示成卡片;聊天里是一行 */
 export function Body({ m, compact = false }: { m: Bodied; compact?: boolean }) {
   const { answers } = useApp()
-  // 回答提问的那条消息显示成收起的卡片(卡片本身写着回答的是哪个问题)
   if (m.k === 'text') {
     if (m.answerTo && answers[m.answerTo]) return <AnswerPill m={m} />
     if (!m.files?.length) return <TextBubble m={m} />
-    /* 带附件:有话先画气泡,附件卡排在下面;只有附件就只画卡 */
     return (
       <div className={cn('flex flex-col gap-1.5', m.from === 'me' ? 'items-end' : 'items-start')}>
         {m.text && <TextBubble m={m} />}

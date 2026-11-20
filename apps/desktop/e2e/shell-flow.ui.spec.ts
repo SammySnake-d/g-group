@@ -1,8 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
 
-// 壳(R1)拆分后补的行为用例:提示条(sonner)、删除可撤销、私聊回退确认框、Esc 逐层退、@ 选人。
-// 这些路径拆分前没有用例覆盖,补上免得以后再挪代码时悄悄坏掉。
 
 const order = (page: Page) => page.locator("[data-scroll=chat] [data-msg]").evaluateAll((els) => els.map((e) => e.getAttribute("data-msg")));
 

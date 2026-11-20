@@ -1,7 +1,6 @@
 import type { HarnessTranscript } from '@g-group/ui-core'
 import { ch, session } from './build'
 
-/* 写代码类的 Claude Code 会话：登录页深色（在跑、测试失败后重试）、快捷键、搜索跳转（在跑）、复核验收文档（做完，一次改动失败后重试）。 */
 
 const login = session({ computeId: 'login', harness: 'claude-code', model: 'Claude Opus 5.5', start: '02:12:00', turns: 3, nativeSessionId: 'demo-login', background: [{ id: 'dev', command: 'pnpm dev --port 5173', state: 'running' }] }, (s) => {
   s.prompt('claude', '把登录页改成深色主题，顺便把测试补上。\n\n来源：模型助手群聊里 39impacts 的原话 #g8。\n主题变量在 theme/tokens.css（群协作手册 pb6）。\n验收看 AC-24：深色下对比度 ≥ 4.5、输入框聚焦有可见描边、切换主题不闪白、7 天内免登。\n改完先交 Astra 复核，再请 39impacts 验收。')

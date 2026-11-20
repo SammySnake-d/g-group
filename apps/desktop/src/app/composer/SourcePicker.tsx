@@ -10,7 +10,6 @@ import { pinfo } from '@/pluginInfo'
 import { useApp } from '@/store'
 import { ListRow } from '../ListRow'
 
-/** 输入框左下角「+」:从本会话挂着的外部数据源取消息,挂到引用条上(标「不可信·外部」) */
 export function SourcePicker({ conv }: { conv: Conversation }) {
   const { plugins, push, setSection } = useApp((s) => ({ plugins: s.plugins, push: s.push, setSection: s.setSection }))
   const [open, setOpen] = useState(false)

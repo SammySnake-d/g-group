@@ -4,10 +4,6 @@ import path from "node:path";
 import { _electron as electron, type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
 
-// 群资料与群管理(连真实后端,只点界面、只读界面;GG_BACKEND=server、规则替身脑子、剧本 Compute):
-//   公告(AC-55)发布 / 改 / 撤下,顶栏公告条与各联系人「已装配 vN」;群设置改名、置顶、免打扰;群临时算力上限(U09);
-//   群清单(AC-47)新建任务、交给联系人认领;拍一拍;把成员拖出群(AC-49);定时页读后端(重启还在);解散群(U03)。
-// 规则替身脑子:被 @ 时正文以「帮我/请」开头才派活,否则回「收到:…」。
 const appDir = path.resolve(import.meta.dirname, "..");
 const env = Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => e[0] !== "ELECTRON_RUN_AS_NODE" && typeof e[1] === "string"));
 const LONG = { timeout: 30_000 };
@@ -33,7 +29,6 @@ async function addContact(win: Page, name: string) {
   await expect(win.getByTestId("chat").locator("header")).toContainText(name, LONG);
 }
 
-/** 建两位联系人、拉进一个新群,停在群聊里 */
 async function groupWith(win: Page, title: string, names: string[]) {
   for (const n of names) await addContact(win, n);
   await win.getByTestId("nav-contacts").click();
@@ -51,7 +46,6 @@ async function openTab(win: Page, tab: "members" | "notice" | "list" | "cron" | 
   if (!(await side(win).isVisible())) await win.getByTestId("head-side").click();
   await win.getByTestId(`side-tab-${tab}`).click();
 }
-/** 在群里 @ 某人说一句(选人菜单开着时回车选中) */
 async function say(win: Page, text: string, at: string) {
   const box = win.getByTestId("composer");
   await box.fill(`${text} @${at}`);
@@ -114,7 +108,7 @@ test("群资料·公告与群设置:发布、改、撤下公告并写明各联�
       const list = win.getByTestId("notice-list");
       await expect(list.locator("li")).toHaveCount(2);
       await expect(list.locator("li").first()).toContainText("周五不发版");
-      await shot(win, "notice-multi", 4500); // 等「已发布」提示收起再拍
+      await shot(win, "notice-multi", 4500);
       const item = list.locator("li").filter({ hasText: "周五不发版" });
       await item.getByRole("button", { name: "撤下", exact: true }).click();
       await item.getByRole("button", { name: "撤下这条", exact: true }).click();
@@ -146,7 +140,7 @@ test("群资料·公告与群设置:发布、改、撤下公告并写明各联�
       await win.getByTestId("pool-max-2").click();
       await expect(pool).toHaveAttribute("data-max", "2", LONG);
       await expect(pool).toContainText("借出 0 / 2 格");
-      await shot(win, "pool", 4500); // 等提示收起再拍
+      await shot(win, "pool", 4500);
       await win.keyboard.press("Escape");
       await openTab(win, "tools");
       await expect(win.getByTestId("side-tools")).toBeVisible();
@@ -221,13 +215,11 @@ test("群资料·清单与成员:新建任务、交给联系人认领;拍一拍;
     });
 
     await test.step("把小林拖到「移出群」:成员里没有它了,群人数变成 2", async () => {
-      // 小林手上那件先做完(交付等你确认不算在途):这样移出不用先停任务
       await openTab(win, "list");
       await expect(win.getByTestId("side-checklist").locator('[data-testid^="task-"][data-status]').filter({ hasText: "整理发票" })).toHaveAttribute("data-status", "待验收", LONG);
       await openTab(win, "members");
       await shot(win, "members");
       const who = win.getByTestId("side-members-drop").locator('[data-testid^="side-member-"]').filter({ hasText: "小林" });
-      // 成员行点下去会先弹菜单,这里直接发拖拽事件(和原型走查同一做法):拖起 → 落点出现 → 拖到落点上 → 松手
       const dt = await win.evaluateHandle(() => new DataTransfer());
       await who.dispatchEvent("dragstart", { dataTransfer: dt });
       const out = win.getByTestId("side-drop-out");

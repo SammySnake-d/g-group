@@ -1,9 +1,6 @@
 import { MousePointer2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-/* 网页预览(Computer Use 看到的画面):浏览器外框用界面 token;
-   框里是「被预览的那个网页」的内容色——深色登录页、浅色首页——它们不随我们的亮暗主题变,
-   所以用 Tailwind 自带色板(zinc / white / black 透明度),不是界面语义 token。 */
 export function Preview({ kind, small = false }: { kind: 'login' | 'home'; small?: boolean }) {
   return (
     <div className={cn('overflow-hidden rounded-xl border border-line bg-elev', !small && 'shadow-elev')}>

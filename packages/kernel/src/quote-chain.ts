@@ -1,12 +1,5 @@
 // 引用链投递(需求文档 D24;验收 AC-41)。纯函数,不做 I/O。
-//   buildQuoteChain:从新消息的直接引用(reply_to 与 quoted_seqs)出发按层广度优先走引用 DAG,同一 seq 只出现一次(via 记第一次走到它的那条);
 //     默认带前 k 级(用户 #2115 定 K=3);会话上文已有的标 in_context、不贴原文,层数照算并继续往上;
-//     撤回的标 deleted_or_withdrawn、看不见(不在本会话可读消息里)的标 not_visible,都不给原文,也不越过它往上走;
-//     整条链往上扫到 scanCap 级为止给出 depthTotal(超过只写上限并标 depthCapped);
-//     没带全时 truncated 为真,nextSeqs 指向没带进来的最近一级;
-//     原文总字节超预算时从最远一级开始降成 id_only(只给编号与作者),近的级不被挤掉,降级的也进 nextSeqs。
-//   quoteParent:read_quote_parent,只返回这条消息直接引用的那一级,字段与引用链相同。
-//   引用只能指向更早的 seq:指向自己或更晚的当脏数据跳过,天然不成环。
 export interface QuoteMsg { readonly seq: number; readonly author: string; readonly at: string; readonly text: string; readonly quoted: readonly number[]; readonly retracted: boolean }
 export type QuoteStatus = "inline" | "in_context" | "deleted_or_withdrawn" | "not_visible" | "id_only";
 export interface QuoteLevel { readonly seq: number; readonly author: string; readonly at: string; readonly depth: number; readonly via: number; readonly status: QuoteStatus; readonly text: string | null; readonly quotedSeqs: readonly number[]; readonly hasMoreAbove: boolean }
@@ -15,7 +8,6 @@ export interface QuoteChainInput { readonly fromSeq: number; readonly refs: read
 
 interface Node { seq: number; depth: number; via: number; msg: QuoteMsg | undefined; parents: number[] }
 const bytes = (s: string) => Buffer.byteLength(s, "utf8");
-/** 一条消息往上可走的引用:去重、只认比它早的 */
 const parentsOf = (m: QuoteMsg) => [...new Set(m.quoted)].filter((q) => Number.isSafeInteger(q) && q > 0 && q < m.seq);
 const traversable = (n: Node) => n.msg !== undefined && !n.msg.retracted;
 
@@ -53,7 +45,6 @@ function fitBudget(levels: QuoteLevel[], budget: number): { levels: QuoteLevel[]
   let used = levels.reduce((a, l) => a + (l.status === "inline" && l.text !== null ? bytes(l.text) : 0), 0);
   const out = [...levels];
   const dropped: number[] = [];
-  // 从最远一级(层数最大,同层 seq 最小即最早)开始降级
   const order = out.map((l, i) => ({ l, i })).filter((x) => x.l.status === "inline").sort((a, b) => b.l.depth - a.l.depth || a.l.seq - b.l.seq);
   for (const { l, i } of order) {
     if (used <= budget) break;

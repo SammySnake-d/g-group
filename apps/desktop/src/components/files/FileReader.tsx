@@ -9,8 +9,6 @@ import { FileBody } from './FileBody'
 import { ProvenanceRail, ProvenanceThread } from './Provenance'
 import { discussFile } from './context'
 
-/* 阅读区 = 正文 + 右侧来处。来处随阅读位置固定(sticky),长文档翻到哪里都在旁边;
-   窗口变窄时先收窄来处、正文让位,再窄收成一列头像,不把来处塞进会被卷走的正文里。 */
 const tier = (w: number) => (w >= 900 ? { aside: 236, gap: 32, pad: 32, rail: false } : w >= 600 ? { aside: 196, gap: 20, pad: 16, rail: false } : { aside: 40, gap: 12, pad: 12, rail: true })
 
 function useBox<T extends HTMLElement>() {

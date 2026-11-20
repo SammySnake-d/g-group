@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-/* 第三步「确认」的两栏:会带过去 / 不会带过去,每栏若干小节 */
 
 export function Column({ title, icon, children, testid, muted }: { title: string; icon: ReactNode; children: ReactNode; testid: string; muted?: boolean }) {
   return (

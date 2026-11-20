@@ -6,7 +6,6 @@ import { ListGroup } from '@/components/ui/list-row'
 import { ConvItem } from './kit/conv-item'
 import { Hint, PageScroll } from './kit/parts'
 
-/* ---------- US2 会话关联:已关联的列表 + 「关联一个会话」压栈去选 ---------- */
 export function LinksPage({ id }: { id: string }) {
   const { convs, push, unlinkConv, openConv } = useApp()
   const g = convs.find((c) => c.id === id)!

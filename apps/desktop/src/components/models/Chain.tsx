@@ -4,7 +4,6 @@ import type { Resolved } from '@g-group/ui-core'
 import { cn } from '@/lib/utils'
 import { hopParts } from '@/modelConfig'
 
-/** 一条继承链:每一跳「来自哪里」,最后一跳的取值就是生效值(描边突出) */
 export function Chain({ r, testid }: { r: Resolved; testid: string }) {
   return (
     <span data-testid={testid} className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">

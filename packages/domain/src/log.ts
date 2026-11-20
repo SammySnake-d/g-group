@@ -1,5 +1,4 @@
 // 只追加的会话记录(AC-05)与发言者约束(AC-03)。
-// 记录是不可变的事件序列:编辑、撤回都是新事件,永远不改旧事件;每个事件带 prev/hash 组成链,原地改写可被 verify 查出。
 import { createHash } from "node:crypto";
 import { DomainError } from "./errors.ts";
 
@@ -80,7 +79,6 @@ export function verify(log: Log): VerifyResult {
   return { ok: true };
 }
 
-/** 把事件序列折叠成用户看到的消息列表;只读,不改记录。 */
 export function project(log: Log): ProjectedMessage[] {
   const out = new Map<number, ProjectedMessage>();
   for (const e of log.events) {

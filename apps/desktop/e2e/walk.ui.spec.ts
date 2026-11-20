@@ -1,8 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
 
-// 固定走查(pstack:从用户真实入口一步步点下去,每步断言 + 截图,亮暗两套各一遍)。
-// 只从左侧导航、聊天头部、群资料页签这些用户看得到的入口进,不用 URL 直达中间状态。
 
 const snap = (page: Page, theme: string, name: string) => shot(page, `walk/${theme}/${name}`);
 

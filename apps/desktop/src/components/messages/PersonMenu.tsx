@@ -1,4 +1,3 @@
-/* 点头像:查看资料 / 从群聊私信(只在群里)/ 私聊 / @它 */
 import type { ReactNode } from 'react'
 import { Activity, AtSign, IdCard, MessageSquare } from 'lucide-react'
 import { dutyByConv, people, type PersonId } from '@/data'

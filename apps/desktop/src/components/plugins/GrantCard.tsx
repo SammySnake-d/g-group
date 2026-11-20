@@ -1,4 +1,3 @@
-/* 输出渠道的六项预授权（需求 US12 第 5 条）。收件人对助手只读：只能在这里由你改。 */
 import { useState } from 'react'
 import { CONTENT_POLICIES, CONTENT_POLICY_LABEL, isInstalled, splitList, validateGrant, type OutboundGrant } from '@g-group/ui-core'
 import type { PluginState } from '@/data'

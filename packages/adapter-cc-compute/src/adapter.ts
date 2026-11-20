@@ -1,17 +1,6 @@
-// Claude Code Compute 适配器:把 brief 变成一次真实的 CLI 子进程,把它的 stream-json 与 report_progress 映射成语义事件。
-//
 // 停止语义对照 mirasim 0.0.774 server-main.cjs 的 z2(child,{graceMs:0,group:true})(g-group#2309),见 procgroup.ts:
-// POSIX 上初始 SIGTERM 只发给 CLI 主进程(z2 的 MLe:child.kill);reapForceMs 后主进程仍未退出才对进程组 SIGKILL(k2 → FG);
-// 主进程先退出就取消这次组 SIGKILL(j2);主进程已经退出时什么都不发(z2 开头的 exitCode/signalCode 判断)。
-// stopped 立即产出,scope:"main-then-group"。内核不得把 stopped 当作执行树已静止。
-// reapForceMs 未显式给出时按 mirasim 的 Ukc 在每次回收时读 MIRASIM_REAP_FORCE_MS(合法正数生效,否则 10000),显式选项优先(R4-03)。
-// 外部输入(适配器选项、brief、spawn 选项与 handoff、computeId、续接文本)读取前按纯数据合同判定(plain.ts,R4-01),
-// getter/setter/Proxy 不调用即拒收、不起子进程。
 // 磁盘(g-group#2900,原则 67):每轮在 os.tmpdir() 建 g-group-cc-* 放 mcp.json,CLI 主进程退出时删掉,谁建谁清。
-// 续接(R7-01):同一 Compute 同一时刻最多一个续接在途。认领在第一个 await 之前完成(检查与置位之间没有 await),
 // 落败的 resume 立即被明确拒绝;等冻结的上一轮退出之后重新核对这一轮有没有被 stop,stop 确认之后不再起新的 CLI。
-// CLI 输出(R7-02):stdout 的每一行在受控边界里处理,任何解码/映射异常都只让当前 Compute 记违规、回收并 failed,
-// 不逸出 readline 回调、不终止适配器宿主;错误说明对外部 JSON 的对象/数组字段只给固定说明,不做隐式字符串转换。
 import { type ChildProcess, spawn as spawnChild } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -30,12 +19,8 @@ import type { AdapterOptions, Brief, ClaudeRunner, ComputeActivity, ComputeAdapt
 
 export const REPORT_MCP_PATH = fileURLToPath(new URL("../mcp/report-mcp.mjs", import.meta.url));
 export const DEFAULT_RUNNER: ClaudeRunner = Object.freeze({ command: "claude", args: Object.freeze([]) });
-/** 默认 SIGTERM → SIGKILL 的间隔,对应 mirasim 的 MIRASIM_REAP_FORCE_MS 默认值(Lkc=1e4) */
 export const DEFAULT_REAP_FORCE_MS = 10_000;
 
-/** 对照 mirasim 0.0.774 z2 的 `c2.forceMs ?? Ukc()`:显式值优先;否则 Number(环境值) 是有限正数就用它,其余回落 10000。
- *  经包根导出,是外部入口(R6-01):显式值只收非负有限数字或 undefined,环境值只收字符串或 undefined,先判 typeof,
- *  对象(含 Proxy、带 toPrimitive 的对象)不做隐式转换、抛受控 TypeError */
 export function resolveReapForceMs(explicit: number | undefined, env: string | undefined): number {
   if (explicit !== undefined && !(typeof explicit === "number" && Number.isFinite(explicit) && explicit >= 0)) throw new TypeError("reapForceMs 必须是非负有限数");
   if (env !== undefined && typeof env !== "string") throw new TypeError("MIRASIM_REAP_FORCE_MS 必须是字符串");
@@ -55,7 +40,6 @@ const OPTION_KEYS: readonly string[] = Object.freeze(["runner", "hostEnv", "reap
 const SPAWN_KEYS: readonly string[] = Object.freeze(["handoff", "cwd", "configDir", "pluginDirs", "mcpServers"]);
 const isStrArr = (x: unknown): x is readonly string[] => Array.isArray(x) && x.every((s) => typeof s === "string");
 
-/** 启动命令 {command, args?}:x 已是纯数据副本 */
 function commandOf(x: unknown, name: string): Command | undefined {
   if (x === undefined) return undefined;
   if (!isPlainRecord(x) || typeof x.command !== "string" || !x.command || Object.keys(x).some((k) => k !== "command" && k !== "args") || (x.args !== undefined && !isStrArr(x.args))) {
@@ -64,7 +48,6 @@ function commandOf(x: unknown, name: string): Command | undefined {
   return x as Command;
 }
 
-/** 适配器选项也是外部输入:先按纯数据合同判定(访问器、Proxy 不调用即拒收),不合格抛受控 TypeError,之后只读副本 */
 function adapterConfig(options: unknown): Config {
   const p = plainData(options, "适配器选项");
   if (!p.ok) throw new TypeError(`适配器选项必须是纯数据:${p.path} ${p.why}`);
@@ -85,8 +68,6 @@ function adapterConfig(options: unknown): Config {
 
 type SpawnParsed = { readonly ok: true; readonly handoff: HandoffSnapshot | undefined; readonly cwd: string | undefined; readonly iso: Isolation };
 
-/** spawn 选项与 handoff:同样先判纯数据,只收 SPAWN_KEYS。未声明的字段即使值为 undefined 也拒绝;
- *  声明过的字段为 undefined 时按没给处理(R5-01) */
 function spawnOptions(opts: unknown): SpawnParsed | Refusal {
   if (opts === undefined) return { ok: true, handoff: undefined, cwd: undefined, iso: NO_ISOLATION };
   const p = plainData(opts, "spawn 选项");
@@ -106,22 +87,16 @@ function spawnOptions(opts: unknown): SpawnParsed | Refusal {
 
 interface Round {
   readonly events: ComputeEvent[];
-  /** CLI 主进程已退出、终态已产出(或停在受阻) */
   readonly done: Promise<readonly ComputeEvent[]>;
-  /** CLI 的 pid,也是它的进程组号(POSIX) */
   readonly pid: number | undefined;
   child: ChildProcess | null;
-  /** CLI 主进程已退出 */
   exited: boolean;
-  /** 终态事件已产出,或已停在受阻 */
   finished: boolean;
   /** 已受理 blocked、进程组已被 SIGSTOP 冻结时 resolve(冻结的进程不会退出,settled 不能只等 done) */
   readonly paused: Promise<void>;
   markPaused: () => void;
   terminal: Terminal["kind"] | null;
-  /** 已经走过一次 reap(对主进程 SIGTERM 并开始组 SIGKILL 计时,或主进程已退出而什么都不发) */
   reaping: boolean;
-  /** CLI 主进程对象;退出后 round.child 置空,但 reap 仍要看它的 exitCode/signalCode */
   readonly proc: ChildProcess;
   stopRequested: boolean;
   initOk: boolean;
@@ -136,7 +111,6 @@ interface Round {
 
 interface ComputeState {
   readonly id: string;
-  /** 续接时宿主可以换工具清单(授权放行或收紧),其余字段不变 */
   brief: Brief;
   readonly cwd: string;
   /** 勾选能力(AC-29),每一轮(含续接)都按它起 CLI */
@@ -149,7 +123,6 @@ interface ComputeState {
   readonly rejected: RejectedReport[];
   /** 被拒收、还没有同种合规重报或宿主解除的 blocked/failed 实例(RR-01) */
   unresolved: RejectedReport[];
-  /** 已有一个 resume 认领了续接、正在等冻结的上一轮退出(R7-01):这期间别的 resume 一律拒绝 */
   resuming: boolean;
 }
 
@@ -161,7 +134,6 @@ const eventCopy = (e: ComputeEvent): ComputeEvent => {
   return out as ComputeEvent;
 };
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-/** 异常的说明:只读真正 Error 的字符串 message,不对未知值做隐式字符串转换 */
 const errorText = (err: unknown): string => (err instanceof Error && typeof err.message === "string" ? err.message : "非 Error 异常");
 
 /** 所有 Compute 共享的事件流:每个迭代器从头按顺序读,不丢事件 */
@@ -185,7 +157,6 @@ function eventHub() {
   };
 }
 
-/** 活动流:只发给正在迭代的订阅者,不留历史(流式增量很多,不像语义事件那样整份保留);每个订阅者最多积压 10000 条。常驻适配器共用 */
 export function activityHub() {
   const subs = new Set<{ queue: ComputeActivity[]; wake: (() => void) | null }>();
   return {
@@ -220,8 +191,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
   const acts = activityHub();
   const computes = new Map<string, ComputeState>();
 
-  /** 对外事件只发一份深冻结的快照(R6-02):violations 等数组是本轮记录的副本并冻结,
-   *  任何一个订阅者或 settled() 的调用方都改不了其他人看到的历史 */
   function emit(round: Round, e: ComputeEvent) {
     const snapshot = freezeDeep(eventCopy(e));
     round.events.push(snapshot);
@@ -236,7 +205,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     round.cleanup.requestStop(resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS));
   }
 
-  /** 违规:记下来(可审计),停止处理这一轮的输出并回收进程组 */
   function violate(round: Round, msg: string) {
     round.violations.push(msg);
     if (round.halted) return;
@@ -254,9 +222,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     if (r.kind === "failed") round.reportedFailure = r.summary;
     if (r.kind === "blocked" && r.needs !== undefined) {
       emit(round, { computeId: st.id, kind: "blocked", needs: r.needs, summary: r.summary, ...(r.attachments !== undefined ? { attachments: Object.freeze([...r.attachments]) } : {}) });
-      // 受理 blocked 后机械地停在受阻:对进程组 SIGSTOP 冻结。这是**非 mirasim 对照项**:mirasim 0.0.774 没有暂停进程的做法
-      // (源码里 SIGSTOP 只出现在一处注释,SIGCONT 没有出现)。之后的任何汇报与 result 都不处理,
-      // 直到宿主显式 resume(校验通过后 SIGKILL 冻结的进程组,再用同一 CLI 会话号续接)或 stop(对冻结的进程组 SIGKILL)
       round.pausedBlocked = true;
       round.halted = true;
       signalGroup(round.pid, "SIGSTOP");
@@ -268,8 +233,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
 
   function onLine(st: ComputeState, round: Round, parse: ReturnType<typeof streamParser>, line: string, resumed: boolean, setResult: (r: { success: boolean; text: string }) => void) {
     if (round.halted) return;
-    // init 之前每一行都要显式认可(R3-03):只放行真实 CLI 在 init 前会输出的 system 帧,其余一律违规,
-    // 也不交给解析器,init 前的 tool_use 就不会被记住、在 init 之后配对生效
     if (!round.initOk) {
       const pre = preInitFrame(line);
       if (pre.kind === "allowed") return;
@@ -291,7 +254,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       if (s.type === "report") absorb(st, round, s.report);
       else if (s.type === "invalid-report" || s.type === "rejected-report") {
         const reason = s.type === "invalid-report" ? s.errors.join(";") : s.reason;
-        // kind 来自 CLI 输出的 JSON,可能是数组或对象:拷贝后深冻结,rejectedReports 的读者改不了记录
         const rec = freezeDeep({ kind: structuredClone(s.kind), reason });
         st.rejected.push(rec);
         if (s.kind === "blocked" || s.kind === "failed") st.unresolved = [...st.unresolved, rec];
@@ -308,7 +270,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     try {
       fs.writeFileSync(mcpConfig, JSON.stringify(mcpConfigFor(st.iso, server)));
       const args = [...(runner.args ?? []), ...cliArgs(st.brief, prompt, mcpConfig, resumeSession, { pluginDirs: [...st.iso.pluginDirs], mcpServers: Object.keys(st.iso.mcpServers) })];
-      // POSIX 上 detached:CLI 自成进程组,stop 与收尾对整组发信号;Windows 不 detached(与 mirasim 一致)
       child = spawnChild(runner.command, args, { cwd: st.cwd, env: cliEnv(st.brief, st.id, cfg.hostEnv, st.iso.configDir), stdio: ["ignore", "pipe", "pipe"], detached: !IS_WINDOWS });
     } catch (err) {
       removeDir();
@@ -329,14 +290,12 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     child.stderr?.on("data", (d: Buffer) => { stderr = (stderr + d.toString("utf8")).slice(-2000); });
     const stdoutClosed = new Promise<void>((r) => {
       const rl = readline.createInterface({ input: child.stdout! });
-      // 受控边界(R7-02):这一行的解码、解析与映射抛出的任何异常都只算这个 Compute 的违规(回收并 failed),不逸出回调终止宿主
       rl.on("line", (line) => {
         try {
           onLine(st, round, parse, line, resumeSession !== undefined, (x) => { result = x; });
         } catch (err) {
           violate(round, `处理 CLI 输出时出错:${errorText(err)}`);
         }
-        // 活动(卡死检测用):只在 init 核验通过、这一轮还没停下时发;解析失败不影响语义事件
         if (round.initOk && !round.halted) {
           try {
             for (const a of activityOf(line)) acts.push(Object.freeze({ computeId: st.id, ...a }) as ComputeActivity);
@@ -353,7 +312,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       const exit = await exited;
       await Promise.race([stdoutClosed, delay(2000)]);
       round.child = null;
-      // 主进程正常退出后不发任何信号:mirasim 的 z2 在 exitCode/signalCode 已有值时直接返回,同组孙进程不被回收
       if (!round.finished) {
         if (!round.initOk && round.violations.length === 0) round.violations.push("CLI 没有输出可校验的 init");
         const terminal = terminalFor(exit, result, {
@@ -373,7 +331,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
 
   return {
     async spawn(brief: unknown, opts?: unknown) {
-      // brief 与选项都先按纯数据合同判定,任何访问器、Proxy 都在起进程之前不调用即拒收(R4-01)
       const b = checkBrief(brief);
       if (!b.ok) return b;
       if (b.brief.placement !== "local") return refuse(`本适配器只在本机运行,不支持 ${b.brief.placement}`);
@@ -405,7 +362,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       if (!st) return refuse(`未知的 Compute ${computeId}`);
       // 先校验输入与前置条件,任何信号和状态变更都在校验之后(R3-02)
       if (!text.trim()) return refuse("续接的内容不能为空");
-      // 换工具清单(宿主按授权放行写工具或收回):选项按纯数据合同判定,新 brief 整体过 checkBrief,不合格不起进程
       let nextBrief: Brief | null = null;
       if (opts !== undefined) {
         const o = plainData(opts, "续接选项");
@@ -419,13 +375,11 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
         }
       }
       if (!st.sessionId) return refuse("上一轮没有拿到 CLI 会话号,无法续接");
-      // 同一 Compute 同一时刻只受理一个续接(R7-01):已有续接在等上一轮退出时立即拒绝,不排队、不另起 CLI
       if (st.resuming) return refuse("这个 Compute 正在续接,同一时刻只受理一个续接");
       const prev = st.round;
       const frozen = prev !== null && !prev.exited && prev.terminal === "paused-blocked";
       if (!frozen && !prev?.exited) return refuse("这个 Compute 还在运行,等它结束这一轮再续");
       if (frozen) {
-        // 认领续接:从这里到起新的一轮之间,别的 resume 都被上面的检查拒绝;检查与置位之间没有 await
         st.resuming = true;
         try {
           // 停在受阻的上一轮进程组还冻结着:先 SIGKILL 它,等主进程退出再续,避免两个 CLI 占同一会话(非 mirasim 对照项)
@@ -456,7 +410,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       round.cleanup.capture();
       // 封存这一轮(R3-01):stopped 之后的任何 stdout/tool_result 都不再产事件、改状态或发信号
       round.halted = true;
-      // 冻结的进程组收不到 SIGTERM:直接对组 SIGKILL(非 mirasim 对照项);否则走 mirasim 的 z2:SIGTERM 主进程,到期组 SIGKILL
       if (frozen) signalGroup(round.pid, "SIGKILL");
       else reap(round);
       round.terminal = "stopped";
@@ -472,7 +425,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
     async settled(computeId: string) {
       if (typeof computeId !== "string") return [];
       const round = computes.get(computeId)?.round;
-      // 主进程退出,或停在受阻(进程被冻结、不会退出)时返回;每次给当前的事件列表,停在受阻后被 stop 时 stopped 追加在后面
       return round ? Promise.race([round.done, round.paused]).then(() => Object.freeze([...round.events])) : [];
     },
 
@@ -483,7 +435,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       if (!round) return { ok: false, reason: `未知的 Compute ${computeId}`, remaining: [] };
       if (!round.finished || (round.terminal === "paused-blocked" && !round.stopRequested)) return { ok: false, reason: "这一轮还没结束(运行中或停在受阻),先停止", remaining: [] };
       const pid = round.pid;
-      // 主进程退出:stop 之后由 reap 保证(reapForceMs 后组 SIGKILL);这里再给 timeoutMs 的余量
       const limit = resolveReapForceMs(cfg.reapForceMs, process.env.MIRASIM_REAP_FORCE_MS) + timeoutMs;
       round.cleanup.capture();
       let timer: NodeJS.Timeout | undefined;
@@ -491,7 +442,6 @@ export function createComputeAdapter(options: AdapterOptions = {}): ComputeAdapt
       clearTimeout(timer);
       if (!exited) return { ok: false, reason: "CLI 主进程没有退出", remaining: pid === undefined ? [] : [pid] };
       if (IS_WINDOWS || pid === undefined) return { ok: true, killed: 0 };
-      // 主进程退出后:停止时记下的后代 + 此刻还在同组的成员,还活着的全部 SIGKILL,轮询到都退出(stop-confirm.ts)
       return round.cleanup.quiesce(timeoutMs, limit);
     },
 

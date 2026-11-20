@@ -4,9 +4,6 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-/* 按钮原语(g-group「纸·墨·柿」):
-   primary 墨色主操作;brand 柿红,一屏最多一个(市场安装、首要转化);secondary 纸面;outline 细边;ghost 无底;danger 删除类。
-   按下 scale(.97) 给回馈(Emil);只过渡颜色、阴影和 transform,不用 transition-all(Vercel)。 */
 const buttonVariants = cva(
   "inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-fast ease-out active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
@@ -20,7 +17,6 @@ const buttonVariants = cva(
         danger: "text-err hover:bg-err-soft",
         "danger-solid": "bg-err text-white shadow-soft hover:bg-err/90",
         link: "h-auto px-0 text-me underline-offset-4 hover:underline active:scale-100",
-        /** 浮在内容上的小控件(回到最新、有人 @ 你) */
         floating: "border border-line bg-elev text-fg shadow-elev hover:bg-hover",
       },
       size: {

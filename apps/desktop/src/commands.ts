@@ -2,8 +2,6 @@ import type { PluginManifest, SlashArg, SlashCommand, SlashPluginState } from '@
 import type { PluginState } from './data'
 import { pinfo } from './pluginInfo'
 
-/* 斜杠命令清单（演示数据）。将来由后端 commands.list 按会话给：内置命令 + 插件注册的 + 在场助手声明的。
-   这里的内置命令就是旧「群资料 · 工具」页签里的 8 项，加上清单、公告、定时、交给助手。 */
 export const BUILTIN_COMMANDS: SlashCommand[] = [
   { name: 'summary', aliases: ['ketchup'], title: '总结未读', desc: '把你不在时的消息总结成几条，只读，不替你批准任何事', args: [], source: 'builtin', scope: 'group' },
   { name: 'todo', title: '加到清单', desc: '把一件事加进群清单，等助手认领', args: [{ name: '内容', kind: 'text', required: true, rest: true, hint: '要做的事，比如「补登录页的测试」' }], source: 'builtin', scope: 'group' },
@@ -31,16 +29,13 @@ export const BUILTIN_COMMANDS: SlashCommand[] = [
   { name: 'clone', title: '复制团队', desc: '把这群助手和分工复制到新项目', args: [], source: 'builtin', scope: 'group' },
 ]
 
-/* 助手声明的命令：只有它在这个会话里才出现；执行 = 在群里 @ 它说这件事 */
 export const ASSISTANT_COMMANDS: SlashCommand[] = [
   { name: 'review', title: '代码审查', desc: '请 Claude Code 审查一段改动，结论回到这里', args: [{ name: '看什么', kind: 'text', required: true, rest: true, hint: '分支、文件，或一句话说明' }], source: 'assistant:claude', scope: 'any' },
   { name: 'research', title: '查资料', desc: '请 Grok 查资料，结论附来源', args: [{ name: '主题', kind: 'text', required: true, rest: true, hint: '想查什么' }], source: 'assistant:grok', scope: 'any' },
 ]
 
-/** 外部数据源插件 → 现有「勾选消息」页(sources 里的 id) */
 export const SOURCE_PAGE: Record<string, string> = { 'g-group.feishu': 'feishu', 'openbridge.telegram': 'telegram' }
 
-/** 插件注册的命令:从插件清单(contributes.commands)派生,单一真源。版本跟本机装的版本走,没装的按市场最新版显示并灰掉 */
 export function pluginCommands(catalog: PluginManifest[], plugins: PluginState[]): SlashCommand[] {
   return catalog.flatMap((m) => {
     const ver = plugins.find((p) => p.id === m.id)?.manifest?.version ?? m.version

@@ -30,7 +30,6 @@ export function StepList({ steps }: { steps: { text: string; state: StepState }[
   )
 }
 
-/** halt：Compute 正在停止时还在跑的程序显示「正在关」；已经停下（或出错）后，记录里还标着在跑的按「已收掉」显示 */
 export function BackgroundJobs({ jobs, halt }: { jobs: BackgroundJob[]; halt?: 'stopping' | 'stopped' }) {
   if (!jobs.length) return null
   return (

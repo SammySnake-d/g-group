@@ -17,7 +17,6 @@ export function MemberStack({ conv, onOpen }: { conv: Conversation; onOpen: () =
   /* motion 给带点按手势的头像容器自动加了 tabIndex=0;整组只有外层按钮一个焦点(名字都在它的 aria-label 里),里面不再嵌一层可聚焦元素 */
   const group = useRef<HTMLDivElement>(null)
   useEffect(() => { group.current?.querySelectorAll<HTMLElement>('[data-slot=tooltip-trigger]').forEach((el) => { el.tabIndex = -1 }) })
-  /* 悬停用原生 pointerenter / pointerleave:按 DOM 判断进出。React 的合成事件会把传送门里的名字提示也算进按钮里,指针离开时可能收不回 */
   const btn = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     const el = btn.current

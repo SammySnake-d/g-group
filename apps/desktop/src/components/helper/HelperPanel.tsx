@@ -25,7 +25,6 @@ export function HelperPanel({ conv, width }: { conv: string; width: number }) {
 
   const setItems = (f: (l: PItem[]) => PItem[]) => setItemsRaw((l) => { const n = f(l); panelItems.set(prev.current, n); return n })
 
-  // 切换聊天:保存上一个聊天的草稿和对话,载入这个聊天的
   useEffect(() => {
     if (prev.current === conv) return
     prev.current = conv
@@ -99,7 +98,6 @@ export function HelperPanel({ conv, width }: { conv: string; width: number }) {
   )
 }
 
-/** 头部三层:名字 → 能读什么 → 谁看得到 */
 function PanelHeader({ title }: { title: string }) {
   const { setHelperPanel } = useApp()
   return (

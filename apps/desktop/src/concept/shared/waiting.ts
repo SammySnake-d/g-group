@@ -1,11 +1,9 @@
 import { people, type Compute, type Conversation, type ListItem, type Pending } from '@/data'
 
-/** 这个会话里「等你」的事,每件落在一条消息上(刻度就画在那条消息的位置) */
 export interface WaitItem { msgId: string; kind: 'ask' | 'accept' | 'error'; label: string }
 
 const name = (id: string) => people[id]?.name ?? id
 
-/* 只收真的在等你的:要你选 / 要你同意 / 做完等你验收 / 出错等你决定。已读、表情、普通 @ 不算 */
 export function waitingIn(conv: Conversation, pending: Pending[], checklist: ListItem[], computes: Record<string, Compute>): WaitItem[] {
   const out: WaitItem[] = []
   const msgOfCompute = (cid: string) => {
@@ -30,7 +28,6 @@ export function waitingIn(conv: Conversation, pending: Pending[], checklist: Lis
   return out.filter((o) => order.has(o.msgId)).sort((a, b) => order.get(a.msgId)! - order.get(b.msgId)!)
 }
 
-/** 某条消息是不是正挂着一件等你的事(提问、提议、做完等验收) */
 export function isWaitingMsg(msgId: string, pending: Pending[], checklist: ListItem[], computes: Record<string, Compute>) {
   if (pending.some((p) => 'ask' in p && p.ask === msgId && !(p.kind === 'choice' && p.stale))) return true
   return checklist.some((t) => t.status === '待验收' && t.attempts.some((a) => computes[a]?.reportMsg === msgId))

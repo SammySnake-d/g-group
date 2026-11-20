@@ -8,11 +8,9 @@ import { FileReader } from './files/FileReader'
 import { fileDataset } from './files/fixtures'
 import { boot } from '@/store/boot'
 
-// 先认出交付物；来处在阅读页头一行，说话回到原对话。
 export function FilesMain({ id }: { id: string | null }) {
   const setFileSel = useApp((s) => s.setFileSel)
   const [peek, setPeek] = useState<Artifact | null>(null)
-  /* 连上后端列 files.list 读到的(附件、任务产出、交付带回的工件);没连上列演示文件 */
   const files = useApp(fileList)
   const collection = fileDataset(boot.fileFixture, files)
   const [keyboardPeek, setKeyboardPeek] = useState(false)

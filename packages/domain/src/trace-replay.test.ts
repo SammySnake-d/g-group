@@ -32,7 +32,6 @@ test("TLA-02 发言发布:去掉 CAS 的双写反例(两人都基于 v0 发布)�
   assert.deepEqual(r.published, [{ who: "c1", base: 0, over: 0 }]);
   const d = divergence(r.steps);
   assert.deepEqual(d && { index: d.index, who: d.who, real: d.real }, { index: 5, who: "c2", real: "conflict" });
-  // 真实实现里没有双写:每条成功发布都基于提交瞬间的版本
   assert.ok(r.published.every((p) => p.base === p.over));
 });
 
@@ -84,19 +83,15 @@ test("TLA-06 多资源租约:去掉 CAS 的双持有反例在真实租约原语�
 test("TLA-07 多资源租约:去掉全序的死锁反例在真实实现上被全序规则打破:逆序申请当场拒绝,释放后对方继续", () => {
   const dump = trace("Lease-noorder");
   const fin = finalState(dump) as { held: Record<string, string[]>; pc: Record<string, string> };
-  // TLC 报的死锁现场:h1 持有 a、b 等 c,h2 持有 c 等 a,谁都走不动
   assert.deepEqual([fin.held.h1, fin.held.h2], [["a", "b"], ["c"]]);
   assert.deepEqual(Object.values(fin.pc), ["acquiring", "acquiring", "acquiring"]);
   const r = replayLease(dump, ORDER);
   assert.equal(divergence(r.steps), null);
   assert.deepEqual(r.held, { h1: { a: 1, b: 1 }, h2: { c: 1 } });
-  // h2 持有 c(rank 2)还要 a(rank 0):真实原语直接拒绝,不原地等
   const rev = acquireLease(r.table, { resource: "a", holder: "h2", expectedVer: readLease(r.table, "a").ver, rank: 0, heldRanks: [2] });
   assert.deepEqual(rev, { ok: false, reason: "reverse-order", rank: 0, heldRank: 2 });
-  // h1 要 c:c 被 h2 占着,排队
   const busy = acquireLease(r.table, { resource: "c", holder: "h1", expectedVer: readLease(r.table, "c").ver, rank: 2, heldRanks: [0, 1] });
   assert.deepEqual(busy, { ok: false, reason: "held-by-other", holder: "h2" });
-  // h2 按规则先释放 c,h1 随即拿到 c,环被打破
   const rel = releaseLease(r.table, { resource: "c", holder: "h2", epoch: 1 });
   assert.ok(rel.ok);
   const got = acquireLease(rel.table, { resource: "c", holder: "h1", expectedVer: readLease(rel.table, "c").ver, rank: 2, heldRanks: [0, 1] });
@@ -115,7 +110,6 @@ test("TLA-08 多资源租约:带 CAS 与全序的 TLC 见证行为(后提交者�
       "h2:conflict:conflict", "h2:read:read", "h2:grant:ok", "h2:read:read", "h2:grant:ok", "h2:read:read", "h2:grant:ok",
     ],
   );
-  // 释放后再授予,epoch 递增:h1 那一代(epoch 1)的令牌对 h2 这一代无效
   assert.deepEqual(r.held, { h1: {}, h2: { a: 2, b: 2, c: 2 } });
   assert.deepEqual(readLease(r.table, "a"), { resource: "a", ver: 3, holder: "h2", epoch: 2 });
   assert.deepEqual(releaseLease(r.table, { resource: "a", holder: "h2", epoch: 1 }), { ok: false, reason: "stale-epoch", epoch: 2 });

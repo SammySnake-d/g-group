@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils'
 import { people, type PersonId } from '@/data'
 import { useApp } from '@/ctx'
 
-/* 头像库：open-bot-avatar（MIT，Dominik Scholz）。几何形状 + 会眨、会跟随鼠标的眼睛 */
 const defs: Record<string, AvatarDefinition> = { ...Object.fromEntries(examples.map((d) => [d.id, d])), ...gallery }
 export type Mood = AvatarMotion
 
@@ -20,7 +19,6 @@ export function Bot({ shape, color, size, mood = 'idle', follow = false, still }
   const [seen, setSeen] = useState(true)
   const [vis, setVis] = useState(typeof document === 'undefined' || !document.hidden)
   useEffect(() => { const f = () => setVis(!document.hidden); document.addEventListener('visibilitychange', f); return () => document.removeEventListener('visibilitychange', f) }, [])
-  /* “正在回复”的头像只用 SVG 静帧 + CSS 呼吸（transform，合成层，不占主线程）；只有悬停和资料页大头像才跑逐帧动画 */
   const wantsLive = vis && (still === false || hover || (follow && size >= 56))
   const isStill = still === true || size < 22 || !wantsLive || !seen
   useEffect(() => {
@@ -30,7 +28,6 @@ export function Bot({ shape, color, size, mood = 'idle', follow = false, still }
     io.observe(el)
     return () => io.disconnect()
   }, [wantsLive])
-  /* 只在形状变化时挂载一次；静止 / 活动之间切换走 update，不重建 SVG（重建会让悬停后第一下点击落空） */
   useEffect(() => {
     inst.current = mountAvatar(host.current!, { definition: defs[shape] ?? defs.chat, color, mood: isStill ? 'idle' : mood, followPointer: follow && !isStill, still: isStill, label: '' })
     return () => inst.current?.destroy()

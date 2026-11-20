@@ -1,4 +1,3 @@
-/* 一次醒来的结果图标:发了消息 / 没打扰你 / 失败。列表、详情、进展总览共用 */
 import { AlertTriangle, Check, MoonStar } from 'lucide-react'
 import type { Cron } from '@/data'
 import { cn } from '@/lib/utils'

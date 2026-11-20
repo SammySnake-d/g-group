@@ -1,4 +1,3 @@
-/* 发现:搜名称 / 简介 / 命令,按类别筛,排序;卡片网格。 */
 import { Search, X } from 'lucide-react'
 import { CATEGORY_DESC, CATEGORY_LABEL, marketList, type MarketSort, type PluginCategory } from '@g-group/ui-core'
 import type { PluginState } from '@/data'

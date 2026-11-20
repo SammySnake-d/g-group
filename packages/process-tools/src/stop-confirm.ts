@@ -1,15 +1,10 @@
 // 停止确认(AC-23,需求 §8.1 已定第 16 条:停止照 mirasim、不用容器,
-// 「助手启动的程序及其子程序全部找出来关掉、确认都退出才显示已停止;交给系统后台托管的程序找不到也关不掉」)。
-// 一次性适配器(adapter.ts)与常驻适配器(resident.ts)共用:读进程表找后代,主进程退出之后把还活着的 SIGKILL,轮询到都退出。
-// 父子链在停止前就断了的(双 fork 守护进程、launchd 托管)找不到,不在保证范围。只读 ps / pgrep,确认循环之外不发信号。
 import { execFileSync } from "node:child_process";
 import { type ProcRow, processMatch, processTable, treeByPgrep, treeOf } from "./procgroup.ts";
 import type { CleanupResult as QuiesceResult } from "./cleanup.ts";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-/** 当前进程表;只读 ps,不发信号 */
 const procs = () => processTable(() => execFileSync("ps", ["-A", "-o", "pid=,ppid=,pgid=,stat=,lstart="], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }));
-/** pgrep:有匹配给 pid 列表,没有匹配(退出码 1)给 [],其它失败给 null */
 const pgrep = (args: readonly string[]): readonly number[] | null => {
   try {
     return execFileSync("pgrep", [...args], { encoding: "utf8" }).split("\n").filter((l) => /^\d+$/.test(l.trim())).map((l) => Number(l.trim()));
@@ -17,7 +12,6 @@ const pgrep = (args: readonly string[]): readonly number[] | null => {
     return (e as { status?: unknown }).status === 1 ? [] : null;
   }
 };
-/** root 的后代与同组成员:先用 ps,读不到退到 pgrep;都读不到返回 null */
 export const treeNow = (root: number): readonly ProcRow[] | null => {
   const t = procs();
   return t ? treeOf(root, t) : treeByPgrep(root, pgrep);

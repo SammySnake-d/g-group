@@ -6,7 +6,6 @@
 
 export type HarnessId = "claude-code" | "codex";
 
-/** 工具按做的事归类:改文件、跑命令、读文件、搜索、上网、其它 */
 export const TOOL_KINDS = ["edit", "command", "read", "search", "web", "other"] as const;
 export type ToolKind = (typeof TOOL_KINDS)[number];
 
@@ -18,20 +17,16 @@ export interface FileChange {
 
 interface EventBase {
   id: string;
-  /** 会话内单调递增的序号,分页与合并都按它排 */
   seq: number;
-  /** ISO 时间 */
   at: string;
 }
 
-/** 派活:联系人交给 Compute 的那段话(harness 视角里的 user 消息) */
 export interface PromptEvent extends EventBase {
   kind: "prompt";
   from: string;
   text: string;
 }
 
-/** harness 说的话(assistant 文字) */
 export interface TextEvent extends EventBase {
   kind: "text";
   text: string;
@@ -39,46 +34,37 @@ export interface TextEvent extends EventBase {
 
 export type ToolStatus = "running" | "ok" | "failed";
 
-/** 一次工具调用:tool_use + tool_result 合在一条 */
 export interface ToolEvent extends EventBase {
   kind: "tool";
-  /** harness 里的工具名(Read / Edit / Bash / shell / apply_patch …) */
   name: string;
-  /** 一行能看懂的调用摘要(文件路径、命令、搜索词) */
   summary: string;
   input?: string;
   output?: string;
   status: ToolStatus;
   durationMs?: number;
   changes?: FileChange[];
-  /** 这次调用是在重试哪一次失败的调用 */
   retryOf?: string;
 }
 
 export type AgentStatus = "running" | "done" | "failed";
 
-/** 子代理:harness 自己再分出去的一路 */
 export interface AgentEvent extends EventBase {
   kind: "agent";
   label: string;
-  /** 交给子代理的任务 */
   brief: string;
   status: AgentStatus;
   calls: number;
   durationMs: number;
   result?: string;
-  /** 子代理自己的工具调用(后端可能只给最近几条) */
   trail?: ToolEvent[];
 }
 
-/** harness 自己的系统提示:接口报错、自动重试、等待 */
 export interface NoticeEvent extends EventBase {
   kind: "notice";
   level: "info" | "warn" | "error";
   text: string;
 }
 
-/** 本轮交付:文件、改动、链接、文字结论 */
 export interface DeliverableEvent extends EventBase {
   kind: "deliverable";
   name: string;
@@ -99,11 +85,9 @@ export interface HarnessSessionMeta {
   computeId: string;
   harness: HarnessId;
   model: string;
-  /** harness 自己的会话 id(Claude Code 的 session id / Codex 的 rollout id);有了才能在 harness 里原样打开 */
   nativeSessionId: string | null;
   startedAt: string;
   endedAt: string | null;
-  /** 第几轮(联系人每补一句、每次重跑算一轮) */
   turns: number;
   background: BackgroundJob[];
 }
@@ -111,11 +95,9 @@ export interface HarnessSessionMeta {
 export interface HarnessTranscript {
   meta: HarnessSessionMeta;
   events: TranscriptEvent[];
-  /** 后端还有更早的事件没取 */
   hasEarlier: boolean;
 }
 
-/* ---------------- 归类 ---------------- */
 
 const KIND_BY_TOOL: Record<string, ToolKind> = {
   edit: "edit",
@@ -144,21 +126,17 @@ export function toolKind(name: string): ToolKind {
   return KIND_BY_TOOL[name.trim().toLowerCase()] ?? "other";
 }
 
-/** 输出的第一行非空内容,截到 max 个字符;用来在折叠的调用行上给一句结果 */
 export function digest(output: string | undefined, max = 80): string {
   const line = (output ?? "").split("\n").map((l) => l.trim()).find((l) => l.length > 0) ?? "";
   const chars = Array.from(line);
   return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : line;
 }
 
-/* ---------------- 分组:文字段 / 连续工具调用组 / 子代理组 ---------------- */
 
 export interface ToolCallView {
   event: ToolEvent;
   kind: ToolKind;
-  /** 第几次尝试(沿 retryOf 往回数) */
   attempt: number;
-  /** 失败了,但后面的重试成功了 */
   recovered: boolean;
 }
 
@@ -186,7 +164,6 @@ export function tallyTools(calls: readonly ToolEvent[]): ToolTally {
   return t;
 }
 
-/** 每次调用是第几次尝试、失败后有没有被重试成功 */
 function retryIndex(tools: readonly ToolEvent[]) {
   const byId = new Map(tools.map((t) => [t.id, t]));
   const attempt = new Map<string, number>();
@@ -198,7 +175,6 @@ function retryIndex(tools: readonly ToolEvent[]) {
     attempt.set(t.id, n);
     return n;
   };
-  /* 一次失败算「已恢复」:沿重试链往后,最后有一次成功 */
   const next = new Map<string, ToolEvent[]>();
   for (const t of tools) if (t.retryOf) next.set(t.retryOf, [...(next.get(t.retryOf) ?? []), t]);
   const recovered = (id: string, seen = new Set<string>()): boolean => {
@@ -242,9 +218,7 @@ export function groupTranscript(events: readonly TranscriptEvent[]): TranscriptB
   return blocks;
 }
 
-/* ---------------- 汇总:改了几个文件、跑了几条命令 ---------------- */
 
-/** 主会话与子代理的全部工具调用 */
 function allTools(events: readonly TranscriptEvent[]): ToolEvent[] {
   const out: ToolEvent[] = [];
   for (const e of events) {
@@ -276,7 +250,6 @@ export interface WorkSummary {
   calls: number;
   failed: number;
   agents: number;
-  /** 各类工具各调用了几次(含子代理里的) */
   byKind: Record<ToolKind, number>;
 }
 
@@ -314,7 +287,6 @@ export function interruptRunning(events: readonly TranscriptEvent[], note: strin
   });
 }
 
-/* ---------------- 分页合并 ---------------- */
 
 /** 增量取到的一页并进已有事件:同 id 以新的为准(在跑的调用会更新状态),按 seq 排 */
 export function mergeEvents(prev: readonly TranscriptEvent[], incoming: readonly TranscriptEvent[]): TranscriptEvent[] {
@@ -324,16 +296,13 @@ export function mergeEvents(prev: readonly TranscriptEvent[], incoming: readonly
   return [...map.values()].sort(bySeq);
 }
 
-/* ---------------- 时间 ---------------- */
 
-/** 会话用时:结束了取起止差;在跑取到 now 为止。时间解析不了按 0 */
 export function sessionElapsedMs(meta: Pick<HarnessSessionMeta, "startedAt" | "endedAt">, now: number): number {
   const start = Date.parse(meta.startedAt);
   const end = meta.endedAt ? Date.parse(meta.endedAt) : now;
   return Number.isFinite(start) && Number.isFinite(end) ? Math.max(0, end - start) : 0;
 }
 
-/** 和 mirasim 同一种写法:42s、4m07s、1h08m;不足 1 秒记 0s */
 export function formatDuration(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return "0s";
   const total = Math.floor(ms / 1000);

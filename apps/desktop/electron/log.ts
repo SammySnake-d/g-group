@@ -1,4 +1,3 @@
-// 主进程的事件日志:userData/logs/main.log。只记启动、后端起停与失败、退出、更新安装这类排障要用的事,不记聊天内容、不记令牌。
 import { appendFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 

@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 // 全机排队跑重活(e2e、埋雷):本机同时有十几个会话,用户 #1083 要求测试别把机器占满。
-// 用法:node verify/serial.mjs <命令…>   例:node verify/serial.mjs npx playwright test --project=renderer
-// - 锁是 $TMPDIR 下的目录 gg-desktop-e2e.lock(mkdir 原子),里面记持锁进程号;持锁进程已不在就当作陈旧锁清掉
 // - 子命令退出(含 Ctrl-C / 被杀)后释放锁,并清掉这个工作副本里残留的 vite / electron 进程
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";

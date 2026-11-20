@@ -27,11 +27,10 @@ export function ContactModelSettings({ id }: { id: PersonId }) {
   const [draft, setDraft] = useState<Draft>(base)
   const [notice, setNotice] = useState<NextTurn | null>(null)
   const [adv, setAdv] = useState(!!p.stall)
-  /* 别处（全局默认、批量替换）保存过：没改动就跟上新值 */
   useEffect(() => {
     const cur = fromPerson(people[id])
     if (!sameDraft(cur, base)) { setBase(cur); setDraft(cur) }
-  }, [modelsRev, id]) // 只在保存过或换了联系人时对一次，不跟着 base 自己变
+  }, [modelsRev, id])
 
   const cm = asContact(id, draft)
   const gate = gateCompute('save', cm, s)

@@ -15,7 +15,6 @@ export interface IconButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLBut
   active?: boolean
   tooltip?: boolean
   side?: "top" | "right" | "bottom" | "left"
-  /** 角标(未读数等) */
   badge?: React.ReactNode
 }
 

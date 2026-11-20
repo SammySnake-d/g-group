@@ -1,4 +1,3 @@
-// Claude Code Compute 适配器的对外类型。
 // Brief 与 domain 里 contact.briefFor 的输出形状一致;本包不 import contact(避免依赖尚未合入的 PR #4),自己声明。
 
 export type Placement = "local" | "byom_daemon" | "cloud_sandbox";
@@ -19,7 +18,6 @@ export interface HandoffSnapshot {
   readonly doneSideEffects: readonly string[];
 }
 
-/** 启动 CLI 的可执行入口。默认是真实的 `claude`;测试注入一个按 stream-json 输出的假 CLI。 */
 export interface ClaudeRunner {
   readonly command: string;
   readonly args?: readonly string[];
@@ -29,9 +27,7 @@ export interface AdapterOptions {
   readonly runner?: ClaudeRunner;
   /** 宿主自己给 CLI 的运行配置(例如模型网关地址)。不来自 brief,也不继承宿主进程的整份环境。 */
   readonly hostEnv?: Readonly<Record<string, string>>;
-  /** 对主进程发 SIGTERM 之后等多久主进程仍未退出就对进程组发 SIGKILL。不给时与 mirasim 一样读环境变量 MIRASIM_REAP_FORCE_MS(有限正数生效),否则 10000;给了就以它为准 */
   readonly reapForceMs?: number;
-  /** report_progress MCP 服务器的启动命令;默认是本包 mcp/report-mcp.mjs。测试用它注入起不来的服务器 */
   readonly reportServer?: { readonly command: string; readonly args?: readonly string[] };
 }
 
@@ -47,20 +43,13 @@ export interface SpawnOptions {
   readonly cwd?: string;
   /** 首轮用的生效模型(AC-51 ①);常驻适配器按它启动,一次性适配器忽略 */
   readonly model?: string;
-  /** 首轮用的推理强度;常驻适配器按它启动 */
   readonly effort?: string;
   /**
    * 联系人专属配置目录(AC-29,绝对路径):作为 CLAUDE_CONFIG_DIR 交给 CLI,设置与会话记录都落在这里,不读写本机 ~/.claude。
    * 盖过 hostEnv 里的同名变量。
    */
   readonly configDir?: string;
-  /**
-   * 勾选的 skill 所在的插件目录(绝对路径,每个经 --plugin-dir 交给 CLI)。
-   * --bare 下 CLI 不读 ~/.claude/skills 也不读 CLAUDE_CONFIG_DIR/skills,只有 --plugin-dir 里的 skill 会加载
-   * (V-02,2026-11-09 真实 CLI 2.1.319 实测,packages/server/proof/v02-config-dir.txt)。
-   */
   readonly pluginDirs?: readonly string[];
-  /** 勾选的 MCP 服务器,和 host(report_progress)一起写进 --mcp-config;名字 host 保留。CLI 只连这些(--strict-mcp-config) */
   readonly mcpServers?: Readonly<Record<string, McpServerSpec>>;
 }
 
@@ -88,7 +77,6 @@ export interface ManifestSection {
   readonly detail: Readonly<Record<string, unknown>>;
 }
 
-/** 新会话首个装配清单:首个提示由哪些段组成、挂了哪些工具与凭据引用 */
 export interface Manifest {
   readonly computeId: string;
   readonly sections: readonly ManifestSection[];
@@ -97,9 +85,7 @@ export interface Manifest {
   readonly placement: Placement;
   /** 交给 CLI 的勾选 MCP 服务器名(不含 host);本适配器总是给出,可选只为兼容旧替身 */
   readonly mcpServers?: readonly string[];
-  /** 交给 CLI 的插件目录 */
   readonly pluginDirs?: readonly string[];
-  /** CLAUDE_CONFIG_DIR;没给为 null */
   readonly configDir?: string | null;
 }
 
@@ -122,13 +108,12 @@ export type ComputeEvent =
       readonly resumed: boolean;
       /** harness 自报的会话当前模型(常驻适配器给出) */
       readonly model?: string;
-      /** CLI 主进程 pid(常驻适配器给出;跨轮不变即同一进程) */
       readonly pid?: number;
       /** init 自报实际加载的 skill 与 MCP 服务器(AC-29);旧替身可以不带 */
       readonly loaded?: LoadedCapabilities;
     }
   | { readonly computeId: string; readonly kind: "milestone"; readonly stage: string; readonly summary: string }
-  | { readonly computeId: string; readonly kind: "blocked"; readonly needs: string; readonly summary: string; /** 工作目录内文件的相对路径(截图等),原样转交宿主 */ readonly attachments?: readonly string[] }
+  | { readonly computeId: string; readonly kind: "blocked"; readonly needs: string; readonly summary: string;                                 readonly attachments?: readonly string[] }
   | {
       readonly computeId: string;
       readonly kind: "completed";
@@ -151,7 +136,6 @@ export type ComputeEvent =
   | {
       readonly computeId: string;
       readonly kind: "stopped";
-      /** stop 时立即产出,进程还没退出,所以是 null */
       readonly code: number | null;
       readonly signal: string | null;
       /**
@@ -163,7 +147,6 @@ export type ComputeEvent =
        * 内核不得把 stopped 当作执行树已静止,更不是容器级静止;完全隔离归 placement=cloud_sandbox / 容器,不在本适配器。
        */
       readonly scope: "main-then-group" | "turn-interrupt";
-      /** 停止之前适配器判定过的违规(工具越界、init 无法核验等),停止优先于违规但违规保留可审计 */
       readonly violations: readonly string[];
     };
 
@@ -188,7 +171,6 @@ export type ComputeActivity =
   | { readonly computeId: string; readonly kind: "tool_end"; readonly toolId: string; readonly isError: boolean }
   | { readonly computeId: string; readonly kind: "retry"; readonly error: string; readonly httpStatus: number | null };
 type WithoutComputeId<T> = T extends unknown ? Omit<T, "computeId"> : never;
-/** 一行 CLI 输出里认出的活动(还没挂上 computeId) */
 export type ActivitySignal = WithoutComputeId<ComputeActivity>;
 
 export interface ComputeAdapter {
@@ -206,10 +188,7 @@ export interface ComputeAdapter {
   events(): AsyncIterable<ComputeEvent>;
   /** 可选:harness 流里的活动(卡死检测用),从开始迭代起按发生顺序;不回放迭代之前的活动 */
   activity?(): AsyncIterable<ComputeActivity>;
-  /** 这一轮产出终态(或停在受阻)且 CLI 主进程已退出后,返回这一轮的事件 */
   settled(computeId: string): Promise<readonly ComputeEvent[]>;
-  /** 只在终态(stopped/completed/failed)且 CLI 主进程已退出之后成功;否则 {ok:false, reason:"not-quiescent"}。
-   *  不检查同组或脱组的其它进程,见 stopped.scope */
   snapshot(computeId: string): SnapshotResult;
   /** 被拒收(服务器 isError,或回执合规但内容不合 schema)的汇报记录,按发生顺序;它们不产出语义事件 */
   rejectedReports(computeId: string): readonly RejectedReport[];

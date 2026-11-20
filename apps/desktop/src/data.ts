@@ -1,5 +1,3 @@
-/* ============ 原型数据：联系人、Compute、会话、待你处理 ============
-   每段数据旁边标了它服务的用户故事（US）与验收条目（AC），走查脚本按这些编号核对。 */
 import type { ModelSlot, StallOverride } from '@g-group/ui-core'
 
 import { seedInstalled, type CronTrigger, type OutboundGrant, type PluginInstall, type PluginManifest, type RiskLevel } from '@g-group/ui-core'
@@ -15,7 +13,6 @@ export interface Person {
   role: string
   /** 说话模型（模型目录里的 id，见 modelConfig.ts）。联系人说话不选 Harness */
   model?: string
-  /** Compute 用哪个 Harness（合同 HARNESSES） */
   harness?: string
   /** AC-32 Compute 模型三态：继承全局 / 跟随说话模型 / 单独指定；effort 跟着槽位走 */
   computeModel?: ModelSlot
@@ -25,7 +22,7 @@ export interface Person {
   today?: string
   month?: string
   human?: boolean
-  focus?: string // US12 专职专注
+  focus?: string
   tools?: { name: string; on: boolean; kind: 'skill' | 'mcp' }[]
   soul?: string
   memory?: { text: string; src: string }[]
@@ -41,10 +38,8 @@ const defaultTools = (): Person['tools'] => [
   { name: '发邮件', on: false, kind: 'mcp' },
 ]
 
-/** 界面各处查联系人用的登记表(store/people.ts):演示模式装下面的演示联系人,连上后端装 contacts.list 的结果 */
 export { people } from './store/people'
 
-/** 演示联系人:只由演示模式(api/demo-state.ts)装进登记表,连上后端时不用 */
 export const demoPeople: Record<PersonId, Person> = {
   me: { id: 'me', name: '39impacts', initials: '39', role: '你', human: true, color: '#52525b' },
   helper: { id: 'helper', name: 'Helper', shape: 'lightbulb', color: '#f8a01c', role: '帮你操作这个软件', model: 'claude-haiku-5-5' },
@@ -87,7 +82,6 @@ export type StepState = 'done' | 'now' | 'todo' | 'fail'
 export interface DiffLine { t: 'ctx' | 'add' | 'del' | 'hunk'; n?: number; s: string }
 export interface CFile { path: string; add: number; del: number; diff: DiffLine[] }
 
-/** 活动流的一条：参照 Devin Activity / Copilot session log / Linear agent activity 的类型化事件 */
 export type ActKind = 'think' | 'read' | 'search' | 'edit' | 'cmd' | 'review' | 'report' | 'user' | 'ask' | 'answer' | 'sub' | 'error' | 'rollback'
 export interface Activity { id: string; step: number; kind: ActKind; title: string; detail?: string; files?: string[]; dur?: string; at: string; who?: PersonId; live?: boolean; link?: string }
 
@@ -126,9 +120,7 @@ export interface Compute {
   short?: string
   /** AC-23：已请求停止、还没确认停下 */
   stopping?: boolean
-  /** 在哪跑(本机 / 自带机器 / 云端);演示数据没有这一项,按本机显示 */
   placement?: string
-  /** C-US15：做到一半卡在只有人能过的一步（验证码），交给你；你接手过了再交还 */
   needsHuman?: { what: string; taken?: boolean; qid?: string }
   /** AC-45：约束版本。你改了派活消息，在途任务原位升版，不另开 */
   cver?: number
@@ -302,10 +294,8 @@ export const computes0: Record<string, Compute> = {
   },
 }
 
-/* ---------- 文件与资产 ---------- */
 export interface Artifact {
   id: string; name: string; kind: 'doc' | 'page' | 'sheet' | 'asset'; meta: string; by: PersonId; conv: string; when: string
-  /** 连上后端时才有:合同里的文件号(files.read / artifacts.get 用)、出现它的那条消息、类型与大小 */
   live?: { ref: string; src: string; mime: string; bytes: number; via: 'file' | 'artifact' }
 }
 export const artifacts: Artifact[] = [
@@ -316,7 +306,6 @@ export const artifacts: Artifact[] = [
   { id: 'a5', name: '群协作手册', kind: 'doc', meta: '文档 · 6 条', by: 'argon', conv: 'g', when: '今天' },
 ]
 
-/* ---------- US1 任务认领板 ---------- */
 export interface Board { id: string; title: string; conv: string; rows: { task: string; who?: PersonId }[] }
 export const boards0: Record<string, Board> = {
   b1: { id: 'b1', title: '本周任务认领板', conv: 'g-design', rows: [
@@ -324,7 +313,6 @@ export const boards0: Record<string, Board> = {
   ] },
 }
 
-/* ---------- US6 / US11 / US12 承诺 ---------- */
 export interface Commitment { id: string; owner: PersonId; conv: string; text: string; trigger: '定时' | '有进度时' | '条件'; next?: string; bound?: string[]; srcMsg: string; on: boolean }
 export const commits0: Commitment[] = [
   { id: 'c1', owner: 'claude', conv: 'g', text: '「登录页深色」有进度就在群里 @你', trigger: '有进度时', bound: ['login'], srcMsg: 'g9d', on: true },
@@ -332,7 +320,6 @@ export const commits0: Commitment[] = [
   { id: 'c3', owner: 'argon', conv: 'g-design', text: '每天 08:00 总结飞书「产品讨论群」前一天的讨论，发到本群', trigger: '定时', next: '明天 08:00', srcMsg: 'y8', on: true },
 ]
 
-/* ---------- US14 群协作手册 ---------- */
 export interface PlaybookItem { id: string; kind: '分工' | '交接' | '纠正落点' | '可信度'; text: string; scope: 'project' | 'team' | 'global'; src: string }
 export const playbook0: PlaybookItem[] = [
   { id: 'pb1', kind: '分工', text: 'Claude Code 主写代码 → Astra 换一家模型复核 → Argon 写文档', scope: 'team', src: '#583' },
@@ -360,9 +347,7 @@ export const sources: Source[] = [
   { id: 'ding', app: '钉钉', name: '', state: '', connected: false, letter: '钉' },
 ]
 
-/* ---------- 消息：聊天里只放“说的话”，事件只占一行 ---------- */
 export interface QuoteRef { msgId: string; from: PersonId; text: string; reply?: boolean; ext?: string }
-/** 随消息发出的附件(连上后端时来自 MessageView.attachments) */
 export interface MsgFile { ref: string; name: string; mime: string; bytes: number }
 export type Msg =
   | { k: 'date'; text: string }
@@ -380,7 +365,6 @@ export type Msg =
   | { k: 'summary'; id: string; from: PersonId; title: string; items: { text: string; ref?: string }[]; covers?: string[]; expired?: string }
   | { k: 'replying'; id: string; from: PersonId; quotes: QuoteRef[]; phase: string; mins: number; steps: string[]; since?: number }
 
-/** 连上后端时消息上挂的卡片(提问、失败、授权…):按钮走 cards.act,点了以你的名义记一条回复。演示数据没有这一项 */
 export interface MsgCard { id: string; seq: number; kind: string; taskId: string | null; state: 'open' | 'claimed' | 'done' | 'expired'; title: string; body: string; actions: { id: string; label: string; style: 'primary' | 'default' | 'danger' }[] }
 /** 一条群公告。ver 每次修改 +1；助手接活前由软件把当前版本装配进它的上下文（不是它自己去读，所以叫「已装配」，不写「已遵守」） */
 /** U87 / D23 / AC-40：每条交给助手的消息都要有交代。谁来交代 = 被 @ 的联系人；ref 指向它落在哪（Compute、定时、消息） */
@@ -441,12 +425,9 @@ export const convs0: Conversation[] = [
       { k: 'text', id: 'g8b', from: 'me', disp: { by: 'claude', kind: 'merged', ref: 'login', refKind: 'compute', note: '并进登录页深色这件事一起做' }, text: '@Claude Code 登录页的按钮也顺便换成圆角' },
       { k: 'text', id: 'g8c', from: 'me', disp: { by: 'claude', kind: 'superseded', ref: 'g8d', refKind: 'msg' }, text: '@Claude Code 深色用纯黑底' },
       { k: 'text', id: 'g8d', from: 'me', disp: { by: 'claude', kind: 'merged', ref: 'login', refKind: 'compute' }, text: '算了，深色用 #111 吧，纯黑太刺眼' },
-      // US11：不 @ 任何人的一句话，在途的联系人各自记成承诺
       { k: 'text', id: 'g9d', from: 'me', disp: { by: 'claude', kind: 'committed', note: 'Claude Code、Codex 都记下了：有进度就在群里 @你' }, text: '有进度的话汇报到群里然后 @我 来看' },
       { k: 'commit', id: 'g9e', ids: ['c1', 'c2'] },
-      // US13：一条消息带多条引用
       { k: 'text', id: 'g10', from: 'me', text: '@Claude Code @Argon 外部的聊天记录要接进来，你们觉得怎么接比较好？', quotes: [{ msgId: 'g1', from: 'astra', text: 'IM 竞品的交互对照整理好了，重点看第 3 节…' }, { msgId: 'g6', from: 'codex', text: '查完了：首屏一次拉了全部历史消息…' }] },
-      // GrokBot 式：助手之间的讨论只占一行，点开在右侧只读看原话
       {
         k: 'huddle', id: 'g11', who: ['claude', 'argon'], conclusion: 'g12', items: [
           { id: 'h1', from: 'argon', text: '全量同步最省事，但群聊记录很多，噪音会盖过真正的讨论。' },
@@ -475,7 +456,6 @@ export const convs0: Conversation[] = [
       { k: 'compute', id: 'd2', from: 'claude', computeId: 'review' },
       { k: 'text', id: 'd3', from: 'claude', text: '过完了，提了 5 处修改，都已经合进去了。' },
       { k: 'date', text: '今天 02:16' },
-      // US7：补充要求挂到哪件事上，可以改挂
       { k: 'text', id: 'd4', from: 'me', text: '登录页的按钮圆角再小一点', tag: { task: 'login', state: '已收到' } },
       { k: 'text', id: 'd5', from: 'claude', text: '好，记到「登录页深色」那件事里了，下一步一起改。' },
       // AC-17：你立过“改代码前先问我”，所以它写盘前停下来问；同意只放行这一次
@@ -493,13 +473,11 @@ export const convs0: Conversation[] = [
       { k: 'text', id: 'y1', from: 'me', text: '@Grok 把 GrokBot 的设计文章找来，整理一下要点' },
       { k: 'text', id: 'y2', from: 'grok', text: '好，我去抓。' },
       { k: 'compute', id: 'y2c', from: 'grok', computeId: 'scrape' },
-      // US9：抢答答错，其他联系人纠正
       { k: 'text', id: 'y5', from: 'me', text: '今天上海天气怎么样？' },
       { k: 'compute', id: 'y6c', from: 'grok', computeId: 'weather' },
       { k: 'text', id: 'y6', from: 'grok', text: '今天上海晴，32°C。' },
       { k: 'text', id: 'y7', from: 'astra', text: '这条不对：中央气象台今天上海是小雨，19–23°C。32°C 是广州的数据。', quotes: [{ msgId: 'y6', from: 'grok', text: '今天上海晴，32°C。', reply: true }] },
       { k: 'text', id: 'y7b', from: 'grok', text: '确实，我拿错了城市，以 Astra 的为准。' },
-      // US6：定时承诺
       { k: 'vote', id: 'y7v', from: 'claude', title: '状态存储用哪种？', options: ['SQLite 单库', '内容寻址文件'], votes: { claude: { opt: 0, why: '事务和索引现成，回滚好做' }, astra: { opt: 0, why: '并发写有锁，审计好查' }, grok: { opt: 1, why: '和 Git 一起管，diff 直观' } } },
       { k: 'text', id: 'y8', from: 'me', disp: { by: 'argon', kind: 'committed', ref: 'cr1', refKind: 'cron', note: '每天 08:00' }, text: '@Argon 每天早上 8 点把飞书「产品讨论群」前一天的讨论总结一下，发到这个群' },
       { k: 'text', id: 'y9', from: 'argon', cron: 'cr1', cronNew: true, text: '好，记成我的定时了：每天 08:00 总结飞书「产品讨论群」前一天的讨论，发到本群。明天 8 点发第一份。' },
@@ -518,7 +496,6 @@ export const convs0: Conversation[] = [
   ] },
   { id: 'dm-codex', kind: 'dm', title: 'Codex', members: ['me', 'codex'], time: '昨天', reads: { codex: [{ upto: 'w1', at: '01:48' }, { upto: 'z2', at: '02:10' }] }, messages: [
     { k: 'date', text: '今天 01:48' },
-    // US3：发了配置，Helper 自动存成资产
     { k: 'text', id: 'w0', from: 'me', text: '香港那台机器：ssh root@43.•••.•••.12  密码 ••••••••  部署目录 /srv/app' },
     { k: 'asset', id: 'w0a', assetId: 'a4', text: 'Helper 把它存成了资产「VPS · 香港 1 号机」。原消息删了，资产也还在。' },
     { k: 'text', id: 'w1', from: 'codex', text: '收到，之后部署直接用这台。首页修好了，在群里 @你了。' },
@@ -541,7 +518,6 @@ export const convs0: Conversation[] = [
   ] },
 ]
 
-/** 助手在群里的内部调度记录：平时不刷群，在「从群聊私信」里展开（US10-View） */
 export const innerLog: Record<string, { conv: string; at: string; text: string; computeId?: string }[]> = {
   claude: [
     { conv: 'g', at: '02:12', text: '收到 #g8：登录页深色 + 补测试。判断要改代码、跑测试 → 分一个 Compute', computeId: 'login' },
@@ -563,7 +539,6 @@ export const innerLog: Record<string, { conv: string; at: string; text: string; 
   grok: [{ conv: 'g-design', at: '02:03', text: '打开网页失败 3 次 → 报给你，等你决定重试还是换模型', computeId: 'scrape' }],
 }
 
-/** 助手之间的对话（GrokBot 式：主流只显示一行，原话在这里） */
 export const agentTalks: { id: string; who: [PersonId, PersonId]; conv: string; at: string; title: string; items: { from: PersonId; text: string }[] }[] = [
   { id: 't1', who: ['claude', 'argon'], conv: 'g', at: '02:14', title: '外部聊天记录怎么接', items: [] },
   { id: 't2', who: ['codex', 'astra'], conv: 'g', at: '01:42', title: '首页性能交给 Astra 复核', items: [
@@ -582,7 +557,6 @@ export const agentTalks: { id: string; who: [PersonId, PersonId]; conv: string; 
 
 agentTalks[0].items = (convs0[0].messages.find((m) => m.k === 'huddle') as Extract<Msg, { k: 'huddle' }>).items.map(({ from, text }) => ({ from, text }))
 
-/* ---------- 待你处理：不进聊天流，停在输入框上方 ---------- */
 export type Pending =
   | { kind: 'choice'; id: string; conv: string; from: PersonId; title: string; options: string[]; recommend?: number; ask: string; stale?: string }
   | { kind: 'accept'; id: string; conv: string; from: PersonId; computeId: string; ask?: string }
@@ -607,7 +581,6 @@ export const reactions0: Record<string, Record<string, PersonId[]>> = {
   y7: { '👍': ['me', 'claude'] },
 }
 
-/* ============ v4 新增：职责 × 群、预设、定时、群清单、插件（概念卡 v3 第 1、4、6、11 张） ============ */
 
 /** 职责是“联系人 × 群”的关系：名片上一个默认职位，每个群另有分工（#1373） */
 export const dutyDefault: Record<PersonId, string> = {
@@ -635,23 +608,16 @@ export const presetOf: Record<PersonId, string> = {
 export interface CronRun { at: string; result: 'said' | 'silent' | 'error'; note: string; msg?: string; notices?: Record<string, number> }
 export interface Cron {
   id: string; owner: PersonId; conv: string
-  /** 醒来做什么（可以多行） */
   text: string
   trigger: CronTrigger
-  /** 什么时候开口：每次都发结果 / 有情况才说 */
   speak: 'always' | 'only-if'
   paused?: boolean
-  /** 用到哪个插件取数 / 发送（展示用） */
   uses?: string[]
-  /** 在聊天里说的那句（路径 A 建的定时才有） */
   srcMsg?: string
-  /** 新的在前 */
   runs: CronRun[]
 }
 
-/* 演示数据的时刻都相对“打开应用这一刻”算，存成 ISO（测试里固定时钟，结果就确定） */
 const T0 = new Date()
-/** 最近第 k 次（0 = 最近一次）每天 hh:mm 的时刻，一定早于现在 */
 const lastAt = (hm: string, k = 0) => {
   const [h, m] = hm.split(':').map(Number)
   const d = new Date(T0.getFullYear(), T0.getMonth(), T0.getDate(), h, m)
@@ -659,7 +625,6 @@ const lastAt = (hm: string, k = 0) => {
   d.setDate(d.getDate() - k)
   return d.toISOString()
 }
-/** 现在往前 mins 分钟 */
 const minsAgo = (mins: number) => new Date(T0.getTime() - mins * 60_000).toISOString()
 
 export const crons0: Cron[] = [
@@ -843,7 +808,6 @@ const web: PluginManifest = {
   changelog: [{ version: '1.1.0', date: '2026-09-25', notes: ['去掉了广告和导航'] }],
 }
 export const pluginCatalog0: PluginManifest[] = [feishu, gmail, telegram, cve, github, web, pulsePlugin, board, webhook, translate, jira]
-/** 本机已装的旧版本：飞书 1.4.2（1.5.0 多要「读取飞书文档」）、CVE 1.2.0（权限没变） */
 const feishu142: PluginManifest = { ...feishu, version: '1.4.2', permissions: feishu.permissions.filter((p) => p.scope !== 'feishu.docs:read'), changelog: feishu.changelog.slice(1) }
 const cve120: PluginManifest = { ...cve, version: '1.2.0', changelog: cve.changelog.slice(1) }
 export const plugins0: PluginState[] = [

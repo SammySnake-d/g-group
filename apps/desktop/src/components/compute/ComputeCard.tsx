@@ -19,9 +19,7 @@ import { computeState, StatusChip } from './StatusChip'
 
 export interface ComputeCardProps {
   compute: Compute
-  /** harness 原始记录：有了才显示「改了 N 个文件，执行了 N 条命令」、后台任务和轮次 */
   transcript?: HarnessTranscript | null
-  /** 不传：在跑/出错/等你时展开，做完和停下时收起 */
   defaultOpen?: boolean
   onOpenSession?: () => void
   actions?: CardActions
@@ -38,10 +36,8 @@ export function ComputeCard({ compute: c, transcript, defaultOpen, onOpenSession
   const done = c.steps.filter((s) => s.state === 'done').length
   const work = useMemo(() => (transcript ? summarizeWork(transcript.events) : null), [transcript])
   const harness = transcript ? HARNESS_LABEL[transcript.meta.harness] : c.harness
-  /* 出错或停下:写停在第几步(原因在提示条里,不重复);做完:写结果;在跑:写当前阶段 */
   const haltAt = c.steps.findIndex((s) => s.state === (c.status === 'error' ? 'fail' : 'now'))
   const halted = c.status === 'error' || c.status === 'stopped'
-  /* 停止中:阶段说明就在提示条里,头部不重复 */
   const where = state.key === 'stopping' ? '' : c.status === 'done' ? c.result ?? state.label : halted ? (haltAt >= 0 ? COPY.stoppedAt(haltAt + 1, c.steps.length) : state.label) : c.phase
   const meta = [
     { key: 'harness', text: harness, className: 'text-fg-2' },

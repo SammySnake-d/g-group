@@ -5,7 +5,6 @@ import { useApp } from '@/store'
 
 type TextMsg = Extract<Msg, { k: 'text' }>
 
-/** 多选模式下替换输入框:引用、删除(只删你这边)、合并转发 */
 export function SelectBar({ conv }: { conv: Conversation }) {
   const { selected, setSelecting, addQuote, deleteMsgs, push, active } = useApp((s) => ({ selected: s.selected, setSelecting: s.setSelecting, addQuote: s.addQuote, deleteMsgs: s.deleteMsgs, push: s.push, active: s.active }))
   const n = selected.size

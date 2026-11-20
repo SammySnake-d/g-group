@@ -3,9 +3,6 @@
 //   - prepareRequest 在每次发给模型前回调,返回的 context.messages 整体替换本次请求;
 //   - 每轮第一次请求 = 五块:第 1 块作 system(固定前缀,带工具声明 toolsAdded,缓存断点在它末尾),第 2–5 块按顺序放进一条 user 消息;
 //   - 同一轮里模型调了工具,之后的请求 = 五块 + 本轮的工具调用与结果,不能清空;五块只在轮与轮之间重拼;
-//   - pi 自己累积的 agent.state.messages 只当缓冲,不当真源:每轮新建 Agent,用完即弃。
-// 工具只登记动作、不做 I/O(tools.ts);宿主校验、分配 action_id、落盘后才执行。
-// 密钥只由调用方传入,只在发请求时交给 pi-ai;不读环境变量,不进返回值、错误信息和日志。
 import { Agent, type AgentMessage, type AgentTool, type AgentToolResult, type StreamFn } from "@earendil-works/pi-agent-core";
 import { type AssistantMessage, type SystemMessage, toToolDeclaration, type UserMessage } from "@earendil-works/pi-ai";
 import { BLOCK_LABELS, type BlockNo, type ContactMind, type MindAction, plainData, type RoundBlock, type RoundInput, type RoundOutput, type RoundTools, type UsageSink } from "@g-group/kernel";
@@ -15,27 +12,21 @@ import { type Attempt, describe, resolveOptions, sessionFor, streamRequest, with
 import { parseToolCall, TOOL_DECLARATIONS } from "./tools.ts";
 
 export interface PiContactMindOptions {
-  /** A single explicit codec is strict. A list enables pre-commit failover for this exact model. */
   readonly api?: PiProtocol;
   readonly protocols?: readonly PiProtocol[];
   readonly healthCache?: ProtocolHealthCache;
   readonly sessionAffinity?: boolean;
   readonly reasoning?: boolean;
-  /** 服务商标识(进 pi 的 provider 字段,不含密钥),例如 "anthropic"、"magpie"。 */
   readonly provider: string;
   /** 模型 id,原样发给端点;必须与 RoundInput.contact.speakingModel 一致,不一致整轮拒绝(不静默换模)。 */
   readonly model: string;
   /** 服务端根地址,由所选协议拼接请求路径。 */
   readonly baseUrl: string;
-  /** 密钥,由调用方传入。适配器不读环境变量。 */
   readonly apiKey: string;
-  /** 密钥放哪个请求头:x-api-key(默认,Anthropic API 密钥)或 Authorization: Bearer(网关令牌)。 */
   readonly authHeader?: PiAuthHeader;
-  /** 单次回复的输出上限,默认 4096。 */
   readonly maxTokens?: number;
   /** 模型上下文窗口,默认 200000(只用于 pi 的模型描述)。 */
   readonly contextWindow?: number;
-  /** 第 1 块缓存断点的保留时长,默认 "short"。第 1 块 cacheBreakpoint 为 false 时不设缓存。 */
   readonly cacheRetention?: "short" | "long";
   /** 一轮最多发几次请求(含工具往返),默认 8;到上限模型仍在调工具则整轮失败。 */
   readonly maxRequestsPerRound?: number;
@@ -45,7 +36,6 @@ export interface PiContactMindOptions {
 
 export { PiContactMindError, type PiContactMindErrorCode, RoundAbortedError, isRoundAborted } from "./errors.ts";
 
-/** 第 2–5 块在 user 消息里的呈现:每块一个文本段,带块号与标签,空块也占位。 */
 export function renderBlock(b: RoundBlock): string {
   return `<block n="${b.block}" label="${b.label}">\n${b.text}\n</block>`;
 }
@@ -94,7 +84,6 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
   async function run(blocks: readonly RoundBlock[], attempt: Attempt, sessionId: string | undefined, signal: AbortSignal, tools?: RoundTools, usage?: UsageSink): Promise<RoundOutput> {
     const [b1, ...rest] = blocks as [RoundBlock, ...RoundBlock[]];
     const now = Date.now();
-    // 第 1 块:system,带工具声明(S-1:宿主拼装要带上 system 里的 toolsAdded,provider 从这里取工具清单)
     const system: SystemMessage = { role: "system", content: b1.text, toolsAdded: declarations, timestamp: now };
     const fresh: UserMessage = { role: "user", content: rest.map((b) => ({ type: "text" as const, text: renderBlock(b) })), timestamp: now };
     const base: readonly AgentMessage[] = [system, fresh];
@@ -193,7 +182,6 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     const onAbort = () => agent.abort();
     signal.addEventListener("abort", onAbort, { once: true });
     try {
-      // 起始消息只是触发;真正发出的内容由 prepareRequest 换成五块
       await agent.prompt(fresh);
     } catch (e) {
       if (signal.aborted) throw new RoundAbortedError();
@@ -204,7 +192,6 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
     }
     if (signal.aborted) throw new RoundAbortedError();
     if (truncated) {
-      // A5: keep the host's existing same-model whole-round retry for empty, single-codec length results.
       const retryableTruncation = cfg.protocols.length === 1 && requests === 1 && last?.content.length === 0;
       throw new PiContactMindError("provider-error", "模型回复达到输出上限而被截断,整轮未提交", false, retryableTruncation);
     }

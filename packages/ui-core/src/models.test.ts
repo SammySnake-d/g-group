@@ -26,7 +26,6 @@ import {
   vendorOf,
 } from "./models.ts";
 
-// 目录:opus 只能在 claude-code 上跑;gpt-b 只能在 codex 上跑;flash 只能用来说话(没有 Harness 支持它跑 Compute)。
 const MODELS: ModelInfo[] = [
   { id: "opus", label: "Opus", vendor: "anthropic", harnesses: ["claude-code"] },
   { id: "sonnet", label: "Sonnet", vendor: "anthropic", harnesses: ["claude-code", "codex"] },
@@ -46,7 +45,6 @@ const oth = ct("oth", "opus", "codex", { mode: "explicit", model: "gpt-a" });
 const cdx = ct("cdx", "flash", "codex", { mode: "inherit" });
 const TEAM = [inh, fol, pin, oth, cdx];
 
-// ---------------------------------------------------------------- 规则 1
 
 test("说话模型:联系人自己配的具体模型,链上只有联系人一层", () => {
   const r = resolveSpeaking(fol);
@@ -110,7 +108,6 @@ test("改了全局默认,同一个联系人下一次解析就是新值(每轮现
   assert.equal(resolveCompute({ ...fol, speakingModel: "gpt-a" }, D).model.value, "gpt-a");
 });
 
-// ---------------------------------------------------------------- 规则 2
 
 test("兼容:模型声明支持该 Harness 就通过", () => {
   assert.equal(checkCompat("claude-code", "opus", MODELS), null);
@@ -153,7 +150,6 @@ test("三个时机同一个判定:保存、改上游、启动前对同一配置�
     assert.equal(g.compute.model.value, "gpt-b");
     assert.equal(g.mismatch?.model, "gpt-b");
     assert.deepEqual(g.mismatch?.supportingHarnesses, ["codex"]);
-    // 联系人本体说话照常
     assert.equal(g.speaking.value, "gpt-b");
   }
   assert.deepEqual(gates[0]?.mismatch, gates[2]?.mismatch);
@@ -173,7 +169,6 @@ test("启动前:不兼容就不启动、不出快照;兼容才按生效值写不
   assert.equal(Object.isFrozen(snap), true);
   const stealth = launchSnapshot(ct("s", "stealth", "claude-code", { mode: "follow-speaking" }), D);
   assert.equal(stealth.ok ? stealth.snapshot.vendor : "", "unknown");
-  // 任务覆盖也过同一个判定
   assert.equal(launchSnapshot(fol, D, { model: "gpt-b" }).ok, false);
 });
 
@@ -198,7 +193,6 @@ test("任务快照:传了快照以快照为准显示实际值、列出配置已�
   assert.equal(none.planned.model.value, "opus");
 });
 
-// ---------------------------------------------------------------- 修复
 
 test("修复:单独指定兼容模型保留原 effort;换 Harness 只改 Harness;id 对不上不生效;不改入参", () => {
   const p = applyFix(fol, { kind: "pin-model", contactId: "fol", model: "sonnet" });
@@ -222,7 +216,6 @@ test("推荐修复:路径一优先保持原来的模型,否则取第一个兼容
   assert.deepEqual(suggestFixes("y", f, "sonnet"), [{ kind: "pin-model", contactId: "y", model: "sonnet" }]);
 });
 
-// ---------------------------------------------------------------- 改全局默认
 
 test("改全局默认 Compute 模型:列出继承全局的联系人和其中会变成不兼容的,失配时不能保存", () => {
   const after = { ...D, defaultComputeModel: "opus" };
@@ -277,7 +270,6 @@ test("下一轮生效提示:生效值没变不提示;改说话模型会带动跟
   assert.equal(nextTurn(inh, { ...inh, computeModel: { mode: "inherit", effort: "low" } }, D, -3)?.running, 0);
 });
 
-// ---------------------------------------------------------------- 规则 6
 
 const tasks = [{ id: "t1", model: "opus" }, { id: "t2", model: "sonnet" }];
 
@@ -317,7 +309,6 @@ test("批量替换:按用户选择处理冲突后才能确认,确认才给变更
     { contactId: "fol", field: "harness", from: "claude-code", to: "codex" },
     { contactId: "oth", field: "speakingModel", from: "opus", to: "gpt-b" },
   ]);
-  // 入参(联系人、在途任务)一个字段都没被改
   assert.deepEqual(JSON.parse(JSON.stringify({ TEAM, tasks })), before);
 });
 

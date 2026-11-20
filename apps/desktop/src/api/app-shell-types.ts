@@ -17,7 +17,6 @@ export type BackendRun =
 
 export interface SetupView {
   gateway: GatewayView | null
-  /** Compute 用的 claude 命令;null = 没找到 */
   claudePath: string | null
   backend: BackendRun
 }
@@ -25,7 +24,6 @@ export interface SetupView {
 export interface SetupInput {
   baseUrl: string
   model: string
-  /** 不填 = 沿用已存的令牌 */
   token?: string
 }
 
@@ -34,10 +32,8 @@ export interface UpdateState {
   phase: UpdatePhase
   current: string
   latest?: string
-  /** downloading:已收 / 总字节 */
   received?: number
   size?: number
-  /** idle:上次检查的结论(已是最新 / 还没有发布过版本);error / unsupported:原因与怎么办 */
   note?: string
   checkedAt?: string
 }
@@ -49,7 +45,6 @@ export interface AppInfo {
   arch: string
 }
 
-/** 方法表:方法名 → [参数, 结果] */
 export interface AppShellMethods {
   'app.info': [Record<string, never>, AppInfo]
   'window.capture': [Record<string, never>, { base64: string; width: number; height: number }]
@@ -68,7 +63,6 @@ export type AppShellResult<M extends AppShellMethod> = { ok: true; value: AppShe
 export type AppShellEvent = { type: 'update'; state: UpdateState }
 
 export interface AppShellBridge {
-  /** 只接受用户选中的 File;内存生成的 File 返回空串,不开放任意路径读取。 */
   getPathForFile(file: File): string
   invoke<M extends AppShellMethod>(method: M, params: AppShellMethods[M][0]): Promise<AppShellResult<M>>
   subscribe(listener: (e: AppShellEvent) => void): () => void

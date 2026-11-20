@@ -1,4 +1,3 @@
-/** 你对提问的回答:显示成收起的卡片(标题 + 你选的),点开看全部选项。正文仍是普通消息,联系人照常读 */
 import { useState } from 'react'
 import * as Collapsible from '@animate-ui/react/primitives/radix-ui/collapsible'
 import { Check, ChevronDown, ListChecks } from 'lucide-react'

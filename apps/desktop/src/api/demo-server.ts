@@ -1,7 +1,3 @@
-// 演示模式下的进程内「宿主」:实现接口合同里联系人(读)、定时、插件、命令这几组方法,
-// 每次调用都先用合同 checkParams 校验参数、回包前用 checkResult 校验结果——
-// 界面走的调用路径和接上真后端时完全一样,演示数据只是换了一个服务端。
-// 没实现的方法一律回 unavailable(「演示模式没有实现 …,要连接后端」),不伪造成功。
 import { type ApiResult, checkParams, checkResult, type ContactView, formatIssues, isMethodName, type MarketplaceEntry, type MethodName, type PluginView, type ScheduleView, type ServerEvent, type SlashCommand } from '@g-group/api-contract'
 import { cronError, describeCron, nextRuns } from '@g-group/ui-core'
 

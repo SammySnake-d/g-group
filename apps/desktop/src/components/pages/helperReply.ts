@@ -1,7 +1,6 @@
 import type { Ctx } from '@/ctx'
 import { HELPER_PAGE as H } from './constants'
 
-/* 浮层 Helper 页的演示回复:按关键词出一张确认卡,或打开新建联系人。纯推导,不碰 React。 */
 export type HelperCard = { title: string; lines: readonly string[]; action: () => void; done?: boolean }
 export type HelperMsg = { from: 'me' | 'helper'; text: string; card?: HelperCard }
 

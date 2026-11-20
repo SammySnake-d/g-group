@@ -1,7 +1,6 @@
 import type { HarnessTranscript } from '@g-group/ui-core'
 import { session } from './build'
 
-/* 查资料类的 Claude Code 会话：抓文章（连续 503，自动重试两次后停下）、飞书接入方案（一条请求卡了 14 分钟）、查天气（做完，拿错了城市）。 */
 
 const scrape = session({ computeId: 'scrape', harness: 'claude-code', model: 'Grok 5', start: '02:01:00', end: '02:03:10' }, (s) => {
   s.prompt('grok', '把 GrokBot 那篇设计文章抓下来，整理要点。来源：前端设计讨论 #y1。')

@@ -1,6 +1,5 @@
 // AC-51 经宿主的真实端到端:Host + 真实 Claude Code 常驻 Compute(claudeCompute)+ 规则替身联系人脑子。
 // 私聊派活(模型 A,记住暗号)→ 交付 → 用户把联系人的 Compute 改成模型 B → 用户退回「把暗号写进 code.txt」
-// (B 被 harness 拒绝时第 2 轮不发出,脚本照样打印进度、消息与网关记录)
 // → 宿主现场解析出 B 交给同一个 Compute,适配器在轮边界会话内换模型 → 核对:同一会话、同一进程(started 只一次)、
 // code.txt 里是暗号(上下文还在)、任务账本 start=A / turn=B、网关逐请求记录的请求模型。
 // 用法: node packages/server/scripts/e2e-model-hotswap.ts <模型A> <模型B>

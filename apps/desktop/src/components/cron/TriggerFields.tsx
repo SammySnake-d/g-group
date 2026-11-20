@@ -1,4 +1,3 @@
-/* 其余三种叫醒方式:只跑一次(本地时刻)/ 每 N 条消息 / 某件事发生(数据源插件 + 条件) */
 import type { ReactNode } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { formatRunAt, localZoneLabel, parseLocalDateTime, toLocalDateTime } from '@g-group/ui-core'

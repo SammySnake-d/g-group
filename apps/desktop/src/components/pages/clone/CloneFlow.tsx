@@ -63,7 +63,6 @@ export function CloneFlow({ id }: { id: string }) {
   )
 }
 
-/** 步骤指示:做完的打勾、当前的墨色实心、没到的空心;当前步 aria-current=step */
 function Stepper({ step }: { step: number }) {
   return (
     <ol className="flex items-center gap-1.5 border-b border-line px-4 py-3">

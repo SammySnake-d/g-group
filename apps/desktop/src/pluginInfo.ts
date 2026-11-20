@@ -2,7 +2,6 @@
 import { isInstalled, type PluginCategory } from '@g-group/ui-core'
 import type { PluginState } from './data'
 
-/** 清单还没到时的图标底色:跟着主题的三级文字色走,不写死色值 */
 const FALLBACK_ICON_COLOR = 'hsl(var(--fg3))'
 
 export type PluginInfo = { id: string; name: string; letter: string; color: string; kind: PluginCategory | undefined; desc: string; installed: boolean; enabled: boolean; revoked: boolean; convs: string[]; version: string | undefined }

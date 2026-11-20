@@ -1,12 +1,6 @@
 // 联系人注意循环的单飞调度器(AC-31 ②,需求文档 D15.1「唯一消息入口」)。
-// 只管「什么时候跑下一轮」,不读消息正文:
-//   - 每位联系人同一时刻最多一轮在跑(单飞);跑的期间新来的通知只记一个「脏」标记,本轮结束后立刻补跑一轮,不并发、不丢;
-//   - urgency=now(被 @、私聊、Compute 终态/受阻、用户控制指令)立刻跑;urgency=batch(群里未 @ 的消息、进度里程碑)攒批,
-//     最迟 maxDeferMs 后必跑(有界攒批,防无限延期);
 //   - 一轮返回 "stale"(发送前检出更新的用户消息,AC-31 ④)就立刻重跑,连续 stale 超过 maxStaleReruns 次后按 "done" 处理并报告,防止活锁;
 //   - 一轮抛错不影响别的联系人,也不丢脏标记:报告后按 retryAfter 给的延迟退避重试(AC-36:宿主按失败策略算,返回 null 表示不再自动重试,
-//     只等新的 now 通知或宿主显式 notify);不给 retryAfter 时按 retryMs。
-// 计时器、时钟都可注入,测试用假计时器逐步推进。
 
 export type Urgency = "now" | "batch";
 export type RoundStatus = "done" | "stale";
@@ -23,32 +17,23 @@ const realTimers: TimerApi = {
 export interface AttentionOptions {
   /** 跑某位联系人的一轮。宿主在里面读游标、装配、调模型、发送前检查、原子落盘。 */
   readonly run: (contactId: string, signal: AbortSignal) => Promise<RoundStatus>;
-  /** 未 @ 消息的攒批上界(毫秒)。 */
   readonly maxDeferMs: number;
-  /** 一轮抛错后多久重试(毫秒),默认 1000。给了 retryAfter 时不用它。 */
   readonly retryMs?: number;
   /**
    * 一轮抛错后多久重试(AC-36):返回毫秒数就按它退避重跑;返回 null 就不自动重跑(失败已出卡或被共享熔断暂停,
    * 等用户处理或宿主显式 notify)。自身抛错或返回非法值时按 retryMs。
    */
   readonly retryAfter?: (contactId: string, error: unknown) => number | null;
-  /** 连续 stale 的重跑上限,默认 3。 */
   readonly maxStaleReruns?: number;
   readonly timers?: TimerApi;
-  /** 报告:一轮出错、stale 超限。不抛出。 */
   readonly onReport?: (contactId: string, what: "error" | "stale-limit", detail: unknown) => void;
 }
 
 export interface AttentionLoop {
-  /** 有新输入送达这位联系人。 */
   notify(contactId: string, urgency: Urgency): void;
-  /** 当前有没有在跑或排着的轮次(给 CLI/测试等待用)。 */
   busy(): boolean;
-  /** 等到所有联系人都空闲(没有在跑、没有排队、没有攒批计时器)。 */
   idle(): Promise<void>;
-  /** 停止:中止在跑的轮次,清掉计时器;之后的 notify 忽略。 */
   stop(): Promise<void>;
-  /** 某位联系人跑过的轮次数(观测用)。 */
   rounds(contactId: string): number;
 }
 
@@ -62,7 +47,6 @@ interface Slot {
   count: number;
 }
 
-/** 失败策略给的退避延迟:有限非负数照用,其余(NaN、负数、无穷、非数字)按 retryMs 兜底。 */
 function validDelay(ms: unknown, retryMs: number): number {
   return typeof ms === "number" && Number.isFinite(ms) && ms >= 0 ? ms : retryMs;
 }
@@ -183,7 +167,6 @@ export function createAttentionLoop(opts: AttentionOptions): AttentionLoop {
         start(contactId);
         return;
       }
-      // batch:已有计时器(攒批或退避)就沿用,不推迟——最迟 maxDeferMs 必跑
       if (s.timer === null) arm(contactId, s, opts.maxDeferMs, "batch");
     },
     busy: isBusy,

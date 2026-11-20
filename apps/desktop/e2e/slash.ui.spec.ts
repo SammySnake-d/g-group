@@ -1,8 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
 
-// 斜杠命令 + 引用条 + 输入框高度。全部用真实键盘、鼠标驱动,断言用户看得到的结果。
-// 设了 GG_SHOTS 就顺手存走查截图(1440×900 @2x,见 playwright.config.ts 的 renderer 项目)。
 
 const open = async (page: Page, conv = "g") => {
   await page.goto(`/?freeze=1&conv=${conv}`);
@@ -22,7 +20,6 @@ test("打 / 弹出命令菜单:贴着输入框上沿、左对齐;每行有 /名�
   await page.keyboard.type("/");
   const menu = page.getByTestId("slash-menu");
   await expect(menu).toBeVisible();
-  // 旧「工具」页签的 8 项都在菜单里
   for (const n of ["summary", "playbook", "files", "workspace", "links", "pins", "pool", "clone"]) await expect(item(page, n)).toBeVisible();
   await expect(item(page, "summary")).toContainText("/summary");
   await expect(item(page, "summary")).toContainText("总结未读");
@@ -30,12 +27,9 @@ test("打 / 弹出命令菜单:贴着输入框上沿、左对齐;每行有 /名�
   await expect(item(page, "feishu").getByTestId("slash-src")).toHaveText(/插件 · 飞书$/);
   await expect(item(page, "mail").getByTestId("slash-src")).toHaveText(/插件 · Gmail$/);
   await expect(item(page, "review").getByTestId("slash-src")).toHaveText(/助手 · Claude Code$/);
-  // Webhook 装了但没挂在本群、Telegram 没装:灰显并说明原因
   await expect(item(page, "hook").getByTestId("slash-disabled")).toHaveText("Webhook 没挂在这个会话");
   await expect(item(page, "tg").getByTestId("slash-disabled")).toHaveText("Telegram 群 插件还没安装");
-  // Grok 不在这个群,它的命令不出现
   await expect(item(page, "research")).toHaveCount(0);
-  // 位置:菜单下沿贴着输入框上沿(间隔 6px),左边和输入框对齐
   const m = await box(menu);
   const b = await box(page.getByTestId("composer-box"));
   expect(Math.abs(m.y + m.height + 6 - b.y)).toBeLessThanOrEqual(2);
@@ -84,14 +78,12 @@ test("↑↓ 和 Enter 选中 schedule 后输入框变成 /schedule ,高亮当�
   await page.keyboard.press("Enter");
   await expect(input).toHaveValue("/schedule ");
   await expect(page.getByTestId("slash-menu")).toHaveCount(0);
-  // 输入框里接着显示参数:何时高亮,做什么灰色
   await expect(page.getByTestId("slash-arg-何时")).toHaveAttribute("data-current", "1");
   await expect(page.getByTestId("slash-arg-做什么")).not.toHaveAttribute("data-current", "1");
   await expect(page.getByTestId("slash-hint")).toContainText("何时");
   await expect(page.getByTestId("slash-missing")).toHaveText("还差 何时、做什么");
   await expect(page.getByTestId("send")).toBeDisabled();
   await expect(page.getByTestId("send")).toHaveText("执行");
-  // 参数提示紧跟在 "/schedule " 后面(同一行,左边不早于打的字)
   const ghost = await box(page.getByTestId("slash-arg-何时"));
   const ib = await box(input);
   expect(ghost.y).toBeLessThan(ib.y + 30);
@@ -100,7 +92,6 @@ test("↑↓ 和 Enter 选中 schedule 后输入框变成 /schedule ,高亮当�
   await page.keyboard.type("每天9点 ");
   await expect(page.getByTestId("slash-arg-做什么")).toHaveAttribute("data-current", "1");
   await expect(page.getByTestId("slash-missing")).toHaveText("还差 做什么");
-  // 必填没填时回车不执行
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("cron-editor")).toHaveCount(0);
   await expect(input).toHaveValue("/schedule 每天9点 ");
@@ -108,7 +99,6 @@ test("↑↓ 和 Enter 选中 schedule 后输入框变成 /schedule ,高亮当�
   await expect(page.getByTestId("slash-missing")).toHaveCount(0);
   await expect(page.getByTestId("send")).toBeEnabled();
   await page.keyboard.press("Enter");
-  // 打开定时编辑器(定时模块的新编辑器),按参数预填:做什么 + 翻成 cron 表达式
   const dlg = page.getByTestId("cron-editor");
   await expect(dlg).toBeVisible();
   await expect(dlg.getByTestId("cron-editor-text")).toHaveValue("写日报");
@@ -135,7 +125,6 @@ test("Esc 关掉菜单,再打字重新弹出;工具栏 / 按钮也能打开同�
   await expect(page.getByTestId("slash-menu")).toBeVisible();
   await expect(input).toHaveValue("/");
   await expect(input).toBeFocused();
-  // 点选一样能用:点「群文件」打开群文件页
   await item(page, "files").click();
   await expect(input).toHaveValue("");
   await expect(page.getByTestId("float")).toHaveAttribute("data-page", "files");
@@ -181,7 +170,6 @@ test("插件命令:飞书打开勾选外部消息页;Gmail 如实说要等后端
   const input = await open(page);
   await page.keyboard.type("/feis");
   await expect(item(page, "feishu").getByTestId("slash-src")).toHaveText(/插件 · 飞书$/);
-  // 飞书的参数都是可选的:第一次回车选中填进输入框,再回车执行(不填就打开勾选页)
   await page.keyboard.press("Enter");
   await expect(input).toHaveValue("/feishu ");
   await page.keyboard.press("Enter");
@@ -229,7 +217,6 @@ test("引用条:卡片按内容收缩,× 紧挨引用文字;多条各占一行;�
   expect(gap).toBeLessThan(24);
   const truncated = await chips.first().getByTestId("quote-text").evaluate((el) => el.scrollWidth > el.clientWidth);
   if (!truncated) expect(area.x + area.width - (x.x + x.width)).toBeGreaterThan(40);
-  // 第二条引用:各占一行(先等上一个右键菜单关掉,免得关闭动画里两个菜单同时在)
   await expect(page.getByTestId("ctx-quote")).toHaveCount(0);
   await page.getByText("好，我分一个 Compute 去查。").click({ button: "right" });
   await page.getByTestId("ctx-quote").click();
@@ -239,12 +226,10 @@ test("引用条:卡片按内容收缩,× 紧挨引用文字;多条各占一行;�
   expect(b.y).toBeGreaterThanOrEqual(a.y + a.height - 1);
   await input.hover();
   await shot(page, "quote-bar");
-  // 切到别的会话再回来,引用还在
   await page.getByTestId("conv-dm-claude").click();
   await expect(chips).toHaveCount(0);
   await page.getByTestId("conv-g").click();
   await expect(chips).toHaveCount(2);
-  // 空输入框:Backspace 去掉最后一条,Esc 再去掉一条
   await input.click();
   await expect(input).toHaveValue("");
   await page.keyboard.press("Backspace");
@@ -258,7 +243,6 @@ test("外部来源的引用挂在引用条上,标「不可信·外部」;入口�
   await open(page);
   await page.getByTestId("tool-plus").click();
   await expect(page.getByTestId("plus-menu")).toBeVisible();
-  // CVE 订阅只推提醒,没有可勾的消息
   await expect(page.getByTestId("plus-g-group.cve")).toBeDisabled();
   await page.getByTestId("plus-g-group.feishu").click();
   await page.getByTestId("srcmsg-0").click();

@@ -23,7 +23,6 @@ import { NewGroupPage } from './NewGroupPage'
 import { SourcePage, SourcesPage } from './SourcesPage'
 import { PageScroll } from './kit/parts'
 
-/* 浮层路由:一种页一个组件,这里只做分发 */
 export function PageBody({ p }: { p: Page }) {
   switch (p.t) {
     case 'person': return <PersonPage id={p.id} />

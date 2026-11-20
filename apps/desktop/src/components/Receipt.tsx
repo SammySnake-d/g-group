@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-/** 命中区:小图形本身不到 24px,用一圈透明伪元素把可点范围补够(Vercel「命中区 ≥24px」) */
 const HIT = "relative before:absolute before:-inset-[3px] before:content-['']"
 
 type Row = { id: PersonId; at?: string; called: boolean }
@@ -28,11 +27,9 @@ export type Receipt = { read: Row[]; unread: Row[]; dm: boolean }
 
 const idsOf = (c: Conversation) => c.messages.filter((m) => 'id' in m).map((m) => (m as { id: string }).id)
 
-/** 名单 = 会话成员 − 发送人。读到 = 这个人的已读位置 ≥ 这条消息；读到时间 = 位置第一次越过它的时刻 */
 export function receiptOf(c: Conversation, msgId: string, from: PersonId, text: string, reactions?: Record<string, PersonId[]>): Receipt | null {
   const ids = idsOf(c)
   if (!ids.includes(msgId)) return null
-  /* 连上后端时按序号比(已读位置可能落在不在列表里的那条上),演示数据按列表先后 */
   const rank = rankIn(ids)
   const seq = rank(msgId)
   /* 坏实现（埋雷 AC-46-1）：照搬 mirasim 群聊，名单只算人，把联系人滤掉 */
@@ -42,7 +39,6 @@ export function receiptOf(c: Conversation, msgId: string, from: PersonId, text: 
   for (const p of audience) {
     const marks = c.reads?.[p] ?? []
     const mark = marks.find((r) => rank(r.upto) >= seq)
-    /* 读到时间空着 = 重启前就读到了,时刻在点开浮层时向宿主要 */
     let at = mark ? mark.at || undefined : undefined
     /* 坏实现（埋雷 AC-46-3）：联系人点了表情就当它读了 */
     if (!mark && broken('AC-46-3') && reactions && Object.values(reactions).some((w) => w.includes(p))) at = '—'
@@ -52,7 +48,6 @@ export function receiptOf(c: Conversation, msgId: string, from: PersonId, text: 
   return { read: read.sort(first), unread: unread.sort(first), dm: c.kind === 'dm' }
 }
 
-/** mne：全读 = 淡绿底 + 绿对勾；否则灰圈 + 按已读比例填充的扇形 */
 export function ReceiptGlyph({ fraction, size = 14 }: { fraction: number; size?: number }) {
   if (fraction >= 1) return (
     <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden className="shrink-0">
@@ -71,7 +66,6 @@ export function ReceiptGlyph({ fraction, size = 14 }: { fraction: number; size?:
   )
 }
 
-/** MI：已读情况浮层。已读 / 未读两页签用 Animate UI 的 Tabs(role=tab、方向键切换、选中底滑过去) */
 function ReceiptList({ rc: local, msgId }: { rc: Receipt; msgId: string }) {
   const [tab, setTab] = useState<'read' | 'unread'>('read')
   const rc = useLiveTimes(local, msgId)
@@ -106,7 +100,6 @@ function ReceiptList({ rc: local, msgId }: { rc: Receipt; msgId: string }) {
   )
 }
 
-/** 连上后端时,浮层一打开就向宿主要这条的回执(messages.receipts):读到时间以宿主记的为准,名单仍按界面算的 */
 function useLiveTimes(rc: Receipt, msgId: string): Receipt {
   const [times, setTimes] = useState<Record<string, string>>({})
   const on = useAppStore((s) => live(s))
@@ -133,7 +126,6 @@ function useReceipt(msgId: string) {
   return c && m ? receiptOf(c, msgId, m.from, m.text ?? '', reactions[msgId]) : null
 }
 
-/** bnt：回执按钮，挂在你发的消息气泡外侧 */
 export function ReceiptButton({ msgId }: { msgId: string }) {
   const rc = useReceipt(msgId)
   const [open, setOpen] = useState(false)
@@ -161,7 +153,6 @@ export function ReceiptButton({ msgId }: { msgId: string }) {
   )
 }
 
-/** wnt：正文里 @名字 后面的小点。读了 = 实心绿点，没读 = 空心灰圈；点开同一个浮层 */
 export function MentionDot({ msgId, who }: { msgId: string; who: PersonId }) {
   const rc = useReceipt(msgId)
   const [open, setOpen] = useState(false)

@@ -1,15 +1,12 @@
 // 状态笔记压缩的纯函数(D06 第 2 小节第 3 块、D25 第 8 节)。不做 I/O,不调用模型。
 //   compactMaterial:联系人本轮没写状态笔记时,宿主交给压缩器的材料——本轮新输入原文(同第 4 块呈现)+ 联系人本轮每个动作。
 //   scrubRetracted :撤回优先(AC-08)。状态笔记是模型写的摘要,可能抄进了后来被撤回的原文;每次落盘与装配前,
-//                    把撤回原文的精确出现换成占位;去掉空白与零宽字符后仍能比对到(无法精确替换)就判 leaked,由宿主作废整份笔记。
-//                    短于 RETRACT_MIN_CHARS 个字符(去空白后)的撤回原文不扫:笔记是摘要,「好的」「收到」这类短语会大量误伤正常用词;
 //                    这些短文本本身也不再经第 4、5 块回到请求。
 import { squash } from "./assemble.ts";
 import { renderInboundText } from "./rounds.ts";
 import type { Inbound, MindAction } from "./runtime-ports.ts";
 
 export const RETRACT_MIN_CHARS = 4;
-/** 精确替换撤回原文用的占位;找旧消息的正文过同一条规则时也用它(history-tools.ts) */
 export const RETRACT_PLACEHOLDER = "〔已撤回内容已移除〕";
 const PLACEHOLDER = RETRACT_PLACEHOLDER;
 
@@ -38,7 +35,6 @@ function renderAction(a: MindAction): string {
   }
 }
 
-/** 压缩材料:本轮新输入原文 + 联系人本轮动作。同样的输入得到逐字节相同的文本 */
 export function compactMaterial(fresh: readonly Inbound[], actions: readonly MindAction[]): string {
   let t = "[本轮新输入(原文)]\n";
   t += fresh.length === 0 ? "(无)\n" : fresh.map(renderInboundText).join("");

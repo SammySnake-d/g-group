@@ -24,7 +24,6 @@ import {
   type SubUnit,
 } from "./board.ts";
 
-/** 本地时间:2026-11-08 为「今天」,断言和机器时区无关 */
 const t = (h: number, m: number, day = 0) => new Date(2026, 10, 8 + day, h, m).getTime();
 const NOW = t(23, 0);
 const C = (u: Partial<ComputeUnit> & Pick<ComputeUnit, "id" | "conv" | "owner" | "state">): ComputeUnit => ({
@@ -198,17 +197,13 @@ test("自适应布局(宽):四列齐全,列位置照 mirasim 常量,卡片按子
   assert.equal(L.columns.inside, 516 + 464 + 44);
   assert.equal(L.width, 1280);
   const y = (id: string) => L.cards.find((c) => c.fact.unit.id === id)!.box.y;
-  // c2 无子任务占 68;c1 三个子任务 3×26+2×4=86 > 68,撑高;c3 接在后面
   assert.equal(y("c2"), S0.padY);
   assert.equal(y("c1"), 18 + 68 + 10);
   assert.equal(y("c3"), 96 + 86 + 10);
-  // 节点对齐到第一张卡片的中线
   assert.equal(L.roots[0]!.box.y, 18 + 34 - 26);
   assert.equal(L.contacts[0]!.box.y, 26);
-  // 下一位联系人在上一位最后一张卡下面再空 contactGap
   assert.equal(y("c5"), 192 + 68 + 10 - 10 + 18);
   assert.equal(L.contacts[1]!.box.y, y("c5") + 34 - 26);
-  // 群级提示挂在群节点下面
   assert.deepEqual(L.hints.map((h) => h.box.y), [18 + 34 + 26 + 6]);
   assert.deepEqual(L.inside.filter((i) => i.owner === "c1").map((i) => i.item.id), ["s1", "s3", "s2"]);
   assert.ok(L.height > y("c3"));
@@ -230,7 +225,6 @@ test("自适应布局(窄):放不下就收掉子任务列、不出横向滚动;�
   const tight = layoutBoard(roots, 700, none);
   assert.equal(tight.columns.cardsW, 300);
   assert.equal(tight.width, 516 + 300 + 20);
-  // 恰好够宽的临界点
   assert.equal(layoutBoard(roots, 1116, none).insideColumn, true);
   assert.equal(layoutBoard(roots, 1115, none).insideColumn, false);
 });

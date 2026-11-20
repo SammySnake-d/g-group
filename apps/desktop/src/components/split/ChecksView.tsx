@@ -6,7 +6,6 @@ import { ListItem } from '@/components/ui/list-row'
 import { Spinner } from '@/components/ui/spinner'
 import { Collapse } from './Collapse'
 
-/* 检查:每一项一行,点开看命令、输出和测试写在哪。通过 = 绿对勾,没过 = 红叉,在查 = 绿色转圈 + 文字 */
 export function ChecksView({ c }: { c: Compute }) {
   const [open, setOpen] = useState<number | null>(null)
   return (

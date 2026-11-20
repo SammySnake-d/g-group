@@ -2,12 +2,10 @@ import type { ReactNode } from 'react'
 import { Search, UserPlus, Users, Puzzle, Clock, Send, Eye } from 'lucide-react'
 import { READ_ASK, SEND_ASK, SEND_PREFIX } from './constants'
 
-/* 全局 Helper(⌘K)的常用命令:两条「试试」+ 几个直达入口。动作由 HelperGlobal 注入 */
 
 export type Cmd = { id: string; label: string; hint: string; icon: ReactNode; testid?: string; run: () => void }
 
 export type CmdDeps = {
-  /** 当前聊天的名字(「找某次聊天」在哪搜) */
   activeTitle: string
   ask: (text: string) => void
   fill: (text: string) => void

@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import { shot } from "./shots";
 import { BASELINE_CONSOLE } from "./console-baseline";
 
-// 同一脚本分别跑 f790496 与试跑提交：只通过可见入口操作，不改 DOM/CSS 来修饰截图。
 for (const theme of ["light", "dark"] as const) {
   test(`前后对照 ${theme}：设置全貌、通知控件、关闭回聊天`, async ({ page }) => {
     const errors: string[] = [];

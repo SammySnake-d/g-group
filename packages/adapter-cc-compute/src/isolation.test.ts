@@ -1,7 +1,4 @@
 // AC-29 联系人能力默认隔离加白名单(适配器一侧):专属配置目录、勾选 skill 的插件目录、勾选 MCP 服务器。
-// 起真实子进程:假 CLI(test-support/fake-claude.mjs)按 --mcp-config 真的和 report_progress 握手,
-// 勾选的 MCP 与 --plugin-dir 里的 skill 照真实 CLI 2.1.319 在 --bare 下的实测行为列进 init(packages/server/proof/v02-config-dir.txt)。
-// 只用临时目录与中性内容(NEUTRAL_FIXTURE_NO_CREDENTIALS),不读本机任何账户文件。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -18,7 +15,6 @@ const FAKE = fileURLToPath(new URL("../test-support/fake-claude.mjs", import.met
 const REPORT = "mcp__host__report_progress";
 const brief = { task: "整理笔记", rules: [], tools: ["Read"], credentialRefs: [], placement: "local" };
 
-// 本文件只回收自己建的进程与目录(命令行里带本测试目录的进程)
 const ownDirs = new Set<string>();
 function reapOwn() {
   let out = "";
@@ -70,7 +66,6 @@ test("勾选能力:专属配置目录进 CLAUDE_CONFIG_DIR,勾选 skill 经 --pl
   assert.deepEqual(r.manifest.mcpServers, ["notes"]);
   assert.deepEqual(r.manifest.pluginDirs, [f.pluginDir]);
   assert.equal(r.manifest.configDir, f.configDir);
-  // --bare 下没有 Skill 工具:首个提示列出勾选 skill 与 SKILL.md 绝对路径,需要时 Read 来照做
   const skillFile = path.join(f.pluginDir, "skills", "notes-style", "SKILL.md");
   assert.ok(l!.prompt.endsWith(`[可用 skill](联系人勾选的;要用时先用 Read 读对应 SKILL.md 再照做)\n- gg-skills:notes-style:NEUTRAL_FIXTURE_NO_CREDENTIALS —— ${skillFile}`), l!.prompt);
   assert.deepEqual(r.manifest.sections.at(-1), { name: "skills", detail: { items: [{ name: "gg-skills:notes-style", file: skillFile }] } });

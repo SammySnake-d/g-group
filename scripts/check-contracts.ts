@@ -69,7 +69,6 @@ function collectKeys(dir: string, label: string, issues: string[]) {
 
 function exportedSymbols(dir: string, issues: string[]) {
   const index = path.join(dir, "index.ts");
-  // Use the checker to resolve type-only exports, aliases and transitive export stars.
   const program = ts.createProgram([index], {
     noLib: true,
     types: [],
@@ -93,7 +92,6 @@ export function runContractChecks(rootDir = ROOT, opts: Options = {}) {
   const current: Baseline = { ...keys, exports: exportedSymbols(backend, issues), specIds: specIds(readText(path.join(rootDir, SPEC))) };
   try {
     const baseline = JSON.parse(readText(baselinePath)) as Baseline;
-    // The documentation gate owns spec ID validation. Preserve its snapshot when
     // refreshing the contract keys, including when using an isolated contract fixture.
     current.specIds = [...new Set([...baseline.specIds, ...current.specIds])].sort();
     for (const kind of CONTRACT_KEYS) {

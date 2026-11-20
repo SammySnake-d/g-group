@@ -1,4 +1,3 @@
-/* 插件中心的文案与常量:界面上的说法集中在这里,组件只引用。 */
 import { Compass, Package, RefreshCw, type LucideIcon } from 'lucide-react'
 import type { MarketSort, RiskLevel } from '@g-group/ui-core'
 
@@ -17,10 +16,8 @@ export const SORT_OPTIONS: { value: MarketSort; label: string }[] = [
   { value: 'updated', label: '最近更新' },
 ]
 
-/** 风险级别 → Chip 色调(颜色之外永远带「x风险」文字) */
 export const RISK_TONE: Record<RiskLevel, 'ok' | 'warm' | 'err'> = { low: 'ok', medium: 'warm', high: 'err' }
 
-/** 官方发布者:名字前加认证标 */
 export const OFFICIAL_PUBLISHER = 'g-group 官方'
 
 export const COPY = {
@@ -53,5 +50,4 @@ export const COPY = {
   uninstallDesc: '卸载后要用得重新安装、重新同意权限。',
 } as const
 
-/** 外发预授权表单的空白初值里默认勾上的数据源 */
 export const GRANT_DEFAULT_SOURCE = '本群消息'

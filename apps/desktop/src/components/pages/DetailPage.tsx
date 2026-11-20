@@ -13,8 +13,6 @@ import { ListItem } from '@/components/ui/list-row'
 import { Tabs, TabList, TabPanel } from './kit/tabs'
 import { Hint, PageScroll, Subhead } from './kit/parts'
 
-/* ---------- 查看对话细节:它和其他助手 / 和你 / 在做什么 / 它记住了什么 ----------
-   bare:嵌在联系人分栏「对话」页签里,只要「和其他助手」那一页,不要头部和页签 */
 type DTab = 'me' | 'agents' | 'work' | 'memory'
 
 export function DetailPage({ id, conv, tab: tab0, bare }: { id: PersonId; conv: string; tab?: DTab; bare?: boolean }) {
@@ -52,7 +50,6 @@ export function DetailPage({ id, conv, tab: tab0, bare }: { id: PersonId; conv: 
   )
 }
 
-/** 和其他助手:原话都在这里,群里只留一行灰字和结论 */
 function AgentsTab({ id }: { id: PersonId }) {
   const { convs, push } = useApp()
   const talks = agentTalks.filter((t) => t.who.includes(id))
@@ -73,7 +70,6 @@ function AgentsTab({ id }: { id: PersonId }) {
   )
 }
 
-/** 和你:私聊的最后一句 + 群里和你有关的最近 8 条 */
 function MeTab({ id }: { id: PersonId }) {
   const { convs, openDm, jump, closeAll } = useApp()
   const p = people[id]
@@ -97,7 +93,6 @@ function MeTab({ id }: { id: PersonId }) {
   )
 }
 
-/** 在做的事:它的 Compute + 它在这个会话里怎么安排的 */
 function WorkTab({ id, conv }: { id: PersonId; conv: string }) {
   const { convs, computes } = useApp()
   const mine = Object.values(computes).filter((c) => c.owner === id)
@@ -112,7 +107,6 @@ function WorkTab({ id, conv }: { id: PersonId; conv: string }) {
   )
 }
 
-/** 它记住的:性格(候选)、长期记忆、配置版本 */
 function MemoryTab({ id }: { id: PersonId }) {
   const p = people[id]
   return (

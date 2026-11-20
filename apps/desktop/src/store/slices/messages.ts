@@ -1,4 +1,3 @@
-// 消息操作切片:撤回、编辑、私聊回退、删除、转发、置顶、投票、改挂、群公告。
 import { people, type Msg, type Pending, type PersonId } from '@/data'
 import { clearLive, editLive, forwardLive, hideLive, pinLive, recallLive, retagLive, rewindLive } from '@/api/wire/chat-ops'
 import { live, liveCtx } from '@/api/wire/live'
@@ -11,10 +10,8 @@ import { activeConv } from '../select'
 
 type TextMsg = Extract<Msg, { k: 'text' }>
 
-/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 MESSAGES_CTX_KEYS */
 export interface MessagesCtx {
   recall: (msgId: string) => void
-  /** C-US08：编辑自己发过的消息 → 标已编辑；在回它的助手作废旧草稿、按新内容重写 */
   editMsg: (msgId: string, text: string) => void
   rewindAsk: string | null
   setRewindAsk: (msgId: string | null) => void
@@ -40,10 +37,8 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
   const L = lens(set)
   const sys = (cid: string, text: string) => get().pushMsg({ k: 'sys', id: 's' + uid(), text }, cid)
   const mapMsgs = (f: (m: Msg) => Msg) => L.convs((cs) => cs.map((c) => ({ ...c, messages: c.messages.map(f) })))
-  /** 私聊回退时撤下的消息(可恢复),按回退那行系统消息的 id 存 */
   const rewound: Record<string, { conv: string; msgs: Msg[]; pending: Pending[] }> = {}
   const nowStep = (cid: string) => Math.max(0, get().computes[cid].steps.findIndex((s) => s.state === 'now'))
-  /* 删除只在你这边隐藏;提示条上可以撤销(Vercel:破坏性操作要可撤销)。每条记住它前面那条的 id,撤销时插回原位 */
   const hide = (ids: string[], text: string) => {
     const gone: { cid: string; after: string | null; m: Msg }[] = []
     for (const c of get().convs) {
@@ -92,7 +87,6 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
 
     editMsg: (mid, text) => {
       const t = text.trim(); if (!t) return
-      /* 连上后端:改以回包为准;在途任务原位升版由宿主做,Compute 行跟着事件变。改成了才收起编辑条 */
       if (live(get())) {
         void editLive(liveCtx(get, set), mid, t).then((ok) => { if (ok) { set({ editing: null }); get().setDraft('') } })
         return
@@ -202,7 +196,6 @@ export const createMessagesSlice: Slice<MessagesSlice> = (set, get) => {
       get().say(owner.id, v.from, '好，按这个定。已写进群协作手册。', 700)
     },
     retag: (msgId, task) => {
-      /* 连上后端:改挂只能从一件移到另一件(宿主不收「不归任何事」) */
       if (live(get())) { if (task) void retagLive(liveCtx(get, set), msgId, task); return }
       mapMsgs((m) => (m.k === 'text' && m.id === msgId ? { ...m, tag: task ? { task, state: '已改挂' } : { task: '', state: '' } } : m))
       if (task) get().addAct(task, { step: nowStep(task), kind: 'user', title: '你把一条补充改挂到这件事上' })

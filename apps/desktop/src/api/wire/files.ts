@@ -1,7 +1,5 @@
 // 文件接线(AC-57 文件列表与窗口联动):每个会话 files.list(附件 + 任务产出)→ 文件区;
 // 交付消息带回的工件快照(AC-04,消息上的 artifacts)也列进来,点开用 artifacts.get 读。
-// 来处 = 出现它的那条消息(附件 = 带它的消息;任务产出 = 交付消息,没有交付时为派活消息),文件区正文右侧据此画来往、点了跳回原消息。
-// 有新附件、新交付(任务带上交付消息序号)时重读一遍。
 import type { FileEntry } from '@g-group/api-contract'
 import type { Artifact, PersonId } from '@/data'
 import { msgId } from './messages'
@@ -11,7 +9,6 @@ const KB = 1024
 export const sizeOf = (n: number) => (n < KB ? `${n} B` : n < KB * KB ? `${Math.round(n / KB)} KB` : `${(n / KB / KB).toFixed(1)} MB`)
 const kindOf = (mime: string) => (mime.startsWith('image/') ? '图片' : mime.startsWith('text/') || mime === 'application/json' ? '文本' : mime === 'application/pdf' ? 'PDF' : '文件')
 
-/** 那条消息是谁发的;读不到就看任务负责人,再不行算你的 */
 function senderAt(w: WireCtx, roomId: string, seq: number, taskId: string | null): PersonId {
   const m = w.get().convs.find((c) => c.id === roomId)?.messages.find((x) => 'id' in x && x.id === msgId(roomId, seq))
   if (m && 'from' in m) return m.from
@@ -25,7 +22,6 @@ function fromEntry(w: WireCtx, roomId: string, f: FileEntry): Artifact {
   }
 }
 
-/** 读全部会话的文件;某个会话读不到不拦别的,读完再说哪几个没读到 */
 export async function loadFiles(w: WireCtx) {
   const convs = w.get().convs
   const res = await Promise.allSettled(convs.map(async (c) => ({ roomId: c.id, files: (await read(w, 'files.list', { roomId: c.id })).files })))
@@ -47,7 +43,6 @@ export async function loadFiles(w: WireCtx) {
   if (bad) throw new Error(`${bad} 个会话的文件没读到`)
 }
 
-/** 事件密的时候合并成一次重读 */
 let timer: ReturnType<typeof setTimeout> | null = null
 const later = (w: WireCtx) => {
   if (timer) clearTimeout(timer)

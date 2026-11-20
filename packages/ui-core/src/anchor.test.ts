@@ -10,7 +10,6 @@ test("placeHoverBar:别人的消息,工具条在气泡右上角——底边压�
   const anchor = { left: 60, top: 200, right: 360, bottom: 240 };
   const p = placeHoverBar(anchor, bar, bounds);
   assert.deepEqual(p, { x: 300 - 130 - BAR_INSET, y: BAR_OVERLAP - 32, side: "top" });
-  // 换成页面坐标核对几何:工具条底边 = 气泡顶边 + 8;右边 = 气泡右边 - 8;和气泡相交(悬停链不断)
   const barBox = { left: anchor.left + p.x, top: anchor.top + p.y, right: anchor.left + p.x + 130, bottom: anchor.top + p.y + 32 };
   assert.equal(barBox.bottom - anchor.top, 8);
   assert.equal(anchor.right - barBox.right, 8);
@@ -45,7 +44,6 @@ test("placeHoverBar:气泡贴着可视区顶边时退到气泡下方(右下角�
   const anchor = { left: 60, top: 10, right: 400, bottom: 50 };
   const p = placeHoverBar(anchor, bar, bounds);
   assert.deepEqual(p, { x: 340 - 130 - BAR_INSET, y: 40 - BAR_OVERLAP, side: "bottom" });
-  // 刚好放得下上方的边界:顶上留 4px
   const exact = { left: 60, top: 32 - BAR_OVERLAP + BAR_EDGE, right: 400, bottom: 80 };
   assert.equal(placeHoverBar(exact, bar, bounds).side, "top");
   const oneLess = { ...exact, top: exact.top - 1 };

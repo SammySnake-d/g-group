@@ -24,10 +24,6 @@ function arrowKeys(e: React.KeyboardEvent<HTMLElement>) {
   items[(i + (e.key === 'ArrowRight' ? 1 : items.length - 1)) % items.length]?.focus()
 }
 
-/**
- * 搜索框里 Esc 先清搜索、不关看板(原型核对项)。遮罩是 Radix Dialog,它在 document 捕获阶段听 Esc,
- * 输入框自己的 onKeyDown 来不及拦;所以只在「焦点在搜索框且有内容」时,于更早的 window 捕获阶段接住这一下。
- */
 function useClearOnEscape(query: string, clear: () => void) {
   const ref = useRef<HTMLInputElement>(null)
   const latest = useRef(clear)

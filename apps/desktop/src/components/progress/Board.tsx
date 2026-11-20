@@ -19,7 +19,6 @@ import './board.css'
   纯逻辑(分组排序、过滤、群级提示、布局、血缘)在 @g-group/ui-core 的 board.ts。
 */
 
-/** mirasim sj:看板滚动区宽度,布局按它自适应 */
 function useWidth(ref: React.RefObject<HTMLDivElement | null>) {
   const [w, setW] = useState(0)
   useLayoutEffect(() => {
@@ -61,7 +60,6 @@ export function Board({ world, onJump }: { world: BoardWorld; onJump: (t: Target
   }, [roots, width, isOpen, filter.query])
   const lit = useMemo(() => (L ? lineage(L.links, hover) : null), [L, hover])
 
-  // 再打开时恢复上次的滚动位置
   const ready = L !== null
   useLayoutEffect(() => {
     const el = scroller.current

@@ -11,7 +11,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from '@/lib/utils'
 import { TaskForm } from './TaskForm'
 
-/** 交给本群哪位联系人(移出中的不算) */
 function AssignMenu({ conv, t }: { conv: Conversation; t: ListItem }) {
   const { claimTask } = useApp()
   const who = conv.members.filter((m) => m !== 'me' && m !== 'helper' && !people[m]?.human && !conv.leaving?.includes(m))

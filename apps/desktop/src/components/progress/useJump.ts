@@ -34,7 +34,6 @@ export function useJump() {
         break
       case 'compute':
         openConv(t.conv)
-        // 演示补充的 Compute 没有详情页,落到联系人在本群的完整过程
         if (computes[t.compute]) openSplit({ t: 'compute', id: t.compute, view: 'activity' })
         else openContact(t.person, t.conv, 'process')
         if (t.askMsg) jump(t.askMsg)

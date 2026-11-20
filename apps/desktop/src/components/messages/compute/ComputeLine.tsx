@@ -14,7 +14,6 @@ import { useFailChoices } from './useFailChoices'
 import { OpenSessionButton } from './ComputeCardFor'
 
 const LINE = 'flex max-w-full shrink gap-1.5 rounded-full text-[12.5px]'
-/** 一行 + 行尾「打开会话」 */
 const WITH_END = 'flex min-w-0 max-w-full items-center gap-1'
 const stop = (run: () => void) => (e: MouseEvent) => { e.stopPropagation(); run() }
 
@@ -35,7 +34,6 @@ export function ComputeLine({ id }: { id: string }) {
     </Pressable><OpenSessionButton id={id} /></div>
   )
 
-  /* C-US15:卡在只有人能过的一步,原地交给你;接手后小窗打开,过了点交还 */
   if (view === 'human') return (
     <div data-testid={`compute-line-${id}`} data-state="human" className="flex max-w-full items-center gap-2 rounded-full bg-warm-soft py-0.5 pl-2 pr-1 text-[12.5px]">
       <Hand className="h-3.5 w-3.5 shrink-0 text-warm" />

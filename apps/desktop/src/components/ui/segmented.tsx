@@ -3,7 +3,6 @@ import * as ToggleGroup from "@animate-ui/react/primitives/radix-ui/toggle-group
 
 import { cn } from "@/lib/utils"
 
-/* 分段切换:同一组里选一个(视图、触发方式、筛选)。Radix ToggleGroup 负责键盘方向键与无障碍。 */
 export interface SegmentedOption<T extends string> { value: T; label: React.ReactNode; testid?: string; disabled?: boolean }
 
 export function Segmented<T extends string>({ value, onChange, options, size = "sm", className, ariaLabel }: {

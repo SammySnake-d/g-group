@@ -2,7 +2,6 @@ import { types } from "node:util";
 import { type Vendor, vendorOf } from "./vendor.ts";
 // 第三台状态机:任务生命周期(需求文档 D20.3 第三台表,本片覆盖主干)。
 // 状态×事件表是一张穷尽的对象字面量:少一格 TypeScript 就报错(AC-09);每格要么转移,要么写明拒绝/忽略原因。
-// 纯函数:apply 不改入参,返回新任务和要宿主执行的副作用(恢复/新开/停止 Compute、释放槽位)。
 // 导出的状态、事件种类与转移表一律冻结,进程内无法改写策略(用户 #2662)。
 export const STATES = Object.freeze(["T1_Open", "T2_Claimed", "T3_Running", "T4b_BlockedOnHuman", "T5_InReview", "T7_Delivering", "T8a_Delivered", "T8_Accepted", "T9_StopRequested", "T10_Cancelled", "T11_Failed"] as const);
 export type TaskState = (typeof STATES)[number];
@@ -42,7 +41,6 @@ export type TaskEvent =
 /** 确认卡绑定快照:创建后冻结,不与其它 Task 共享(CORR-04)。 */
 export interface PendingQuestion { readonly qId: string; readonly constraintVer: number }
 export interface Launch { readonly requestId: string; readonly constraintVer: number }
-/** 当前交付:代次与被交付的 commit(T7/T8 有效,其余为 null)。 */
 export interface Delivery { readonly round: number; readonly commit: string }
 /** 通过审查时的审查人模型与豁免人;交付后迟到的生产模型记录据此重判合规(R4-CORR-01)。 */
 export interface Approval { readonly reviewerModel: string; readonly waiverBy: string | null }
@@ -65,7 +63,6 @@ export interface Task {
   readonly approval: Approval | null;
   /** 当前交付(T7/T8 有效);其余状态为 null(R5-CORR-01)。 */
   readonly delivery: Delivery | null;
-  /** 已分配过的交付代次个数,只增不减。 */
   readonly deliverySeq: number;
   /** 已发 cancel-spawn、还没确认撤销也没见到实例上线的旧启动请求(R3-CORR-02)。 */
   readonly revoked: readonly string[];
@@ -73,7 +70,6 @@ export interface Task {
   readonly orphans: readonly string[];
   /** 已确认停止的实例(当前实例停止或孤儿停止);它们的迟到回包可证明是旧的,重复上线/确认不再登记、不再释放槽位(R6-CORR-01)。 */
   readonly retired: readonly string[];
-  /** 已分配过的启动请求个数,只增不减,用来生成永不复用的 requestId。 */
   readonly launchSeq: number;
   /** 已分配过的审查轮次号,只增不减;处于 T5 时就是当前提审的轮次(R2-CORR-04)。 */
   readonly reviewRound: number;
@@ -107,7 +103,6 @@ const no = (reason: string): Outcome => ({ ok: false, reason });
 const go = (run: (t: Task, e: TaskEvent) => Outcome): Cell => ({ kind: "go", run });
 const rej = (reason: string): Cell => ({ kind: "reject", reason });
 const ign = (reason: string): Cell => ({ kind: "ignore", reason });
-/** 表格按事件种类分发,这里再核对一次,防止表格接错列时静默读到别的字段。 */
 const as = <K extends EventKind>(e: TaskEvent, k: K): Extract<TaskEvent, { kind: K }> => {
   if (e.kind !== k) throw new Error(`状态表接错:期望 ${k},收到 ${e.kind}`);
   return e as Extract<TaskEvent, { kind: K }>;
@@ -134,7 +129,6 @@ export function newTask(id: string, requester: string): Task {
   }, {});
 }
 
-/** 有活跃 Compute 时先请求停止;新实例还在启动途中就撤销启动;两者都等真实停止确认。都没有才直接进终态。 */
 const stopThenRun = (t: Task, reason: "cancel" | "fail"): Outcome => {
   if (t.computeId) return ok(set(t, { state: "T9_StopRequested", stopReason: reason }), [{ kind: "stop-compute", computeId: t.computeId }]);
   if (t.launch) return ok(set(t, { state: "T9_StopRequested", stopReason: reason }), [{ kind: "cancel-spawn", requestId: t.launch.requestId }]);
@@ -169,7 +163,6 @@ const rework = (t: Task, resumable: boolean): Outcome => {
   if (resumable && t.computeId) return ok(set(t, { ...base, launch: null }), [{ kind: "resume-compute", computeId: t.computeId, constraintVer: base.constraintVer }]);
   return relaunch(set(t, { ...base, computeId: null, boundRequest: null }), [], true);
 };
-/** 发起一次新的启动请求:requestId 永不复用,绑定当前条件版本;pre 是要先执行的副作用(如撤销旧启动)。 */
 const relaunch = (t: Task, pre: Effect[], withHandoff: boolean): Outcome => {
   const seq = t.launchSeq + 1;
   const launch: Launch = { requestId: `${t.id}#L${seq}`, constraintVer: t.constraintVer };
@@ -192,7 +185,6 @@ const orphan = (t: Task, e: TaskEvent): Outcome | null => {
   if (ev.requestId === t.launch?.requestId) return null;
   // 当前实例的重复上线回包(或冒用当前实例 ID 的回包):绝不停当前实例,幂等忽略(R3-CORR-01)
   if (ev.computeId === t.computeId) return ok(t);
-  // 已经下过停止的孤儿:不重复登记
   if (t.orphans.includes(ev.computeId)) return ok(t);
   // 已确认停止过的实例又回报上线:是重放或已停实例,再发一次停止(幂等)但不重新登记,之后的确认不会再释放槽位(R6-CORR-01)
   if (t.retired.includes(ev.computeId)) return ok(t, [{ kind: "stop-compute", computeId: ev.computeId }]);
@@ -213,7 +205,6 @@ const bind = (t: Task, e: TaskEvent): Task => {
   const ev = as(e, "Dispatch");
   return set(t, { computeId: ev.computeId, boundRequest: ev.requestId, launch: null, instances: t.instances.includes(ev.computeId) ? t.instances : [...t.instances, ev.computeId], producerModels: [...new Set([...t.producerModels, ev.model])] });
 };
-/** 回绑只接受当前在途启动的实例(requestId 对上),没有启动在途或已有实例都拒。 */
 const canBind = (t: Task, e: TaskEvent): boolean => !t.computeId && !!t.launch && as(e, "Dispatch").requestId === t.launch.requestId;
 const NO_COMPUTE = "新 Compute 尚未回绑";
 const userRejectRun = (t: Task, e: TaskEvent): Outcome => {
@@ -227,7 +218,6 @@ const accept = (t: Task, e: TaskEvent): Outcome => {
 };
 
 /** T5 守卫(AC-26 / R-01):审查人≠作者;审查厂商不在累积生产厂商集合里;任何一方 unknown 都拒;提出者本人可豁免同厂商,记为 Waived。 */
-/** 跨厂商判定:返回门禁结论,或不通过的原因(以 Error 包装区分)。 */
 const vendorGate = (t: Task, reviewerModel: string, waiverBy: string | null | undefined): ReviewGate | Error => {
   const producers = new Set<Vendor>(t.producerModels.map(vendorOf));
   const reviewer = vendorOf(reviewerModel);
@@ -252,10 +242,6 @@ const review = go((t, e) => {
   return ok(set(t, { state: "T7_Delivering", reviewGate: gate, approval: { reviewerModel: ev.reviewerModel, waiverBy: ev.waiverBy ?? null }, delivery, deliverySeq: round }),
     [{ kind: "send-card", taskId: t.id, deliveryRound: round, commit: delivery.commit, constraintVer: t.constraintVer }]);
 });
-/**
- * 这一轮没有审查(找不到合格审查人,或审查没做成):交付照常发出,分配新的交付代次,门禁如实留 none、不记审查结论;
- * 之后发卡确认即进 T8a 待确认(需求 §8.1 已定 1:交活后进 T8a,不说话不算通过)。过期回包幂等忽略(同 Review 的绑定)。
- */
 const unreviewed = go((t, e) => {
   const ev = as(e, "ReviewUnavailable");
   if (ev.round !== t.reviewRound || ev.commit !== t.reviewedCommit || ev.constraintVer !== t.constraintVer) return ok(t);
@@ -325,7 +311,6 @@ const claim = go((t, e) => {
   const launch: Launch = { requestId: `${t.id}#L0`, constraintVer: t.constraintVer };
   return ok(set(t, { state: "T2_Claimed", owner: as(e, "Claim").by, launch }), [{ kind: "spawn-compute", withHandoff: false, ...launch }]);
 });
-/** 尚未派发时改条件:只推进版本。 */
 const bumpVer = go((t) => ok(set(t, { constraintVer: t.constraintVer + 1 })));
 
 /** 深冻结转移表:go 格的 run 函数本体、每一格、每一行、整张表都冻结(用户 #2662,R13-CORR-01)。 */
@@ -420,7 +405,6 @@ export const TABLE: TransitionTable = freezeTable({
   T9_StopRequested: {
     ...Object.fromEntries(EVENT_KINDS.map((k) => [k, ign("正在等真实停止,其他事件不中断停止流程")])) as unknown as Row,
     Claim: rej("停止期间禁止把任务重新指派给他人"),
-    // 撤销启动没赶上、新实例仍回报上线:登记它并立即停止,不让它带着旧授权继续跑
     Dispatch: go((t, e) => {
       if (!canBind(t, e)) return orphan(t, e) ?? no("停止期间禁止重新派发");
       const b = bind(t, e);
@@ -467,7 +451,6 @@ const staleDelivery = (t: Task, e: TaskEvent): boolean => {
 };
 
 // ---- 运行时事件形状校验(R7-CORR-01 / R7-TEST-01)----
-// 事件常来自 JSON 等未经类型检查的外部输入,静态类型的必填不等于运行时存在。入口按下表逐字段核对:
 // str = 非空且不全是空白的字符串;nat = 非负安全整数;pint = 正安全整数;bool = 布尔;字符串数组 = 枚举取值。多余字段不拒绝。
 type FieldSpec = "str" | "nat" | "pint" | "bool" | readonly string[];
 type Shape = { readonly req: Readonly<Record<string, FieldSpec>>; readonly opt?: Readonly<Record<string, FieldSpec>> };
@@ -515,8 +498,6 @@ export function normalizeEvent(e: unknown): { ok: true; event: TaskEvent } | { o
   try {
     return snapshotOf(e);
   } catch {
-    // JSON 产生的普通对象(含 Object.prototype 被放了同名属性时)不会走到这里;
-    // 尚未初始化绑定的模块命名空间原型为 null、不是 Proxy,取描述符会抛 ReferenceError,由这里兜底(R11-TEST-01,对应 X03/L04)
     return { ok: false, reason: "事件无法校验" };
   }
 }
@@ -533,7 +514,6 @@ const snapshotOf = (e: unknown): { ok: true; event: TaskEvent } | { ok: false; r
   if (typeof e !== "object" || e === null || Array.isArray(e)) return no_("事件不是对象");
   const proto = Object.getPrototypeOf(e);
   if (proto !== Object.prototype && proto !== null) return no_(PLAIN_ONLY);
-  // 逐个自有属性看描述符:访问器直接拒绝(不调用 getter);数据属性只取 value
   const own = new Map<string, unknown>();
   for (const key of Reflect.ownKeys(e)) {
     const d = Object.getOwnPropertyDescriptor(e, key);
@@ -542,16 +522,13 @@ const snapshotOf = (e: unknown): { ok: true; event: TaskEvent } | { ok: false; r
     if (typeof key === "string") own.set(key, d.value);
   }
   const kind = own.get("kind");
-  // 非字符串的 kind 用固定文字拒绝,不把不可信值格式化进原因(对象 kind 可能无法转成字符串)
   if (typeof kind !== "string") return no_("事件种类缺失或不是字符串");
   const shape = SHAPE_BY_KIND.get(kind);
   if (!shape) return no_(`未知的事件种类 ${JSON.stringify(kind)}`);
   // 临时字段表原型为 null:追加条件字段时不会经过 Object.prototype 上同名的 setter 或不可写属性(R11-CORR-01)
   const req: Record<string, FieldSpec> = Object.assign(Object.create(null), shape.req);
   const opt = optOf(shape);
-  // Review 先读 verdict:只有打回才需要 computeResumable;通过时它不是声明字段
   if (kind === "Review" && own.get("verdict") === "reject") req.computeResumable = "bool";
-  // 原型为 null 的快照:读不到的字段就是 undefined,不会从 Object.prototype 上继承
   const snap = Object.create(null) as Record<string, unknown>;
   snap.kind = kind;
   for (const k of [...Object.keys(req), ...Object.keys(opt)]) {

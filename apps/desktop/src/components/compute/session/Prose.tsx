@@ -1,8 +1,6 @@
 import { Fragment } from 'react'
 import { cn } from '@/lib/utils'
 
-/* harness 说的话：只认三样——空行分段、「- 」开头的列表、反引号里的代码。够读，不引一整个 markdown 引擎。
-   正文 13.5px、行高 1.7、每行不超过 68 个字宽（impeccable：正文 65–75ch）。 */
 
 function Inline({ text }: { text: string }) {
   const parts = text.split('`')

@@ -1,4 +1,3 @@
-// 演示模式的界面初值:浏览器预览(没有桌面壳)、或桌面壳里后端没起来时才装。连上后端时一概不装,界面只读后端(api/wire)。
 // 演示数据(data.ts、store/demo.ts)只经这里进界面状态;演示服务(demo-server)的种子也在这里一起装,两边是同一份。
 import type { StoreApi } from 'zustand'
 import { provFixture } from '@/components/files/fixtures'
@@ -27,7 +26,6 @@ export function applyDemo(store: StoreApi<AppState>) {
     crons: crons0, pulse: pulse0,
     plugins: plugins0, pluginCatalog: pluginCatalog0,
   })
-  /* 没连上后端时 call() 交给演示服务;种子是同一份演示数据,命令清单按会话现算 */
   installDemo(demoSeed({
     people, crons: crons0, plugins: plugins0, catalog: pluginCatalog0,
     commands: (roomId) => {

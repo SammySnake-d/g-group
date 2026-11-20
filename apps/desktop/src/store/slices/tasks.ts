@@ -1,4 +1,3 @@
-// 协作切片:任务板、群清单、记下的承诺、协作手册,以及 Helper 在聊天里的总结与回复。
 import { people, type Board, type Commitment, type ListItem, type PersonId, type PlaybookItem } from '@/data'
 import { assignTaskLive, createTaskLive, createTasksLive, setTaskStatusLive } from '@/api/wire/checklist'
 import { live, liveCtx } from '@/api/wire/live'
@@ -7,28 +6,23 @@ import { later, uid } from '../boot'
 import { HELPER_CARDS, IMPORTED_BOARD, SUMMARY_DEMO } from '../demo'
 import { lens, type Slice } from '../state'
 
-/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 TASKS_CTX_KEYS */
 export interface TasksCtx {
   boards: Record<string, Board>
   commits: Commitment[]
   playbook: PlaybookItem[]
   checklist: ListItem[]
   claim: (boardId: string, row: number, who: PersonId) => void
-  /** 导入任务板:rows 是要进清单的行(连上后端时逐行建成本群任务,待认领);演示里用示例行 */
   importBoard: (convId: string, rows?: string[]) => void
   claimTask: (taskId: string, who: PersonId) => void
   setTaskStatus: (taskId: string, st: ListItem['status']) => void
   addTasks: (convId: string, texts: string[]) => void
-  /** 手动新建一项（群资料·清单·新建）：标题、描述分开存，指了人就直接进行中 */
   addTask: (t: { text: string; desc?: string; who?: PersonId; conv: string }) => string
   summarize: (convId: string) => void
-  /** 在聊天里 @Helper：回复作为这个聊天的一条消息 */
   helperReply: (convId: string, ask: string) => void
 }
 export const TASKS_CTX_KEYS = ['boards', 'commits', 'playbook', 'checklist', 'claim', 'importBoard', 'claimTask', 'setTaskStatus', 'addTasks', 'addTask', 'summarize', 'helperReply'] as const satisfies readonly (keyof TasksCtx)[]
 
 export type TasksSlice = TasksCtx & {
-  /** 群清单整表换掉 / 换一项 / 删一项(连上后端时由 api/wire/checklist 写) */
   setChecklist: (list: ListItem[]) => void
   putListItem: (it: ListItem) => void
   dropListItem: (id: string) => void
@@ -38,14 +32,12 @@ export const createTasksSlice: Slice<TasksSlice> = (set, get) => {
   const L = lens(set)
   const sys = (cid: string, text: string) => get().pushMsg({ k: 'sys', id: 's' + uid(), text }, cid)
   const helperSays = (cid: string, text: string) => get().pushMsg({ k: 'text', id: 'h' + uid(), from: 'helper', text }, cid)
-  /** Helper 先亮「正在输入」,过一会儿再出结果 */
   const helperTypes = (cid: string, done: () => void, ms: number) => {
     L.typing((t) => ({ ...t, [cid]: 'helper' }))
     later(() => { L.typing((t) => ({ ...t, [cid]: null })); done() }, ms)
   }
 
   return {
-    /* 初值空:演示数据由 api/demo-state.ts 装 */
     boards: {},
     commits: [],
     playbook: [],
@@ -57,7 +49,6 @@ export const createTasksSlice: Slice<TasksSlice> = (set, get) => {
 
     claim: (bid, row, who) => {
       const b = get().boards[bid]
-      /* 连上后端:任务板的一行就是清单里同名的待认领任务,交给它 */
       if (live(get())) {
         const task = b?.rows[row]?.task
         const t = task ? get().checklist.find((x) => x.conv === b.conv && x.text === task && x.status === '待认领') : undefined
@@ -100,7 +91,6 @@ export const createTasksSlice: Slice<TasksSlice> = (set, get) => {
       get().say(cid, 'argon', '我领「飞书接入方案」和「设计规范 v1」，这两项在我的分工里。', 1200)
     },
     addTask: (t) => {
-      /* 连上后端:由后端建(以你的一条消息记进群里),清单项等回包;这里先返回空 */
       if (live(get())) { void createTaskLive(liveCtx(get, set), t); return '' }
       const id = 't' + uid()
       const desc = broken('AC-47-2') ? undefined : t.desc

@@ -1,5 +1,3 @@
-/* 表情回应:一行小胶囊,照 mirasim 的回应胶囊搬——24px 高、无边框浅底、表情和后面的头像之间一道淡竖线;
-   你点过的那颗用靛蓝浅底(aria-pressed)。悬停看是谁;点了切换你的回应,按下有 Button 原语的回馈 */
 import { cn } from '@/lib/utils'
 import { people } from '@/data'
 import { useApp } from '@/ctx'

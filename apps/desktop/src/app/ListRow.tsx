@@ -13,7 +13,6 @@ export const ListRow = React.forwardRef<HTMLButtonElement, React.ComponentPropsW
 )
 ListRow.displayName = 'ListRow'
 
-/** 列表里按 ↑/↓ 在行之间移动焦点(共同规则追加 2 第 5 条:方向键在组内移动)。挂在列表容器的 onKeyDown 上 */
 export function moveRowFocus(e: React.KeyboardEvent<HTMLElement>) {
   if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
   const rows = [...e.currentTarget.querySelectorAll<HTMLElement>('[data-row]:not(:disabled)')]

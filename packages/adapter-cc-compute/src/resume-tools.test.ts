@@ -1,5 +1,4 @@
 // AC-17 续接换工具清单:宿主按本人授权在续接时放开或收回写工具。用假 CLI(test-support/fake-claude.mjs)核对真实传给 CLI 的参数。
-// 只回收本文件自己起的进程(命令行里带本文件的临时目录),跑完删掉临时目录。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";

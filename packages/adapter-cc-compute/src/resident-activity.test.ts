@@ -1,7 +1,5 @@
 // AC-43 ①⑦⑩⑪⑫ 的 harness 侧,常驻适配器(生产入口用的就是它;需求文档 D26 第 8.3 节):按 stdout 每一行推送「活动」——
 // 模型调用已发出(首字节窗口起点)、流式增量、工具开始 / 结束(后台命令、子代理分别标出)、子代理里的消息。宿主据此给运行台账计时、开子单元。
-// 起真实子进程:假 CLI(test-support/fake-claude-resident.mjs)每轮 init 之后输出 system/status requesting,带 --include-partial-messages 时输出
-// stream_event 增量(真实 CLI 2.1.319 在 stdin 收 stream-json 时的帧序见 proof/resident-partial-messages-probe.txt)。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -151,7 +149,6 @@ test("长工具在跑:tool_start 立即推送,tool_end 要等工具真的结束�
 });
 
 test("init 核验没通过的这一轮不推活动:CLI 换了会话 id 判违规后,之后的请求与工具行都不算进展;同一适配器上合规的 Compute 照常推", async () => {
-  // CLI 主进程忽略 SIGTERM:违规回收发出之后它仍把请求与工具行写完,才看得出这些行没被当成活动
   const r = rig(createResidentComputeAdapter, { ignoreTerm: true, byIncludes: { "[任务]\n跑测试": { initSession: "00000000-0000-4000-8000-000000000000", tools: [{ name: "Bash", input: { command: "ls" } }] } } });
   const id = await r.spawn();
   await r.until(() => r.ends().length === 1, 8000, "违规结束");

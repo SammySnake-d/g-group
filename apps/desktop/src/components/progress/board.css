@@ -62,7 +62,6 @@
 .bd-link[data-dim] { opacity: .12 }
 @keyframes bd-flow { to { stroke-dashoffset: -24px } }
 
-/* 节点:绝对定位在画布上;过渡只列 mirasim 的三项,外加原语按下缩放的 transform(时长取库 token) */
 .bd-board .bd-press { position: absolute; font-weight: 400; white-space: nowrap; text-align: left; transition: opacity .16s var(--mx-ease), box-shadow .16s var(--mx-ease), background-color .12s var(--mx-ease), transform var(--dur-fast) var(--ease-out) }
 .bd-board .bd-person { background: var(--bd-card); box-shadow: var(--bd-lift); border-radius: 12px; display: flex; justify-content: flex-start; align-items: center; gap: 10px; padding: 6px 10px 6px 7px }
 .bd-person-text { flex-direction: column; gap: 1px; min-width: 0; display: flex }
@@ -108,7 +107,6 @@
 .bd-hint > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .bd-empty { min-height: 240px; justify-content: center }
 
-/* 悬停一项:它的上下游整条链亮起,其余变淡(mirasim 的 data-lit / data-dim) */
 .bd-board [data-dim]:not(path) { opacity: .38 }
 .bd-board .bd-press[data-lit] { box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-cta) 55%, transparent), 0 4px 14px -8px hsl(var(--bd-new) / .3) }
 .bd-board .bd-press:focus-visible { box-shadow: 0 0 0 3px var(--focus-ring); outline: none }

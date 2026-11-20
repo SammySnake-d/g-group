@@ -1,5 +1,3 @@
-/* 开发用探针页(?preview=astryx):Astryx 基础控件挂在「纸·墨·柿」主题下,
-   e2e 用它量主题是否真生效、Tailwind 类能否覆盖、键盘交互是否完整。不进产品界面。 */
 import { useState } from 'react'
 import { Button } from '@astryxdesign/core/Button'
 import { Dialog } from '@astryxdesign/core/Dialog'

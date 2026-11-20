@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/pages/kit/parts'
 import { CHECKPOINT_NOTE } from './constants'
 
-/* 检查点:最新的在上;回到某个检查点要先确认,说清会恢复几个文件(破坏性操作要确认) */
 export function CheckpointView({ c }: { c: Compute }) {
   const { rollback } = useApp()
   const [confirm, setConfirm] = useState<string | null>(null)

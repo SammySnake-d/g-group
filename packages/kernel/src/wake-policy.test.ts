@@ -26,7 +26,6 @@ test("F11 休眠门参数:jumpMs 不是正数、graceMs 不是非负整数、不
     { graceMs: 1.5 },
   ].map((p) => checkWakePolicy(p));
   for (const r of reasons) assert.deepEqual(r, { ok: false, reason: "jumpMs 必须是正数、graceMs 必须是非负整数" });
-  // 无穷大、NaN 在普通数据合同那一层就拒(plainData)
   assert.deepEqual(checkWakePolicy({ jumpMs: Number.POSITIVE_INFINITY }), { ok: false, reason: "休眠门参数.jumpMs:数字必须有限" });
   assert.deepEqual(checkWakePolicy({ graceMs: Number.NaN }), { ok: false, reason: "休眠门参数.graceMs:数字必须有限" });
   const notObj = [null, 60000, [60000, 180000]].map((p) => checkWakePolicy(p));

@@ -12,7 +12,6 @@ function live(pid: number): boolean {
     const rows = execFileSync("ps", ["-A", "-o", "pid=,stat="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
     return rows.split("\n").some((line) => { const p = line.trim().split(/\s+/); return Number(p[0]) === pid && !p[1]?.startsWith("Z"); });
   } catch {
-    // macOS seatbelt denies setuid ps; use an independent OS pid listing, never assume absent on error.
     const listed = spawnSync("pgrep", ["-fl", "."], { encoding: "utf8" });
     if (listed.status === 1) return false;
     if (listed.error || listed.status !== 0) throw new Error(`pid enumeration unavailable: ${listed.error?.message ?? listed.stderr}`);

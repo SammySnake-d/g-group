@@ -69,7 +69,6 @@ test("groupTranscript:失败后重试——标出第几次尝试、失败是否�
   assert.equal(g1.failed, 2);
   assert.equal(g1.recovered, 2);
   assert.equal(g1.running, false);
-  /* 重试还在跑:失败还没被救回 */
   assert.deepEqual(g2.calls.map((c) => [c.attempt, c.recovered]), [[1, false], [2, false]]);
   assert.equal(g2.failed, 1);
   assert.equal(g2.recovered, 0);

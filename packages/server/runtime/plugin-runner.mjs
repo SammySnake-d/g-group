@@ -1,10 +1,5 @@
-// 插件进程入口。宿主用 `node --permission --allow-fs-read=<插件包目录>/ --allow-fs-read=<本文件>` 起它,
-// 环境变量只给 G_GROUP_PLUGIN_ID,工作目录是插件私有数据目录;不给写文件、子进程、worker、原生扩展权限。
 // 网络不在 Node 22 权限模型里:插件能连网,只按清单权限声明(net:fetch / net:post)告知用户,宿主没有拦。
-//
 // 协议:stdin 每行一个请求 {id, method, params},stdout 每行一个回应 {id, ok:true, result} | {id, ok:false, error}。
-// 只有 JSON 能过进程边界:插件交回的 getter、Proxy、类实例在这里被 JSON.stringify 成数据(访问器在插件自己的进程里求值),
-// 函数、Symbol 丢掉,转不成 JSON 的(BigInt、循环引用)回成错误。宿主那边仍按内核契约校验每个字段。
 // 插件的 console 输出改到 stderr,stdout 只走协议;插件自己往 stdout 写非 JSON 的东西,宿主按协议违规结束进程。
 import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";

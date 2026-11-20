@@ -1,6 +1,5 @@
 // Helper 三种入口(用户 g-group#1365、#1353):
 // 全局入口隔离,不在任何对话里展示;在聊天里 @Helper,回复作为消息出现在这个聊天里;在聊天里打开 Helper 侧边栏,带当前聊天上下文,但不作为消息。
-// Helper 只为用户本人服务,不是项目成员,不认领任务。
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { helperMayClaimTasks, routeHelper } from "./helper.ts";
@@ -134,7 +133,6 @@ test("CH-27 普通数据合同:entry/caller 是 Proxy、可撤销 Proxy、类实
   assert.equal(routeHelper(e, me, "u1").ok, true);
 });
 
-/** 在 Object.prototype 上临时放同名属性(描述符空原型),跑完 f 立即恢复;返回 setter 调用次数。 */
 const polluted = (keys: readonly string[], mode: "none" | "readonly" | "setter" | "readonlyTrue", f: () => void): number => {
   const np = (d: PropertyDescriptor): PropertyDescriptor => Object.assign(Object.create(null) as PropertyDescriptor, d);
   const saved: [string, PropertyDescriptor | undefined][] = [];

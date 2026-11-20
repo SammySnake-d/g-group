@@ -1,4 +1,3 @@
-/* 有更新:旧版本 → 新版本、这之间的更新日志;新版本多要的权限先摆出来,更新时再逐条同意。 */
 import { RefreshCw } from 'lucide-react'
 import { changesSince, marketList, permissionsToConsent } from '@g-group/ui-core'
 import type { PluginState } from '@/data'

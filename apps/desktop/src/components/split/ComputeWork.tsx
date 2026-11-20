@@ -39,7 +39,6 @@ const Meta = ({ icon, children }: { icon: React.ReactNode; children: React.React
   <span className="flex min-w-0 items-center gap-1 tabular-nums text-fg-3 [&_svg]:size-3 [&_svg]:shrink-0">{icon}<span className="truncate">{children}</span></span>
 )
 
-/** view 由分屏页签记着(store 的 SplitTab.view):消息行点「打开会话」时即使这页已经开着也能切到「会话」 */
 export function ComputeWork({ id, view = 'session' }: { id: string; view?: CView }) {
   const { computes, stop, resume, jump, resolve, pending, showPip, debug, convs, openConv, addQuote, openSplit } = useApp()
   const c = computes[id]
@@ -52,7 +51,6 @@ export function ComputeWork({ id, view = 'session' }: { id: string; view?: CView
   const conv = convs.find((x) => x.id === c.conv)
   const dm = conv?.kind === 'dm'
   const convTitle = conv ? (dm ? `与 ${conv.title} 私聊` : conv.title) : c.conv
-  /* 回复要对着联系人说的那句:有汇报回汇报,否则回它接活那句(连上后端时派活那条是你自己发的) */
   const lead = conv?.messages.find((m) => m.k === 'compute' && m.computeId === id)
   const replyTo = c.reportMsg ?? (lead && 'id' in lead ? lead.id.replace(/~c$/, '') : c.askMsg)
   const talk = (text: string) => { openConv(c.conv); setTimeout(() => addQuote({ msgId: replyTo, from: c.owner, text, reply: true }), 50) }

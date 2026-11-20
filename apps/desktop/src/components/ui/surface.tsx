@@ -3,8 +3,6 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-/* 承载面原语:卡片、浮层、输入框外壳。半透明细边 + 两层阴影(Vercel「Crisp borders」「Layered shadows」);
-   嵌套时子圆角 ≤ 父圆角(radius 档位随层级往下取)。不要卡片套卡片。 */
 const surfaceVariants = cva("relative", {
   variants: {
     elevation: {

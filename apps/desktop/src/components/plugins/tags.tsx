@@ -1,4 +1,3 @@
-/* 插件的小部件:图标、类别 / 风险 / 命令标签、发布者、进行中的转圈。颜色从不单独表达含义,永远带文字。 */
 import type { ReactNode } from 'react'
 import { BadgeCheck } from 'lucide-react'
 import { CATEGORY_LABEL, RISK_LABEL, type PluginCategory, type RiskLevel } from '@g-group/ui-core'
@@ -6,7 +5,6 @@ import { Chip, chipVariants } from '@/components/ui/chip'
 import { cn } from '@/lib/utils'
 import { OFFICIAL_PUBLISHER, RISK_TONE } from './constants'
 
-/** 插件图标:清单里的字母 + 品牌色(数据,不是界面色) */
 export function PluginIcon({ m, size = 40, className }: { m: { icon: { letter: string; color: string } }; size?: number; className?: string }) {
   return (
     <span aria-hidden className={cn('grid shrink-0 select-none place-items-center font-semibold text-white shadow-soft', className)}
@@ -24,7 +22,6 @@ export function RiskBadge({ r, className }: { r: RiskLevel; className?: string }
   return <Chip data-risk={r} tone={RISK_TONE[r]} className={className}>{RISK_LABEL[r]}风险</Chip>
 }
 
-/** 斜杠命令:等宽,命中搜索时高亮 */
 export function CommandTag({ children, hit, className }: { children: ReactNode; hit?: boolean; className?: string }) {
   return <code className={cn(chipVariants({ tone: hit ? 'link' : 'neutral' }), 'font-code', className)}>{children}</code>
 }

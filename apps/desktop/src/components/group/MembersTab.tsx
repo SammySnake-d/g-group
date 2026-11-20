@@ -35,7 +35,6 @@ function MemberRow({ id, role, silenced, leaving, duty, onDrag }: { id: PersonId
   return id === 'me' ? row : <PersonMenu id={id} side="left">{row}</PersonMenu>
 }
 
-/** 后端因在途任务没直接移出:列出它在本群在做的事,问你要不要先停下 */
 function RemoveAsk({ conv }: { conv: Conversation }) {
   const { groupAsk, setGroupAsk, removeMember } = useApp()
   if (groupAsk?.kind !== 'remove' || groupAsk.conv !== conv.id) return null

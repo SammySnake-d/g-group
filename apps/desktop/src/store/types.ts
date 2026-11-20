@@ -11,12 +11,11 @@ import type { PluginsCtx } from './slices/plugins'
 import type { ModelsCtx } from './slices/models'
 import type { ContactsCtx } from './slices/contacts'
 
-/** 右侧浮层是一摞页面：打开新页压栈，返回/关闭只弹出一层（群资料 → 成员资料 → 关闭 = 回到群资料） */
 export type Page =
   | { t: 'person'; id: PersonId }
   | { t: 'personTools'; id: PersonId }
-  | { t: 'inner'; id: PersonId; conv: string } // 从群聊私信
-  | { t: 'detail'; id: PersonId; conv: string; tab?: 'me' | 'agents' | 'work' | 'memory' } // 查看对话细节
+  | { t: 'inner'; id: PersonId; conv: string }
+  | { t: 'detail'; id: PersonId; conv: string; tab?: 'me' | 'agents' | 'work' | 'memory' }
   | { t: 'talk'; id: string }
   | { t: 'workspace'; id: string }
   | { t: 'pins'; id: string }
@@ -39,7 +38,7 @@ export type Page =
   | { t: 'newGroup' }
   | { t: 'sources' }
   | { t: 'source'; id: string }
-  | { t: 'process'; id: PersonId; conv?: string } // 联系人的完整过程：同一套聊天模板，只有它一个人说话；conv 有值 = 只看本群
+  | { t: 'process'; id: PersonId; conv?: string }
   | { t: 'cron'; id: string }
   | { t: 'task'; id: string }
 
@@ -47,7 +46,6 @@ export type SplitTab = { t: 'compute'; id: string; view?: CView } | { t: 'artifa
 /** Compute 视图页签;'session' = harness 原始会话(#1005,默认选中) */
 export type CView = 'session' | 'activity' | 'diff' | 'preview' | 'checks' | 'checkpoints'
 
-/** A2UI 提问卡片的回答记录(按提问消息 id):卡片答完收起成「标题 · 选了什么」,你的回答消息也显示成同一张收起的卡片 */
 export interface Answer { title: string; options: string[]; picked: string; at: string; replyId: string }
 
 /** 业务组件经 useApp() 看到的全部字段 = 各切片对外字段之和。各片在自己的切片文件里声明(XxxCtx),这里不再逐个列 */

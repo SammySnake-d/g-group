@@ -18,7 +18,6 @@ const inReview = (commit = "abc") => must(apply(running(), { kind: "SubmitForRev
 const approve = (commit: string, constraintVer: number, round = 1): TaskEvent => ({ kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round, commit, constraintVer, verdict: "approve" });
 const delivered = () => must(applyAll(inReview(), [approve("abc", 0), { kind: "DeliveredCard", ...D1 }])).task;
 
-/** 第一次交付的代次与 commit(delivered() 链);DC1 是 inState 代表性交付(commit "c")。 */
 const D1 = { taskId: "t1", deliveryRound: 1, commit: "abc" } as const;
 const DC1 = { taskId: "t", deliveryRound: 1, commit: "c" } as const;
 const SAMPLE: { [K in EventKind]: Extract<TaskEvent, { kind: K }> } = {
@@ -80,7 +79,6 @@ const SPEC: { [S in TaskState]: { [E in EventKind]: Exp } } = {
   T5_InReview: {
     Claim: "rej", Dispatch: ORPHAN_STOP("T5_InReview"), ProducerModelAdded: { to: "T5_InReview", pm: PM2 }, NeedHuman: "rej", HumanReply: "ign",
     Amend: REWORK, SubmitForReview: { to: "T5_InReview", fx: [{ kind: "request-review", round: 2, commit: "c2", constraintVer: 0 }] }, Review: { to: "T7_Delivering", fx: [{ kind: "send-card", taskId: "t", deliveryRound: 1, commit: "c", constraintVer: 0 }] },
-    // 没有合格审查人或审查没做成:交付照常进 T7 → T8a 待确认(§8.1 已定 1),不停在 T5
     ReviewUnavailable: { to: "T7_Delivering", fx: [{ kind: "send-card", taskId: "t", deliveryRound: 1, commit: "c", constraintVer: 0 }] }, DeliveredCard: "rej",
     UserAccept: "rej", UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
@@ -840,7 +838,6 @@ test("状态转移不改入参任务", () => {
   assert.equal(amended.ok && amended.task.constraintVer, 1);
 });
 
-// ---- 第四轮 ----
 const deliveredBy = (reviewerModel: string) => must(applyAll(inReview(), [{ kind: "Review", reviewerId: "astra", reviewerModel, round: 1, commit: "abc", constraintVer: 0, verdict: "approve" }, { kind: "DeliveredCard", ...D1 }])).task;
 
 test("R4-CORR-01 旧生产实例的换模记录在新实例回绑后迟到:仍计入累积集合,后续同厂商审查被拒", () => {
@@ -970,7 +967,6 @@ test("R4-CORR-03 首派在途改条件:撤销 L0、按新版本重发首派(不�
   assert.deepEqual(failed.effects, [{ kind: "cancel-spawn", requestId: "t1#L0" }]);
 });
 
-/** 运行中、有两个孤儿 o1/o2 的任务(由两次撤销重发产生)。 */
 const twoOrphans = () => must(applyAll(respawned(), [
   { kind: "Amend", by: "u1", computeResumable: true }, { kind: "Amend", by: "u1", computeResumable: true }, up("cc-new", "t1#L3"), up("o1", L1), up("o2", "t1#L2"),
 ]));
@@ -1043,8 +1039,6 @@ test("R4-CORR-03 首派撤销重发后,旧首派实例在 T2 上线被停止,它
   assert.deepEqual(revokedAck.task.revoked, []);
 });
 
-// ---- 第五轮 ----
-/** v0 交付(代次 1,commit abc)后改条件,v1 重新提审 sha-v1 并交付(代次 2)。 */
 const redelivered = () => must(applyAll(delivered(), [
   { kind: "Amend", by: "u1", computeResumable: true },
   { kind: "SubmitForReview", commit: "sha-v1", computeId: "cc-1", constraintVer: 1 },
@@ -1167,7 +1161,6 @@ test("R5-TEST-01 当前实例报来的非当前(未来)版本提问在 T4b 被�
   assert.equal(r.task.state, "T3_Running");
 });
 
-// ---- 第六轮 ----
 const SC = (x: { computeId?: string; requestId?: string }): TaskEvent => ({ kind: "StoppedConfirmed", taskId: "t1", ...x });
 
 test("R6-CORR-01 T2 已确认停止的孤儿:迟到的当前版本提问/提审仍被忽略,同批随后的首派实例正常上线", () => {
@@ -1254,7 +1247,6 @@ test("R6-TEST-01 首派重发时已登记(未确认)孤儿的当前版本回包�
 });
 
 const D2s = { taskId: "t1", deliveryRound: 2, commit: "s2" } as const;
-/** 交付两次后再次不可恢复返工,回绑 cc-3 并提审 s3(第三次交付前)。 */
 const toThird = () => must(applyAll(respawned(), [up("cc-2"),
   { kind: "SubmitForReview", commit: "s2", computeId: "cc-2", constraintVer: 1 }, approve("s2", 1, 2), { kind: "DeliveredCard", ...D2s },
   { kind: "UserReject", by: "u1", computeResumable: false, ...D2s }, up("cc-3", "t1#L2"),
@@ -1290,8 +1282,6 @@ test("R6-TEST-01 当前代次号但 commit 不符的退回被当作旧回包忽�
   assert.equal(r.task.state, "T8_Accepted");
 });
 
-// ---- 第七轮 ----
-// 独立于实现的事件形状期望:每种事件的必填字段与取值域(s=非空字符串,n=非负整数,p=正整数,b=布尔,数组=枚举)。
 type Dom = "s" | "n" | "p" | "b" | readonly string[];
 const SHAPES: { [K in EventKind]: { req: Record<string, Dom>; opt?: Record<string, Dom> } } = {
   Claim: { req: { by: "s" } },
@@ -1311,7 +1301,6 @@ const SHAPES: { [K in EventKind]: { req: Record<string, Dom>; opt?: Record<strin
   StoppedConfirmed: { req: { taskId: "s" }, opt: { computeId: "s", requestId: "s" } },
   ExecFailed: { req: {}, opt: { computeId: "s", requestId: "s" } },
 };
-/** 每种取值域的非法值:缺失、null、错类型、越界。 */
 const BAD: Record<"s" | "n" | "p" | "b" | "enum", unknown[]> = {
   s: [undefined, null, 1, true, "", ["x"], {}],
   n: [undefined, null, "1", true, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 2],
@@ -1430,7 +1419,6 @@ test("R7-TEST-01 错任务 ID 的交付事件在 T7/T8a/T8_Accepted 全被拒;�
 });
 
 const upT2 = (id: string, req: string): TaskEvent => ({ kind: "Dispatch", computeId: id, model: PRODUCER, requestId: req });
-/** T2 里依次登记并确认停止三个孤儿 a/b/c。 */
 const threeRetired = () => must(applyAll(claimed().task, [upT2("a", "t1#L7"), SC({ computeId: "a" }), upT2("b", "t1#L8"), SC({ computeId: "b" }), upT2("c", "t1#L9"), SC({ computeId: "c" })])).task;
 
 test("R7-TEST-01 退役账本:三个孤儿全部保留且冻结,最早的重放上线与确认都不再释放槽位", () => {
@@ -1463,7 +1451,6 @@ test("R7-TEST-01 有另一个活动实例时,退役实例重放上线只停它�
   assert.equal(r.task.computeId, "cc-1");
 });
 
-// ---- 第八轮 ----
 const PROTO_KINDS = ["__proto__", "constructor", "toString", "hasOwnProperty", "valueOf", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "__defineGetter__"];
 
 test("R8-CORR-01 标准 JSON 的异常 kind:validateEvent、apply、applyAll 都返回拒绝,绝不抛异常", () => {
@@ -1556,10 +1543,7 @@ test("R8-TEST-01 非对象与非字符串 kind 的拒绝原因精确", () => {
   for (const k of [1, 0, true, null, {}, []]) assert.equal(validateEvent({ kind: k, by: "u" }), "事件种类缺失或不是字符串", JSON.stringify(k));
 });
 
-// ---- 第九轮 ----
-/** 自定义原型的事件:领域层只接受普通数据对象,这类输入整体拒绝。 */
 const withProto = (own: Record<string, unknown>, inherited: Record<string, unknown>): TaskEvent => Object.assign(Object.create(inherited), own) as TaskEvent;
-/** 在 Object.prototype 上临时放一个同名字段(模拟原型污染),让普通对象"继承"它;fn 结束后一定删掉。 */
 const polluted = <T>(key: string, value: unknown, fn: () => T): T => {
   Object.defineProperty(Object.prototype, key, { value, configurable: true, writable: true, enumerable: false });
   try { return fn(); } finally { delete (Object.prototype as Record<string, unknown>)[key]; }
@@ -1822,18 +1806,12 @@ test("R9 契约边界:普通对象、Object.create(null) 对象、JSON.parse 结
   }
 });
 
-// ---- 第十一轮 ----
 const TASK_URL = new URL("./task.ts", import.meta.url).href;
-/**
- * 在单独的 Node 子进程里跑一段脚本(脚本里 m 是同一份 task.ts 模块),返回它 stdout 的 JSON。
- * Object.prototype 只在子进程里被临时改动,子进程在 finally 中删除并核对已恢复;测试主进程的原型从不被改动。
- */
 const inChild = (body: string): unknown => {
   const r = spawnSync(process.execPath, ["--input-type=module", "-e", `const m = await import(process.env.TASK_URL);\n${CHILD_PRELUDE}\n${body}`], { env: { ...process.env, TASK_URL }, encoding: "utf8" });
   if (r.status !== 0) throw new Error(`子进程失败(exit ${r.status}):${r.stderr}`);
   return JSON.parse(r.stdout);
 };
-/** 子进程共用:under(key, cond, value, fn) 按四种条件之一在 Object.prototype 上放同名属性,fn 结束后一定删掉;safe 把异常记成 { threw }。 */
 const CHILD_PRELUDE = `
 const { newTask, apply, applyAll, normalizeEvent, validateEvent } = m;
 let calls = 0;
@@ -1855,7 +1833,6 @@ const safe = (fn) => { try { return fn(); } catch (err) { return { threw: String
 const PROTO_CONDS = ["none", "data", "setter", "readonly"] as const;
 const R11_REVIEW = { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "reject" } as const;
 const R11_T5 = [{ kind: "Claim", by: "claude" }, { kind: "Dispatch", computeId: "cc-1", model: PRODUCER, requestId: "t1#L0" }, { kind: "SubmitForReview", commit: "abc", computeId: "cc-1", constraintVer: 0 }];
-/** computeResumable 取 true / false / 缺失;有无豁免人各一份(waiverBy 是提出者本人,跨厂商下不影响结论)。 */
 const r11Review = (v: "true" | "false" | "missing", w: "plain" | "waiver"): Record<string, unknown> =>
   ({ ...R11_REVIEW, ...(v === "missing" ? {} : { computeResumable: v === "true" }), ...(w === "waiver" ? { waiverBy: "u1" } : {}) });
 const R11_MISSING = "Review.computeResumable 缺失或取值非法(应为布尔)";
@@ -1901,7 +1878,6 @@ console.log(JSON.stringify({ out, calls, restored: restored.length > 0 && restor
   assert.equal(Object.getOwnPropertyDescriptor(Object.prototype, "computeResumable"), undefined, "主进程原型未被改动");
 });
 
-/** 跑遍交付、退回、新开回绑、提问:产生 delivery、approval、launch、instances、producerModels、pendingQ 的读写。 */
 const R11_PATH = [...R11_T5,
   { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "approve" },
   { kind: "DeliveredCard", taskId: "t1", deliveryRound: 1, commit: "abc" },

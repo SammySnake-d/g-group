@@ -1,10 +1,7 @@
 // 渲染层访问后端的唯一入口:Electron 里是 preload 暴露的 window.gg(按 @g-group/api-contract);
-// 浏览器预览或后端没接上时为演示模式,界面明确标出「演示数据」,不假装已连上。
-// 演示模式下 call() 交给进程内的演示服务(demo-server.ts):同样按合同校验参数和回包,只是数据是演示的。
 import { API_VERSION, type ApiResult, type GGroupBridge, type MethodName, type ParamsOf } from '@g-group/api-contract'
 import { createDemoServer, type DemoSeed } from './demo-server'
 
-/** connected 时 eventSeq 是握手那一刻的事件游标,接线层从这里订阅事件流 */
 export type BackendState = { mode: 'checking' } | { mode: 'connected'; userId: string; eventSeq: number } | { mode: 'demo'; reason: string }
 
 export const bridge: GGroupBridge | null = typeof window !== 'undefined' && 'gg' in window ? (window as unknown as { gg: GGroupBridge }).gg : null
@@ -21,13 +18,11 @@ async function hello(): Promise<BackendState> {
 }
 
 let probed: Promise<BackendState> | null = null
-/** 探测一次后端;之后的 call() 都按这次结果走真后端或演示服务 */
 export const probeBackend = () => (probed ??= hello())
 
 let demo: ReturnType<typeof createDemoServer> | null = null
 /** 状态层启动时登记演示服务的种子(初始演示数据转成合同形状) */
 export function installDemo(seed: DemoSeed) { demo = createDemoServer(seed) }
-/** 演示服务收到过的调用(走查 / 测试核对「确实走了合同」用) */
 export const demoCalls = () => demo?.calls ?? []
 
 export async function call<M extends MethodName>(method: M, params: ParamsOf<M>): Promise<ApiResult<M>> {

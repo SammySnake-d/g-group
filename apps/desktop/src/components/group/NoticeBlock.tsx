@@ -37,7 +37,6 @@ function Loaded({ conv, n }: { conv: Conversation; n: Notice }) {
   )
 }
 
-/** 「改 · 撤下」两个动作;撤下先在原地确认(破坏性操作不一点就走) */
 function Actions({ n, onEdit, onRemove, children }: { n: Notice; onEdit: () => void; onRemove: () => void; children?: ReactNode }) {
   const [asking, setAsking] = useState(false)
   if (asking) {
@@ -86,7 +85,6 @@ export function NoticeBlock({ conv }: { conv: Conversation }) {
   const [v, setV] = useState('')
   const top = list.find((n) => n.top) ?? list[0]
   const many = list.length > 1
-  /* 连上后端时发布成功与否由回包提示;演示里直接提示 */
   const publish = () => { const t = v.trim(); if (!t) return; setNotice(conv.id, t); if (!live) toast(NOTICE.published); setAdding(false); setV('') }
   const startEdit = (n: Notice) => { setEditing(n.id); setEv(n.text) }
   const editor = (n: Notice) => editing === n.id && (

@@ -28,7 +28,6 @@ export interface Ledger {
   readonly activity: readonly { readonly roundId: string; readonly commitmentId: string; readonly taskId: string; readonly actor: Actor; readonly kind: "progress" | "close"; readonly text: string | null }[];
 }
 export type Proposal = { readonly id: string; readonly taskId: string; readonly text: string };
-/** Candidate fields are data only. This slice does not interpret or enable them. */
 export interface CandidatePolicy {
   readonly disposition?: unknown;
   readonly reconciliation?: unknown;
@@ -48,7 +47,6 @@ export type Reconciliation = { readonly ok: true; readonly ready: boolean; reado
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
-// External values are copied through descriptors before any property is read.
 function jsonCopy(value: unknown, ancestors = new Set<object>()): Json {
   if (value === null || typeof value === "boolean" || typeof value === "string") return value;
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -149,7 +147,6 @@ export function emptyLedger(ownerId: unknown): Ledger | Failure {
   return freeze({ ownerId, version: 0, messages: [], commitments: [], actions: [], activity: [] });
 }
 
-/** Produces a proposed snapshot. The host must persist it atomically before the next action. */
 export function applyLedger(ledger: Ledger, expectedVersion: number, command: Command, artifactExists?: (id: string) => boolean): Result {
   let state: unknown;
   let input: unknown;

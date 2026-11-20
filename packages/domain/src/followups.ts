@@ -1,7 +1,5 @@
 // 补充消息关联边 linked_msgs 与单条改挂 E5b(需求文档 1.2 不变量 I1/I3、第三台 E5b 列、C-US29;验收 AC-15、AC-16、AC-45)。
 // 三种边:Received 只表示已送达负责人;Applied 必须指向含该要求的产物版本(送达不等于落实);Rebound 表示已改挂到别的任务。
-// 改挂(E5b)不取消源任务:源任务推进单调递增的新版本,完整保留并重放 #m 之后仍有效的补充 #n;
-// #m 已落实进工作区时,先等旧执行器停止确认(StoppedOrIsolatedConfirmed)才发恢复工作区的副作用,不边写边回滚。
 // 纯函数:入参先过普通数据合同,返回冻结的新状态和要宿主执行的副作用;导出常量冻结(用户 #2662)。
 import { type Effect as TaskEffect, type Task, apply as applyTask } from "./task.ts";
 import { nestedPlainError, normalize } from "./plain.ts";
@@ -12,18 +10,14 @@ export type LinkState = (typeof LINK_STATES)[number];
 export interface Link {
   readonly roomId: string;
   readonly seq: number;
-  /** 补充原文:改挂后重放给执行器用 */
   readonly text: string;
   readonly state: LinkState;
-  /** 挂进本任务(或改挂进来)时任务的约束版本 */
   readonly ver: number;
   /** Applied 时:含这条要求的产物引用与产物版本;其余状态为 null */
   readonly appliedIn: string | null;
   readonly appliedVer: number | null;
-  /** Rebound 时:改挂到的任务 */
   readonly reboundTo: string | null;
 }
-/** 已落实的 #m 被移走、旧执行器仍在:等它停止确认后再从 #m 之前恢复工作区 */
 export interface Rollback {
   readonly roomId: string;
   readonly beforeSeq: number;
@@ -39,7 +33,6 @@ export interface FollowUps {
 }
 export interface Requirement { readonly roomId: string; readonly seq: number; readonly text: string }
 export type FollowUpEffect =
-  /** 按新版本把本任务仍有效的全部补充(含 #m 之后的 #n)重新交给执行器 */
   | { readonly kind: "replay"; readonly taskId: string; readonly ver: number; readonly requirements: readonly Requirement[] }
   /** 先停旧执行器(不是取消任务),停稳后才能回滚工作区 */
   | { readonly kind: "stop-for-rollback"; readonly taskId: string; readonly computeId: string }
@@ -177,7 +170,6 @@ export function unappliedFollowUps(state: FollowUps, uptoVer?: number): readonly
   return Object.freeze(requirementsOf(s.fu.links.filter((l) => l.state === "Received" && (uptoVer === undefined || l.ver <= uptoVer))));
 }
 
-/** 源任务一侧改挂的前置校验:返回拒绝原因、"idempotent"(已改挂到同一去向)或 null(可以改挂)。不看版本。 */
 function checkOut(fu: FollowUps, c: { roomId: string; seq: number; toTaskId: string; expectedBindingVer: number }): string | "idempotent" | null {
   if (c.toTaskId === fu.taskId) return "不能改挂到自己";
   const i = find(fu, c.roomId, c.seq);
@@ -215,7 +207,6 @@ export function rebindOut(state: FollowUps, input: { roomId: string; seq: number
   const wasApplied = m.state === "Applied";
   const links = fu.links.map((l, j): Link => {
     if (j === i) return { ...l, state: "Rebound", appliedIn: null, appliedVer: null, reboundTo: c.toTaskId };
-    // 工作区要回到 #m 之前:#m 之后已落实的补充随回滚失效,退回 Received 按新版本重做
     if (wasApplied && j > i && l.state === "Applied" && newVer !== null) return { ...l, state: "Received", ver: newVer, appliedIn: null, appliedVer: null };
     return l;
   });
@@ -227,7 +218,6 @@ export function rebindOut(state: FollowUps, input: { roomId: string; seq: number
   return done(next(null), [{ kind: "restore-workspace", taskId: fu.taskId, roomId: m.roomId, beforeSeq: m.seq, ver: newVer, requirements }]);
 }
 
-/** 旧执行器停止确认:只认待回滚记录里的那个执行器;对上了才发恢复工作区 + 重放,对不上(迟到或别的实例)幂等忽略。 */
 export function confirmRollbackStopped(state: FollowUps, computeId: string): FollowUpResult {
   const s = readState(state);
   if (!s.ok) return fail(s.reason);
@@ -239,7 +229,6 @@ export function confirmRollbackStopped(state: FollowUps, computeId: string): Fol
 }
 
 const IN_SCHEMA = { roomId: { kind: "string" }, seq: { kind: "number" }, text: { kind: "string" }, fromTaskId: { kind: "string" }, ver: { kind: "number" } } as const;
-/** 目标任务一侧:#m 以目标任务的新版本登记为 Received(原来从这里改挂走的,重新激活),关联版本 +1,重放给目标执行器;重复幂等。 */
 export function rebindIn(state: FollowUps, input: { roomId: string; seq: number; text: string; fromTaskId: string; ver: number }): FollowUpResult {
   const s = readState(state);
   if (!s.ok) return fail(s.reason);

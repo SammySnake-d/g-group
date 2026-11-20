@@ -15,5 +15,4 @@ export const GROUPS: { key: GroupKey; title: string; desc: string }[] = [
 
 export const STEPS = ['起名并选成员', '检查要带走的规则和经验', '确认'] as const
 
-/** 无论怎么勾都不会带过去的项目内容 */
 export const NEVER_CARRIED = ['全部聊天消息', '文件和资产（含服务器账号）', '在做和做完的任务与清单']

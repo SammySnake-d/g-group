@@ -22,7 +22,6 @@ export function GroupPage({ id }: { id: string }) {
   const owner = g.roles?.me === 'owner'
   /* 连上后端时你就是群主:群主不单独退出,要离开就解散(U03) */
   const canLeave = !(live && owner)
-  /* 解散时后端说群里还有在做的事:列出来,确认后先停下再解散 */
   const ask = groupAsk?.kind === 'dissolve' && groupAsk.conv === id ? groupAsk : null
   const rename = () => { if (tv.trim()) renameConv(id, tv.trim()); setEditT(false) }
   const go = () => {

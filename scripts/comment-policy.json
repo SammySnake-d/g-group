@@ -1,0 +1,58 @@
+{
+  "includeRoots": [
+    "apps",
+    "packages",
+    "scripts",
+    "third_party",
+    ".github",
+    ".githooks"
+  ],
+  "extensions": [
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".mjs",
+    ".cjs",
+    ".mts",
+    ".cts",
+    ".css",
+    ".scss",
+    ".html",
+    ".py",
+    ".sh",
+    ".bash",
+    ".yml",
+    ".yaml",
+    ".tla"
+  ],
+  "extensionlessRoots": [
+    ".githooks"
+  ],
+  "ignoredPaths": [],
+  "baseline": "scripts/comments-baseline.json",
+  "allowedPatterns": [
+    "^#!",
+    "@ts-(expect-error|ignore)\\b",
+    "eslint-(disable|enable)",
+    "stylelint-(disable|enable)",
+    "prettier-(ignore|disable|enable)",
+    "@vitest-environment",
+    "webpackchunkname",
+    "@vite-ignore",
+    "#__PURE__",
+    "istanbul ignore",
+    "c8 ignore",
+    "<reference\\b",
+    "@jsx",
+    "@generated",
+    "@license",
+    "spdx-license",
+    "\\bnoqa\\b",
+    "\\bnolint\\b",
+    "type:\\s*ignore",
+    "biome-ignore",
+    "@__PURE__",
+    "@__NO_SIDE_EFFECTS__"
+  ]
+}

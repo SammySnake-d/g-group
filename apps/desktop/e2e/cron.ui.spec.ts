@@ -1,7 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/* 定时：真实点击和键盘输入驱动，断言用户看得到的结果。
-   时钟固定在 2026-11-09（周一）08:30，时区是 playwright.config 里的 Asia/Shanghai，所有「下次」「接下来」都是确定的。 */
 const NOW = new Date("2026-11-09T08:30:00+08:00");
 
 async function openGroupCrons(page: Page) {
@@ -12,7 +10,6 @@ async function openGroupCrons(page: Page) {
   await expect(page.getByTestId("side-crons")).toBeVisible();
 }
 
-/** 像人一样改表达式：点进输入框、全选、敲新的 */
 async function typeExpr(page: Page, expr: string) {
   const input = page.getByTestId("cron-editor-expr");
   await input.click();
@@ -112,10 +109,8 @@ test("保存后本群列表出现新定时和人话描述；改时间后下次�
   await expect(row.getByTestId("cron-row-expr")).toHaveText("30 15 * * WED");
   await expect(row.getByTestId("cron-row-next")).toHaveText("周三 15:30");
   await expect(row.getByTestId("cron-row-last")).toContainText("还没跑过");
-  // 原会话里只插一行灰字
   await expect(page.getByText("你给 Codex 加了定时：每周三 15:30「盘点一次还没合入的分支，列出卡住的原因」")).toBeVisible();
 
-  // 打开详情，改成每天 09:00：详情和列表的下次运行都立刻变
   await row.click();
   await expect(page.getByTestId("cron-next")).toHaveText("周三 15:30");
   await page.getByTestId("cron-edit").click();
@@ -143,7 +138,6 @@ test("启停开关：暂停后各处显示已暂停，再打开恢复下次时�
   await expect(row.getByTestId("cron-row-next")).toHaveText("已暂停");
   await expect(page.getByText("你把 Codex 的定时「巡检首页首屏耗时，超过 1.5 秒就报」暂停了")).toBeVisible();
 
-  // 详情里看到的是同一个状态，从详情打开回来
   await row.click();
   await expect(page.getByTestId("cron-pause-label")).toHaveText("已暂停");
   await expect(page.getByTestId("cron-next")).toHaveText("已暂停");
@@ -168,7 +162,6 @@ test("删除要二次确认：取消或 Esc 不删，确认才删", async ({ pag
   await expect(confirm).toHaveCount(0);
   await expect(page.getByTestId("cron-detail-cr4")).toBeVisible();
 
-  // Esc 只关确认框，不连带收起右侧分屏
   await page.getByTestId("cron-delete").click();
   await expect(confirm).toBeVisible();
   await page.keyboard.press("Escape");
@@ -186,7 +179,6 @@ test("删除要二次确认：取消或 Esc 不删，确认才删", async ({ pag
 
 test("立即跑一次：运行历史多一条；发了消息的能跳到那条消息", async ({ page }) => {
   await openGroupCrons(page);
-  // 有情况才说的：试跑一次没打扰你
   await page.getByTestId("cron-row-cr1c").click();
   await expect(page.getByTestId("cron-runs-count")).toHaveText("1 次");
   await page.getByTestId("cron-run-now").click();
@@ -196,7 +188,6 @@ test("立即跑一次：运行历史多一条；发了消息的能跳到那条�
   await expect(page.getByTestId("cron-run-0")).toContainText("今天 08:30");
   await expect(page.getByTestId("cron-run-1")).toContainText("0 条报错");
 
-  // 每次都发结果的：试跑后发了消息，点「看消息」跳到那条
   await page.getByTestId("split-tab-group-g").click();
   await page.getByTestId("cron-row-cr5").click();
   await expect(page.getByTestId("cron-runs-count")).toHaveText("0 次");
@@ -212,19 +203,16 @@ test("立即跑一次：运行历史多一条；发了消息的能跳到那条�
 
 test("三个视角：本群只看本群，联系人看它在各会话的全部，进展里看所有", async ({ page }) => {
   await openGroupCrons(page);
-  // 本群（模型助手群聊）不混进「前端设计讨论」的定时
   await expect(page.getByTestId("cron-row-cr2")).toBeVisible();
   await expect(page.getByTestId("cron-row-cr1")).toHaveCount(0);
   await expect(page.getByTestId("cron-row-cr3")).toHaveCount(0);
 
-  // 进展总览：两个群的都在，出错的置顶
   await page.getByTestId("side-cron-overview").click();
   await expect(page.getByTestId("pano-cron")).toBeInViewport();
   await expect(page.getByTestId("pano-cron-err-cr3")).toBeVisible();
   await expect(page.getByTestId("pano-cron-cr2")).toBeVisible();
   await page.getByTestId("pano-close").click();
 
-  // 联系人工作台：Argon 在两个会话里的定时按会话分组
   await page.getByTestId("nav-contacts").click();
   await page.getByTestId("contact-argon").click();
   await page.getByTestId("wb-tab-cron").click();
@@ -233,7 +221,6 @@ test("三个视角：本群只看本群，联系人看它在各会话的全部�
   await expect(wb.getByTestId("wb-cron-group-g-design").getByTestId("cron-row-cr1")).toBeVisible();
   await expect(wb.getByTestId("cron-row-cr1").getByTestId("cron-row-next")).toHaveText("明天 08:00");
   await expect(wb.getByTestId("cron-row-cr8").getByTestId("cron-row-next")).toHaveText("再有 12 条消息");
-  // 别人的定时不出现在 Argon 的工作台里
   await expect(wb.getByTestId("cron-row-cr2")).toHaveCount(0);
 });
 

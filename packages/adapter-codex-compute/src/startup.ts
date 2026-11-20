@@ -1,5 +1,4 @@
 // Startup admission pattern informed by OpenMausBot 613ed01fd, codex-process.ts (Apache-2.0).
-// These limits are local resource policy; they are not Codex protocol constants.
 const LIMIT = 2;
 const QUEUE_LIMIT = 32;
 let active = 0;

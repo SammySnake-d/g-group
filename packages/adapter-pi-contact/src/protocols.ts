@@ -2,14 +2,12 @@
 // 这里只做一张表加三件小事——把选项里的 api 名字翻成 pi-ai 的适配器入口与 Model.api、按协议校验密钥头、
 // 把端点根地址补成该协议惯用的形状。协议之间的请求体差异(工具声明摆在哪儿、工具结果怎么回填)由 pi-ai 的
 // 对应适配器自己转,这里不重写协议,也不新加依赖。
-// 适配器一律用 pi-ai 现成的懒加载入口(@earendil-works/pi-ai/api/*.lazy):模块在第一次发请求时才真正加载。
 import { anthropicMessagesApi } from "@earendil-works/pi-ai/api/anthropic-messages.lazy";
 import { googleGenerativeAIApi } from "@earendil-works/pi-ai/api/google-generative-ai.lazy";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import { openAIResponsesApi } from "@earendil-works/pi-ai/api/openai-responses.lazy";
 import type { Model, ProviderStreams } from "@earendil-works/pi-ai";
 
-/** 选项里 api 能取的四个值。与 pi-ai 的 api 标识不完全同名:openai-chat 在 pi-ai 里叫 openai-completions。 */
 export type PiModelApi = Exclude<PiProtocol, "openai-chat"> | "openai-completions";
 export type PiProtocol = "anthropic-messages" | "openai-chat" | "openai-responses" | "google-generative-ai";
 export const PI_PROTOCOLS: readonly PiProtocol[] = Object.freeze(["anthropic-messages", "openai-chat", "openai-responses", "google-generative-ai"]);
@@ -24,13 +22,10 @@ export type PiAuthHeader = "x-api-key" | "bearer" | "x-goog-api-key";
 
 /** 一种协议在 pi-ai 里怎么接。 */
 export interface ProtocolSpec {
-  /** 写进 Model.api 的 pi-ai 标识,适配器据此摆请求体。 */
   readonly api: PiModelApi;
   /** 该协议认的密钥头;不在这里面的值判选项不合格。 */
   readonly authHeaders: readonly PiAuthHeader[];
-  /** 不给 authHeader 时用哪个。 */
   readonly defaultAuthHeader: PiAuthHeader;
-  /** pi-ai 的懒加载入口:第一次发请求才真正加载适配器模块。 */
   readonly load: () => ProviderStreams;
 }
 
@@ -56,11 +51,6 @@ export function authHeaderFor(protocol: PiProtocol, given: unknown, bad: (why: s
   return value as PiAuthHeader;
 }
 
-/**
- * 把密钥放进 pi-ai 的调用选项。openai 的 Authorization: Bearer 与 google 的 x-goog-api-key 都由适配器从 apiKey 发,
- * 所以这两种(以及 anthropic 的 x-api-key)只给 apiKey;只有 anthropic 要 Bearer 时才改成显式头
- * (Anthropic 的 SDK 把 apiKey 发成 x-api-key,发不成 Bearer)。
- */
 export function keyOptions(protocol: PiProtocol, authHeader: PiAuthHeader, apiKey: string): { readonly apiKey?: string; readonly headers?: Record<string, string> } {
   if (authHeader === "bearer" && protocol === "anthropic-messages") return { headers: { authorization: `Bearer ${apiKey}` } };
   return { apiKey };
@@ -95,7 +85,6 @@ export function apiForModel(model: string): PiProtocol {
   return "anthropic-messages";
 }
 
-/** Translate advertised paths, not model names. */
 export function protocolForEndpoint(endpoint: string): PiProtocol | undefined {
   const path = endpoint.split(/[?#]/, 1)[0]?.replace(/\/+$/, "") ?? "";
   if (/\/v1\/responses$/i.test(path)) return "openai-responses";
@@ -116,7 +105,6 @@ export interface ModelConfig {
 }
 
 export function modelForProtocol(protocol: PiProtocol, cfg: ModelConfig): Model<PiModelApi> {
-  // Discovery returns the gateway root (possibly with a deployment path), not a codec URL.
   const magpieVersion = protocol === "google-generative-ai" ? "v1beta" : protocol.startsWith("openai-") ? "v1" : undefined;
   const baseUrl = cfg.provider === "magpie" && magpieVersion
     ? `${cfg.baseUrl.replace(/\/+$/, "")}/${magpieVersion}` : baseUrlForApi(protocol, cfg.baseUrl);
@@ -138,7 +126,6 @@ const COOLDOWNS = [60_000, 120_000, 300_000, 600_000] as const;
 type CooldownsByProtocol = Map<PiProtocol, { count: number; retryAt: number }>;
 type CooldownsByModel = Map<string, CooldownsByProtocol>;
 
-/** Health is shared by callers, not global. If every candidate is cooling, probe only the one due first. */
 export class ProtocolHealthCache {
   #now: () => number;
   #failed = new Map<string, CooldownsByModel>();

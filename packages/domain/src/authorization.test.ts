@@ -51,7 +51,6 @@ test("AC-19 含义不清不放行:带条件、反问、混合、只说别的,一
   for (const t of ["同意吗？", "可以，但只改 README", "同意，先把测试写了", "等等，我想想", "你先进行检查", "好像不对", "看这条", "同意。不过别动配置", "如果测试过了就同意"]) {
     assert.equal(consentIntent(t), "unclear", t);
   }
-  // 对照:同一批说法去掉条件后是干脆的同意
   assert.equal(consentIntent("好的"), "approve");
 });
 
@@ -74,7 +73,6 @@ test("AC-17 本人直接说「同意」:绑定到唯一待授权的 (task, q, �
 test("AC-20 授权只来自用户本人:联系人、Helper、别的用户、转发、外部材料里的「同意」都不产生授权", () => {
   assert.equal(resolveConsent([req()], msg("同意", { sender: { kind: "contact", id: "argon" } })).kind, "none");
   assert.equal(resolveConsent([req()], msg("同意", { sender: { kind: "helper", id: "h" } })).kind, "none");
-  // 联系人与用户 id 恰好同名也不行:先看发话人种类
   assert.match((resolveConsent([req()], msg("同意", { sender: { kind: "contact", id: "u1" } })) as { reason: string }).reason, /只有用户本人/);
   assert.equal(resolveConsent([req()], msg("同意", { sender: { kind: "system", id: "u1" } })).kind, "none");
   const other = resolveConsent([req()], msg("同意", { sender: { kind: "user", id: "u2" } }));
@@ -82,14 +80,12 @@ test("AC-20 授权只来自用户本人:联系人、Helper、别的用户、转�
   assert.match((other as { reason: string }).reason, /授权人本人/);
   assert.match((resolveConsent([req()], msg("同意", { forwarded: true })) as { reason: string }).reason, /转发/);
   assert.match((resolveConsent([req()], msg("同意", { external: true })) as { reason: string }).reason, /外部材料/);
-  // 对照:同一请求由本人直接说,才产生决定
   assert.equal(resolveConsent([req()], msg("好的")).kind, "decision");
 });
 
 test("AC-20 引用旧同意不算当前授权:回复一条旧的「同意」消息、正文只说别的,不放行", () => {
   const r = resolveConsent([req()], msg("按这条来", { replyToSeq: 5, quotedSeqs: [5] }));
   assert.equal(r.kind, "none");
-  // 对照:同样引用着旧消息,但本人这句话自己表态了,就算数
   assert.equal(resolveConsent([req()], msg("好的", { replyToSeq: 5, quotedSeqs: [5] })).kind, "decision");
 });
 
@@ -99,7 +95,6 @@ test("AC-20 多个待授权动作又没指明是哪个:不擅自选,返回追问
   assert.equal(r.kind, "ambiguous");
   assert.ok(r.kind === "ambiguous");
   assert.deepEqual([...r.candidates], ["q1", "q2"]);
-  // 回复了其中一次提问就是那一次
   const anchored = resolveConsent(two, msg("同意", { replyToSeq: 9 }));
   assert.ok(anchored.kind === "decision");
   assert.equal(anchored.binding.qId, "q2");
@@ -112,7 +107,6 @@ test("AC-19 答复早于提问、所答的提问已过期都不放行", () => {
   assert.equal(r.kind, "none");
   assert.match((r as { reason: string }).reason, /过期/);
   assert.equal(resolveConsent(expired, msg("同意")).kind, "none");
-  // 对照:提问在答复之前且仍有效时,同一句话照常绑定
   assert.equal(resolveConsent([req()], msg("好的")).kind, "decision");
 });
 

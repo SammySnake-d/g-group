@@ -6,7 +6,6 @@ import { SectionHeader } from '@/components/ui/section'
 import { Hint, TextInput } from '@/components/pages/kit/parts'
 import { TextLink, WbCard } from './parts'
 
-/* 记忆(MEMORY.md):它自己写,你可以纠正或删除;每条带出处,出处是消息就能点回去 */
 export function Memory({ id }: { id: PersonId }) {
   const { jump, updatePerson } = useApp()
   const p = people[id]

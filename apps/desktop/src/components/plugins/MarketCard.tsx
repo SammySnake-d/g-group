@@ -1,4 +1,3 @@
-/* 市场里的一张插件卡:图标 + 名字 + 发布者 → 一句话简介 → 类别、命令、能做的那一件事。整张卡点了进详情。 */
 import type { PluginManifest } from '@g-group/ui-core'
 import type { PluginState } from '@/data'
 import { Chip } from '@/components/ui/chip'

@@ -26,7 +26,7 @@ export function GlobalModelDefaults() {
   const [savedN, setSavedN] = useState<number | null>(null)
   const [batch, setBatch] = useState(false)
   const impactRef = useRef<HTMLDivElement>(null)
-  useEffect(() => { setDraft(s); setFixes([]) }, [modelsRev]) // 任何一处保存过都从新的全局默认重新开始
+  useEffect(() => { setDraft(s); setFixes([]) }, [modelsRev])
 
   const contacts = modelContacts().map(toContactModels)
   const plan = planDefaults(contacts, s, draft, fixes)

@@ -11,17 +11,12 @@ export interface ModelUsage {
   readonly line: string;
   /** 这次调用里的第几次请求,从 1 起(一轮里模型调了工具会有第 2、3… 次) */
   readonly request: number;
-  /** 实际请求体固定前缀(工具声明 + system,即第 1 块)的 sha256 十六进制 */
   readonly prefixHash: string;
   /** 实际请求体里 cache_control 断点的个数(AC-39 ③ 上限 4) */
   readonly breakpoints: number;
-  /** Omitted means explicit; false denotes a codec with automatic prefix caching. */
   readonly explicitBreakpoints?: boolean;
-  /** 端点回报的未命中输入 token(input_tokens) */
   readonly input: number;
-  /** 端点回报的缓存读取 token(cache_read_input_tokens) */
   readonly cacheRead: number;
-  /** 端点回报的缓存写入 token(cache_creation_input_tokens) */
   readonly cacheWrite: number;
   readonly output: number;
 }

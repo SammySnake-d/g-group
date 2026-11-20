@@ -1,10 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
 
-// 模型配置(需求 D07.4 规则 1/2/5/6、U93、U92;验收 R-17、AC-32、AC-51)。全部用真实点击、下拉选择、键盘输入驱动,断言用户看得到的结果。
-// 演示数据:Claude Code 说话 claude-opus-5-5、Compute 跟随说话模型、effort xhigh、Harness Claude Code,手上 3 个在跑的任务;
-// Argon 的 Compute 单独指定 claude-opus-5-5;Astra 在 Codex 上继承全局;全局默认 Compute 模型 claude-sonnet-5-5、effort high。
-// 目录:claude-opus-5-5 只能在 Claude Code 上跑,gpt-6 只能在 Codex 上跑,gemini-flash 只能用来说话。
 
 const contactSettings = async (page: Page, id = "claude") => {
   await page.goto(`/?freeze=1&section=contacts&contact=${id}&wb=settings`);
@@ -31,12 +27,10 @@ test("联系人 Compute 槽位切换三态:生效值和继承链跟着变", asyn
   await expect(chain).toHaveText(/继承全局.*全局默认 Compute 模型.*claude-sonnet-5-5/);
   await expect(page.getByTestId("cm-effective-title")).toHaveText("保存后，下一轮会用");
 
-  // effort 改成跟全局:链变成「联系人没单独设 → 全局默认 effort high」
   await page.getByTestId("cm-effort").selectOption("");
   await expect(summary).toHaveText("Compute → 继承全局 → claude-sonnet-5-5 · claude-code · high");
   await expect(page.getByTestId("chain-effort")).toHaveText(/联系人没单独设.*全局默认 effort.*high/);
 
-  // 单独指定:先带上当前生效的模型,不凭空换;再选 gpt-6.1
   await page.getByTestId("cm-mode-explicit").click();
   await expect(page.getByTestId("cm-model")).toHaveValue("claude-sonnet-5-5");
   await expect(summary).toHaveText("Compute → 单独指定 → claude-sonnet-5-5 · claude-code · high");
@@ -44,7 +38,6 @@ test("联系人 Compute 槽位切换三态:生效值和继承链跟着变", asyn
   await expect(summary).toHaveText("Compute → 单独指定 → gpt-6.1 · claude-code · high");
   await expect(chain).toHaveText(/单独指定.*联系人单独指定的模型.*gpt-6\.1/);
 
-  // 再切回跟随说话模型,链又回到说话模型
   await page.getByTestId("cm-mode-follow-speaking").click();
   await expect(summary).toHaveText("Compute → 跟随说话模型 → claude-opus-5-5 · claude-code · high");
   await expect(page.getByTestId("cm-save")).toBeEnabled();
@@ -60,12 +53,10 @@ test("选了 Harness 跑不了的模型:就地阻断、给两条修复路径、�
   const box = page.getByTestId("cm-mismatch");
   await expect(box).toBeVisible();
   await expect(page.getByTestId("cm-mismatch-text")).toHaveText("Claude Code 这个 Harness 跑不了 GPT-6，不会自动换成别的模型。选一条修好再保存：");
-  // 生效值原样显示 gpt-6,没被偷偷换掉;联系人说话不受影响
   await expect(page.getByTestId("cm-summary")).toHaveText("Compute → 单独指定 → gpt-6 · claude-code · xhigh");
   await expect(page.getByTestId("cm-blocked")).toHaveText("这样配，下次开 Compute 会被拦下；Claude Code 在群里说话不受影响。");
   await expect(page.getByTestId("cm-save")).toBeDisabled();
   await expect(page.getByTestId("cm-save-hint")).toHaveText("模型和 Harness 对不上，修好才能保存");
-  // 两条路:单独指定兼容模型(候选是 Claude Code 能跑的,默认保持原来的 claude-opus-5-5),或换成能跑 gpt-6 的 Codex
   await expect(page.getByTestId("cm-mismatch-pin-model")).toHaveValue("claude-opus-5-5");
   const options = await page.getByTestId("cm-mismatch-pin-model").locator("option").evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
   expect(options).toEqual(["gpt-6.1", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "gemini-4", "grok-5", "deepseek-v4"]);
@@ -79,7 +70,6 @@ test("选了 Harness 跑不了的模型:就地阻断、给两条修复路径、�
   await expect(page.getByTestId("cm-summary")).toHaveText("Compute → 单独指定 → gpt-6.1 · claude-code · xhigh");
   await expect(page.getByTestId("cm-save")).toBeEnabled();
 
-  // 另一条路:换 Harness
   await page.getByTestId("cm-model").selectOption("gpt-6");
   await expect(page.getByTestId("cm-save")).toBeDisabled();
   await page.getByTestId("cm-mismatch-harness").click();
@@ -98,7 +88,6 @@ test("改上游的说话模型:跟随它的 Compute 同样拦下;只能用来说
   await expect(page.getByTestId("cm-mismatch-harness")).toHaveCount(0);
   await expect(page.getByTestId("cm-save")).toBeDisabled();
   await page.getByTestId("cm-mismatch-pin").click();
-  // 修法是把 Compute 单独指定成兼容模型(默认保持原来的 claude-opus-5-5),说话照样用 gemini-flash
   await expect(page.getByTestId("cm-summary")).toHaveText("Compute → 单独指定 → claude-opus-5-5 · claude-code · xhigh");
   await expect(page.getByTestId("cm-speaking-summary")).toHaveText("说话 → gemini-flash");
   await expect(page.getByTestId("cm-save")).toBeEnabled();
@@ -113,7 +102,6 @@ test("改模型保存后提示「下一轮生效、正在跑的这一轮不打�
   await expect(note).toContainText("Claude Code 下一次说话用 gpt-6.1");
   await expect(note).toContainText("Compute 下一次输入用 gpt-6.1 · claude-code · xhigh");
   await expect(note).toContainText("正在跑的 3 个任务这一轮不打断，按启动时的 Claude Opus 5.5 · Claude Code 跑完。");
-  // 在跑的任务仍显示启动时的快照,另注明下一轮起用新模型
   await expect(page.getByTestId("cm-running-login")).toHaveText("「登录页深色」Claude Opus 5.5 · Claude Code");
   await expect(page.getByTestId("cm-running-next")).toHaveText("这 3 个任务这一轮照常跑完，下一轮起用 gpt-6.1 · claude-code");
   await expect(page.getByTestId("cm-summary")).toHaveText("Compute → 跟随说话模型 → gpt-6.1 · claude-code · xhigh");
@@ -168,7 +156,6 @@ test("全局默认改 Compute 模型:先显示会影响几位联系人和失配,
   await expect(page.getByTestId("model-row-compute-astra")).toHaveText("Compute claude-sonnet-5-5 · codex");
   await expect(page.getByTestId("model-row-astra")).toContainText("（单独指定）");
 
-  // 去 Astra 的工作台看:单独指定了原来的模型,Harness 没动
   await page.getByTestId("model-row-astra").click();
   await expect(page.getByTestId("cm-summary")).toHaveText("Compute → 单独指定 → claude-sonnet-5-5 · codex · high");
 });
@@ -194,7 +181,6 @@ test("批量替换:预览三栏条目正确,冲突处理完才能确认;确认�
   await page.getByTestId("open-batch").click();
   const dlg = page.getByTestId("batch-dialog");
   await expect(dlg).toBeVisible();
-  // Esc 只关对话框,设置页还在
   await page.keyboard.press("Escape");
   await expect(dlg).toHaveCount(0);
   await expect(page.getByTestId("model-defaults")).toBeVisible();
@@ -226,12 +212,10 @@ test("批量替换:预览三栏条目正确,冲突处理完才能确认;确认�
   await page.getByTestId("br-confirm").click();
   await expect(dlg).toHaveCount(0);
 
-  // 设置页还开着;各联系人在用的模型已更新,固定在 claude-opus-5-5 的 Argon 没被改
   await expect(page.getByTestId("model-row-talk-claude")).toHaveText("说话 gpt-6");
   await expect(page.getByTestId("model-row-compute-claude")).toHaveText("Compute gpt-6 · codex");
   await expect(page.getByTestId("model-row-compute-argon")).toHaveText("Compute claude-opus-5-5 · claude-code");
 
-  // 工作台里:配置是新值,在跑的任务仍显示启动时的 Claude Opus 5.5
   await page.getByTestId("model-row-claude").click();
   await expect(page.getByTestId("cm-summary")).toHaveText("Compute → 跟随说话模型 → gpt-6 · codex · xhigh");
   await expect(page.getByTestId("cm-running-login")).toHaveText("「登录页深色」Claude Opus 5.5 · Claude Code");

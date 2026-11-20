@@ -1,9 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { shot } from './shots'
 
-// 插件:市场、安装流程、启停、卸载、更新、详情、群资料·插件 / 工具页签、从文件或地址安装。
-// 全部用点击和键盘驱动,断言用户看得到的结果。设了 GG_SHOTS 时顺手存走查截图。
-// 等页签切换的淡入动画走完再拍
 const snap = (page: Page, name: string) => shot(page, `plugins-${name}`, 400)
 const openCenter = async (page: Page) => {
   await page.goto('/?section=plugins')
@@ -35,10 +32,8 @@ test('左侧导航进插件中心;市场按名称、简介、命令名搜索,按
   await expect.poll(() => names(page)).toEqual(['Jira'])
   await typeIn(page, 'plg-search', 'mail')
   await expect.poll(() => names(page)).toEqual(['Gmail'])
-  // 「消息」只出现在三张卡的简介里,按目录顺序
   await typeIn(page, 'plg-search', '消息')
   await expect.poll(() => names(page)).toEqual(['飞书', 'Telegram 群', '翻译'])
-  // 搜索词 + 类别同时生效
   await page.getByTestId('plg-cat-source').click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('数据源')
   await expect.poll(() => names(page)).toEqual(['飞书', 'Telegram 群'])
@@ -77,7 +72,6 @@ test('安装:要逐条勾选全部权限才能确认,确认后安装中 → 已�
   await expect(dlg).toBeHidden()
   await expect(card).toHaveAttribute('data-phase', 'installing')
   await expect(card).toContainText('安装中')
-  // 装好后直接问挂到哪个聊天
   const after = page.getByTestId('plg-attach-after')
   await expect(after).toBeVisible()
   await expect(card).toHaveAttribute('data-phase', 'enabled')
@@ -123,7 +117,6 @@ test('停用 / 启用:开关切换状态,停用后标「已停用」', async ({ 
   await expect(sw).toHaveAttribute('aria-checked', 'true')
   await expect(row).toHaveAttribute('data-phase', 'enabled')
   await expect(page.getByTestId('plg-disabled-g-group.cve')).toHaveCount(0)
-  // 详情页里看到的是同一个状态
   await row.click()
   await expect(page.getByTestId('plg-detail-phase')).toHaveText('已启用')
   await page.getByTestId('plg-detail-toggle').click()
@@ -172,7 +165,6 @@ test('更新:新版本多要的权限要重新同意,只列新增的那项;权�
   await expect(feishu).toHaveCount(0)
   await expect(page.getByTestId('toast')).toHaveText('「飞书」更新到 v1.5.0')
 
-  // CVE 1.3.0 权限没变:不弹同意框,直接更新
   await page.getByTestId('plg-update-g-group.cve').click()
   await expect(page.getByTestId('plg-consent')).toHaveCount(0)
   await expect(page.getByTestId('plg-updates-empty')).toHaveText('都是最新版本。')
@@ -197,20 +189,17 @@ test('详情页:权限逐条带风险级别(高风险醒目)、提供的命令 /
   await expect(page.getByTestId('plg-changelog')).toContainText('v1.4.2')
   await expect(page.getByTestId('plg-changelog')).toContainText('你装的')
   await snap(page, 'detail')
-  // 挂到聊天 / 摘下
   await page.getByTestId('plg-conv-add').click()
   await page.getByTestId('plg-conv-add-dm-argon').click()
   await expect(page.getByTestId('plg-conv-dm-argon')).toHaveText('与 Argon 私聊')
   await page.getByRole('button', { name: '从「与 Argon 私聊」摘下' }).click()
   await expect(page.getByTestId('plg-conv-dm-argon')).toHaveCount(0)
-  // 谁能调用
   await page.getByTestId('plg-caller-add').click()
   await page.getByTestId('plg-caller-add-codex').click()
   await expect(page.getByTestId('plg-caller-codex')).toContainText('Codex')
   await page.getByRole('button', { name: '不让 Codex 调用' }).click()
   await expect(page.getByTestId('plg-caller-codex')).toHaveCount(0)
 
-  // Gmail:高风险权限醒目、/mail 命令、事件、外发预授权
   await page.getByTestId('plg-detail-back').click()
   await page.getByTestId('plg-card-g-group.gmail').click()
   const send = page.getByTestId('plg-perm-gmail.send')
@@ -242,7 +231,6 @@ test('输出渠道的外发预授权:校验六项,撤销后阻断并在群里出
   await page.getByTestId('plg-revoke').click()
   await expect(page.getByTestId('plg-grant-status')).toHaveText('授权失效，外发已阻断')
   await expect(page.getByTestId('plg-detail-cred')).toHaveText('授权失效')
-  // 群里出修复卡(AC-35⑤),在卡上重新授权
   await page.getByTestId('nav-chat').click()
   const fix = page.getByTestId('authfix-g-group.gmail')
   await expect(fix).toContainText('Gmail 授权过期了，外发已暂停')
@@ -276,7 +264,6 @@ test('群资料·插件页签:列出本群挂的插件,能把已安装的挂到�
   await expect(page.getByTestId('side-tab-plugin')).toHaveText('插件 4')
   await expect(page.getByTestId('chat').getByText('你把插件「Webhook」从这里摘下了')).toBeVisible()
 
-  // 启停对所有聊天生效
   const sw = page.getByTestId('side-plugin-toggle-g-group.gmail')
   await sw.click()
   await expect(sw).toHaveAttribute('aria-checked', 'false')
@@ -349,7 +336,6 @@ test('从文件或地址安装:非法清单逐条显示校验错误;合法清单
   await paste('http://plugins.example.com/notes/plugin.json')
   await expect(dlg.getByTestId('plg-sideload-errors')).toHaveText('只接受 https 地址，现在是「http」')
 
-  // 没有被偷偷装上
   await page.keyboard.press('Escape')
   await expect(dlg).toBeHidden()
   await expect(page.getByTestId('plg-tab-installed')).toContainText('5')

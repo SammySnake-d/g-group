@@ -11,7 +11,6 @@ import { ListRow } from '../ListRow'
 const toneText: Record<ConvTone, string> = { warm: 'font-medium text-warm', err: 'font-medium text-err', run: 'text-fg-2', draft: 'text-fg-2', none: 'text-fg-2' }
 const badge = 'grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full px-1 text-[10.5px] font-semibold tabular-nums text-white'
 
-/** 聊天区的会话列表:置顶在前,按搜索词过滤;右键置顶 / 免打扰 / 标为已读 */
 export function ConvList({ query }: { query: string }) {
   const convs = useApp((s) => s.convs)
   const list = [...convs].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned)).filter((c) => !query || c.title.includes(query))

@@ -8,7 +8,6 @@ import { EmptyState } from '@/components/ui/section'
 import { Surface } from '@/components/ui/surface'
 import { Hint, PageScroll } from './kit/parts'
 
-/* ---------- US11 / US6 承诺:每个助手从你的话里记下的事;每条能跳回那句话 ---------- */
 export function CommitsPage({ id }: { id: string }) {
   const { commits, jump, convs } = useApp()
   const list = commits.filter((c) => c.conv === id)

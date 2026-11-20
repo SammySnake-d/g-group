@@ -1,5 +1,3 @@
-// 从访达、程序坞打开的应用拿不到登录 shell 里配的 PATH(~/.local/bin、nvm、Homebrew),Compute 要起的 claude 命令就找不到。
-// 做法同 fix-path / shell-env:起一次登录交互 shell 读它的 PATH,并进当前进程;Compute 子进程按这个 PATH 找命令。
 import { spawnSync } from "node:child_process";
 import { accessSync, constants, statSync } from "node:fs";
 import os from "node:os";
@@ -30,7 +28,6 @@ export function fixPath(): void {
   process.env.PATH = [...new Set(parts.filter(Boolean))].join(":");
 }
 
-/** 在 PATH 里找可执行文件;找不到为 null */
 export function which(cmd: string, envPath = process.env.PATH ?? ""): string | null {
   for (const dir of envPath.split(":")) {
     if (!dir) continue;

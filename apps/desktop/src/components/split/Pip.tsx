@@ -9,7 +9,6 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Avatar } from '@/components/Avatar'
 import { Preview } from './Preview'
 
-/* Computer Use 小窗:可拖动,聊天时一直在(画中画)。从右下角浮起(transform-origin 右下),尊重 reduced-motion */
 export function Pip({ id, onClose }: { id: string; onClose: () => void }) {
   const { computes } = useApp()
   const c = computes[id]

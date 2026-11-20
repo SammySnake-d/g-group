@@ -27,7 +27,6 @@ const events = [];
 void (async () => { for await (const e of adapter.events()) { events.push(e); log(`event ${JSON.stringify(e)}`); } })();
 const ends = () => events.filter((e) => e.kind === "completed" || e.kind === "failed");
 const until = async (n, ms = 240_000) => { const end = Date.now() + ms; while (ends().length < n) { if (Date.now() > end) throw new Error(`第 ${n} 轮超时`); await new Promise((r) => setTimeout(r, 200)); } };
-/** 续接并等这一轮结束;续接被拒(这一轮没发出)时不等 */
 const turn = async (label, text, tm) => {
   const before = ends().length;
   const t = Date.now();
@@ -60,7 +59,6 @@ try {
   log(`stop 后进程退出=${pid ? !alive(pid) : "无 pid"}`);
 }
 const sid = events.find((e) => e.kind === "started")?.sessionId;
-// 网关核对:只读本次会话的行,只摘非敏感字段
 await new Promise((r) => setTimeout(r, 1500));
 const usage = path.join(os.homedir(), ".config/magpie/usage.jsonl");
 const rows = [];

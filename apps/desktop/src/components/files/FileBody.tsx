@@ -8,7 +8,6 @@ import { Preview } from '../split/Preview'
 import { AssetTable } from '../split/ArtifactView'
 import { ARTICLE_INTRO, ARTICLE_SEC4, PLAYBOOK_INTRO, PLAYBOOK_SECTIONS, articleSections } from '../split/constants'
 
-// 正文仍来自原来的内容源；目录缩略图和阅读页不另造一套文件内容。
 export function FileBody({ artifact: a }: { artifact: Artifact }) {
   const tasks = useApp((s) => s.checklist.filter((t) => t.conv === a.conv))
   if (a.live) return <LiveFileBody file={a.live} />
@@ -20,7 +19,6 @@ export function FileBody({ artifact: a }: { artifact: Artifact }) {
     <span className={cn('shrink-0', t.status === '待验收' ? 'text-warm' : 'text-fg-2')}>{t.status}</span>
   </div>)}{!tasks.length && <p className="py-8 text-fg-2">清单为空</p>}</div>
   const base = a.id === 'a1' ? articleSections(ARTICLE_SEC4) : PLAYBOOK_SECTIONS
-  // 走查用长文档:同样的小节接几遍,验证往下翻时右侧来处还在
   const sections = boot.provFixture?.includes('long') ? Array.from({ length: 6 }, (_, i) => base.map(([h, b]) => [`${h}${i ? `（${i + 1}）` : ''}`, b] as const)).flat() : base
   return <article className="space-y-7 text-[15px] leading-[1.9]">
     <p className="text-fg-2">{a.id === 'a1' ? ARTICLE_INTRO : PLAYBOOK_INTRO}</p>

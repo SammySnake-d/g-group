@@ -1,4 +1,3 @@
-/* Compute 卡片与 harness 会话窗口。外部只从这里取。 */
 export { ComputeCard, type ComputeCardProps } from './ComputeCard'
 export { HarnessSession, type HarnessSessionProps } from './HarnessSession'
 export { computeState, StatusChip, StatusDot, type ComputeState } from './StatusChip'

@@ -1,8 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
 
-// #1005:Compute 是一个具体的 harness,要能「打开会话」看它和 Claude Code / Codex 的原始对话(只读)。
-// 走真实入口:消息行末端与「更多」菜单的「打开会话」→ 分屏 Compute 视图的「会话」页签;完整过程面板里的 Compute 卡。
 
 const IDS = ["login", "keys", "perf", "scrape", "logs", "feishu", "research", "review", "search", "weather"] as const;
 
@@ -16,7 +14,6 @@ for (const theme of ["light", "dark"] as const) {
       await go(page, "conv=g");
       const line = page.getByTestId("compute-line-login");
       await expect(line).toBeVisible();
-      // 「打开会话」在这一行的末端:紧挨着行的右边,同一条水平线上
       const open = page.getByTestId("open-session-login");
       const [lb, ob] = [(await line.boundingBox())!, (await open.boundingBox())!];
       expect(ob.x).toBeGreaterThanOrEqual(lb.x + lb.width - 1);
@@ -49,7 +46,6 @@ for (const theme of ["light", "dark"] as const) {
       await expect(detail).toContainText("输出");
       await expect(detail).toContainText("bg-white、border-gray-200");
 
-      // 失败与重试:失败那次直接露出错误一句,重试标「第 2 次」
       const failed = s.locator("[data-testid=tool-group][data-failed]").first();
       await expect(failed.getByTestId("tool-group-failed")).toHaveText("1 次失败");
       await failed.getByTestId("tool-group-toggle").click();
@@ -58,7 +54,6 @@ for (const theme of ["light", "dark"] as const) {
       await retry.getByTestId("tool-group-toggle").click();
       await expect(retry.locator("[data-testid=tool-call][data-attempt='2']")).toContainText("第 2 次");
 
-      // 子代理:一行一个,展开看任务与结果
       const agent = s.getByTestId("agent-row").first();
       await expect(agent).toContainText("9 个调用");
       await agent.getByRole("button").click();
@@ -68,7 +63,6 @@ for (const theme of ["light", "dark"] as const) {
       await expect(s.getByTestId("session-changes")).toContainText("theme/tokens.css");
       await expect(s.getByTestId("session-statusline")).toContainText("3 轮");
       await expect(s.getByTestId("session-statusline")).not.toContainText("tok");
-      // 只读:会话页里没有输入框;分屏底部是「回群里 @派活的联系人」
       await expect(page.getByTestId("split").getByRole("textbox")).toHaveCount(0);
       await expect(page.getByTestId("compute-readonly")).toContainText("这里只能看");
       await expect(page.getByTestId("compute-talk")).toHaveText("回群里 @Claude Code");
@@ -125,7 +119,6 @@ for (const theme of ["light", "dark"] as const) {
       await expect(session(page)).toHaveAttribute("data-compute", "login");
       await expect(page.getByTestId("cview-session")).toHaveAttribute("aria-selected", "true");
 
-      // 做完的卡默认收起,点头部展开
       await go(page, "section=contacts&contact=codex&wb=process");
       const done = page.getByTestId("compute-card-perf");
       await expect(done.getByTestId("compute-status")).toHaveText("已完成");
@@ -163,7 +156,6 @@ for (const theme of ["light", "dark"] as const) {
       const card = page.getByTestId("compute-card-login");
       await expect(card.getByTestId("compute-status")).toHaveText("进行中");
       await expect(session(page)).toBeVisible();
-      // 停住时间,好让「停止中」这一刻稳定可查、可截图(真实的确认退出要等一会儿)
       await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
       await page.getByTestId("compute-stop").click();
       await expect(card.getByTestId("compute-status")).toHaveText("正在停止…");
@@ -177,7 +169,6 @@ for (const theme of ["light", "dark"] as const) {
       await expect(card.getByTestId("compute-card-alert")).toContainText("只保证到助手启动的那些程序");
       const s = session(page);
       await expect(s.getByTestId("session-statusline")).toContainText("已停止 · 只保证到助手启动的那些程序");
-      // 停下后记录里还标着在跑的那次测试显示成中断,不再转圈
       await page.clock.resume();
       const last = s.getByTestId("tool-group").last();
       await expect(last).toHaveAttribute("data-failed", "1");

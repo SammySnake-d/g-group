@@ -21,9 +21,7 @@ import { useBarPlacement } from './useBarPlacement'
 import type { Bodied } from './types'
 
 const ICON = { strokeWidth: 1.75 } as const
-/** 工具条上的按钮:28px 方块、圆角 md;悬停和「它的面板开着」都用选中底 */
 const VERB = 'rounded-md hover:bg-sel data-[state=open]:bg-sel data-[state=open]:text-fg'
-/** 显隐:默认透明且不接指针;指到这一行 / 键盘焦点在条里 / 面板开着时出现。离开时 duration-0 立刻消失 */
 const REVEAL = 'pointer-events-none opacity-0 transition-opacity duration-0 group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-hover/row:duration-fast has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:opacity-100 has-[[data-state=open]]:pointer-events-auto has-[[data-state=open]]:opacity-100'
 
 export function HoverBar({ m, mine }: { m: Bodied; mine: boolean }) {

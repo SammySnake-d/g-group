@@ -1,5 +1,4 @@
 // 联系人的 progress_get 工具(需求文档 D26 第 4 节,AC-43 ①④、U91):pi 联系人在同一轮的工具往返里经宿主给的台账查询口查一个单元。
-// 工具只校验参数形状;查询口由宿主按会话判可见范围(宿主侧见 packages/server/src/runtime-config.test.ts)。
 // 用进程内的 Anthropic Messages 兼容假端点(SSE)驱动,经 opts.fetch 注入,不连网;核对的是真实发出的下一次请求里的工具结果。
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -91,7 +90,6 @@ test("progress_get 在本轮内经宿主的台账查询口取单元详情,结果
   assert.match(JSON.stringify(results[0]!.content), /stalled/);
   assert.deepEqual(results.map((b) => b.is_error === true), [false, true, true]);
   assert.match(JSON.stringify(results[1]!.content), /在 g1 看不到单元 run-x/);
-  // 宿主没给台账查询口(只给了记忆查询口):错误结果,不当作查到
   await createPiContactMind(opts(fake)).round(input(), live(), { readMemory: async () => null });
   const none = fake.seen[3]!.messages[2]!.content as Block[];
   assert.equal(none[0]!.is_error, true);

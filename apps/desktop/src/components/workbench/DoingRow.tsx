@@ -8,7 +8,6 @@ import { Spinner } from '@/components/ui/spinner'
 import { Source, pressRow, pressRowCls } from './parts'
 import { stepOf } from './status'
 
-/* 在做的一件事:在跑的转圈 + 第几步;出错的整行浅红底 + 重试。点整行在右边分屏看它 */
 export function DoingRow({ c, conv, link }: { c: Compute; conv?: Conversation; link: ReactNode }) {
   const { openSplit, resume } = useApp()
   const err = c.status === 'error'

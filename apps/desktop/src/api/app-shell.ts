@@ -16,7 +16,6 @@ export async function shellCall<M extends AppShellMethod>(method: M, params: App
 /** 应用壳状态:接入模型的设置、版本、更新进度。只在桌面应用里有值 */
 export const useAppShell = create<{ setup: SetupView | null; info: AppInfo | null; update: UpdateState | null }>(() => ({ setup: null, info: null, update: null }))
 
-/** 启动时读一次,之后跟着更新事件走;返回退订 */
 export function startAppShell(): () => void {
   if (!appShell) return () => {}
   void shellCall('setup.get', {}).then((r) => r.ok && useAppShell.setState({ setup: r.value }))

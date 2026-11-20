@@ -17,25 +17,17 @@ import { Transcript } from './session/Transcript'
 
 export interface HarnessSessionProps {
   compute: Compute
-  /** 原始记录；还没拿到时传 null */
   transcript: HarnessTranscript | null
-  /** 派活所在的群/私聊名，面包屑第一项 */
   sourceTitle: string
-  /** 派活在私聊里 */
   dm?: boolean
-  /** 计算在跑会话的用时；不传取当前时间 */
   now?: number
   onBack?: () => void
   onClose?: () => void
-  /** 面包屑点群名：跳到派活的原消息 */
   onJumpSource?: () => void
-  /** 只读条「回群里 @XX」 */
   onTalk?: () => void
-  /** 打开时把焦点移进窗口（Esc 就能关）；挂在分屏页签里切换时不要抢焦点 */
   autoFocus?: boolean
   /** 嵌进已有标题与只读条的容器（分屏里 Compute 视图的「会话」页签）：不画自己的顶栏和只读条，只留对话流和状态行 */
   embedded?: boolean
-  /** 记录还在取(连上后端时点开的那一下):先空着,不说「还没开工」 */
   loading?: boolean
   /** 记录里没有工具调用(连上后端时合同只有语义进度):状态行不写调用数,不拿 0 冒充 */
   noCalls?: boolean
@@ -49,7 +41,6 @@ export function HarnessSession({ compute: c, transcript, sourceTitle, dm = false
   }, [autoFocus])
   const owner = people[c.owner]?.name ?? c.owner
   const state = computeState(c)
-  /* 停下或出错了：记录里还标着在跑的调用其实被中断了（后端接上后由事件本身更新，这里兜底） */
   const settled = c.status === 'stopped' || c.status === 'error'
   const raw = transcript?.events
   const events = useMemo(() => (raw && settled ? interruptRunning(raw, COPY.interrupted) : raw), [raw, settled])

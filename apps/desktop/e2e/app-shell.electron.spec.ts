@@ -6,9 +6,6 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 
-// 应用壳:没接入模型时整窗先请用户接入,填好后宿主用真模型脑子起来、界面连上;
-// 自动更新:从更新地址读 latest-mac.yml → 提示新版本 → 下载并核对 sha512 → 可以重启安装;校验不过就丢掉并说明。
-// 全程只点界面。开发模式(没打包)下不真的替换应用,替换那一步在打包后的验收里走。
 const appDir = path.resolve(import.meta.dirname, "..");
 const baseEnv = Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => e[0] !== "ELECTRON_RUN_AS_NODE" && typeof e[1] === "string"));
 
@@ -57,7 +54,6 @@ test("没接入模型时整窗请用户接入;填好后宿主起来、界面连�
 
 test("自动更新:提示新版本 → 下载并核对 sha512 → 可以重启安装;校验不过的下载被丢掉并说明;没发布过版本时如实说", async () => {
   const zip = Buffer.from("neutral zip payload for update test ".repeat(4096));
-  // 安装包晚 1.5 秒才开始回:像真实下载一样,点了「下载」之后提示条要撑过这段时间
   const good = await feedServer({ "latest-mac.yml": { body: feedFor("9.9.9", zip) }, "g-group-9.9.9-arm64-mac.zip": { body: zip, delayMs: 1500 }, "g-group-9.9.9-x64-mac.zip": { body: zip, delayMs: 1500 } });
   const userData = mkdtempSync(path.join(tmpdir(), "gg-shell-up-"));
   const launch = (feed: string) => electron.launch({ args: [appDir], cwd: appDir, env: { ...baseEnv, GG_BACKEND: "server", GG_MIND: "fake", GG_COMPUTE: "fake", GG_USER_DATA_DIR: userData, GG_UPDATE_FEED: feed, GG_UPDATE_AUTO: "off" } });
@@ -69,7 +65,6 @@ test("自动更新:提示新版本 → 下载并核对 sha512 → 可以重启�
     await win.getByTestId("update-check").click();
     await expect(win.getByTestId("update-toast")).toHaveAttribute("data-phase", "available");
     await expect(win.getByTestId("update-toast")).toContainText("9.9.9");
-    // 用提示条上的按钮走:点「下载」后提示条不能消失,下载完同一条提示上出现「重启并安装」
     await win.locator("[data-sonner-toast]").getByRole("button", { name: "下载", exact: true }).click();
     await expect(win.getByTestId("update-install")).toBeVisible({ timeout: 20_000 });
     await expect(win.getByTestId("update-toast")).toHaveAttribute("data-phase", "ready");
@@ -78,7 +73,6 @@ test("自动更新:提示新版本 → 下载并核对 sha512 → 可以重启�
     expect(log).toContain("sha512 一致");
     await app.close();
 
-    // 校验不过:更新信息里的 sha512 和实际文件对不上
     const bad = await feedServer({ "latest-mac.yml": { body: feedFor("9.9.10", zip, createHash("sha512").update("别的内容").digest("base64")) }, "g-group-9.9.10-arm64-mac.zip": { body: zip }, "g-group-9.9.10-x64-mac.zip": { body: zip } });
     app = await launch(bad.url);
     win = await app.firstWindow();
@@ -91,7 +85,6 @@ test("自动更新:提示新版本 → 下载并核对 sha512 → 可以重启�
     await app.close();
     bad.server.close();
 
-    // 还没发布过版本(更新地址 404)
     const none = await feedServer({});
     app = await launch(none.url);
     win = await app.firstWindow();

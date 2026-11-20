@@ -1,7 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
 
-// F-VISUAL:能量化的视觉指标(开发手册原则 52),亮暗两套都跑。
-// 「只有用户说好看才算好看」——这里只拦能量化的退步:顶部占用、对比度、横向溢出、阅读栏宽度、按钮折行。
 
 function lum(rgb: string): number {
   const m = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number);
@@ -16,7 +14,6 @@ const contrast = (a: string, b: string) => {
   return (x + 0.05) / (y + 0.05);
 };
 
-/** 取元素文字色和它实际落在上面的背景色(往上找第一个不透明背景) */
 async function colors(page: Page, selector: string) {
   return page.locator(selector).first().evaluate((el) => {
     const fg = getComputedStyle(el).color;
@@ -85,7 +82,6 @@ for (const theme of ["light", "dark"] as const) {
       const chat = (await page.getByTestId("chat").boundingBox())!;
       expect(chat.width).toBeGreaterThanOrEqual(480);
       await expect(page.getByTestId("split-tabs")).toHaveAttribute("data-count", "1");
-      // 只有一页时标题是纯文字,不是页签按钮
       await expect(page.getByTestId("split-tabs").locator("button")).toHaveCount(0);
     });
   });

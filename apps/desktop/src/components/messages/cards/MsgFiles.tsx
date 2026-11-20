@@ -1,11 +1,9 @@
-/* 随消息发出的附件(C-US19):细边卡片,左边类型图标,右边文件名 + 大小 · 谁发的。和交付工件卡同一套外形(Attachments.tsx 的 CARD) */
 import { File as FileIcon, FileArchive, FileText, Image as ImageIcon } from 'lucide-react'
 import { people } from '@/data'
 import { cn } from '@/lib/utils'
 import type { TextMsg } from '../types'
 
 const iconOf = (mime: string) => (mime.startsWith('image/') ? ImageIcon : mime.startsWith('text/') || mime === 'application/pdf' || mime === 'application/json' ? FileText : mime === 'application/zip' ? FileArchive : FileIcon)
-/** 字节数 → 人读的大小 */
 export function sizeOf(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`

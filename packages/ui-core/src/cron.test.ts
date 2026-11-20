@@ -20,11 +20,9 @@ import {
   type CronParse,
 } from "./cron.ts";
 
-/** 本地时间构造 / 打印,断言和机器时区无关(测试日期都避开夏令时切换日) */
 const at = (y: number, mo: number, d: number, h = 0, mi = 0, s = 0) => new Date(y, mo - 1, d, h, mi, s);
 const fmt = (d: Date) => toLocalDateTime(d).replace("T", " ");
 const fmts = (ds: readonly Date[]) => ds.map(fmt);
-/** 取合法结果 / 错误;不符合预期直接抛,断言里仍然直接调用被测函数 */
 const ok = (p: CronParse) => {
   if (!p.ok) throw new Error(`应当合法却报错:${p.error.message}`);
   return p.spec;
@@ -42,7 +40,6 @@ test("parseCron:* / 列表 / 范围 / 步长逐段展开成取值", () => {
   assert.deepEqual(s.months, [1, 4, 7, 10]);
   assert.deepEqual(s.weekdays, [0, 1, 2, 3, 4, 5, 6]);
   assert.equal(s.expr, "0,15,30 9-11 */10 1-12/3 *");
-  // 多余空白会被规整
   assert.equal(ok(parseCron("  0   9 *  * 1-5 ")).expr, "0 9 * * 1-5");
 });
 
@@ -74,7 +71,6 @@ test("parseCron:越界报中文错误并指出第几段", () => {
   assert.deepEqual(bad(parseCron("0 0 * 13 *")), { field: 4, message: "第 4 段（月）：13 超出 1–12" });
   assert.deepEqual(bad(parseCron("0 0 * * 8")), { field: 5, message: "第 5 段（周）：8 超出 0–7" });
   assert.deepEqual(bad(parseCron("0 0 1-40 * *")), { field: 3, message: "第 3 段（日）：40 超出 1–31" });
-  // 对照:每段的上下界本身是合法的
   const hi = ok(parseCron("59 23 31 12 7"));
   assert.deepEqual([hi.minutes, hi.hours, hi.days, hi.months, hi.weekdays], [[59], [23], [31], [12], [0]]);
   const lo = ok(parseCron("0 0 1 1 0"));
@@ -89,7 +85,6 @@ test("parseCron:段数不对、空段、非法字符、反向范围、步长为 
   assert.deepEqual(bad(parseCron("0 9,,10 * * *")), { field: 2, message: "第 2 段（时）：逗号前后不能为空" });
   assert.deepEqual(bad(parseCron("0 9 * * MON?")), { field: 5, message: "第 5 段（周）：不认识「MON?」" });
   assert.deepEqual(bad(parseCron("0 9 L * *")), { field: 3, message: "第 3 段（日）：不认识「L」" });
-  // 英文名只在月、周两段认
   assert.deepEqual(bad(parseCron("MON 9 * * *")), { field: 1, message: "第 1 段（分）：不认识「MON」" });
   assert.deepEqual(bad(parseCron("0 9-5 * * *")), { field: 2, message: "第 2 段（时）：范围 9-5 起点大于终点" });
   assert.deepEqual(bad(parseCron("*/0 * * * *")), { field: 1, message: "第 1 段（分）：步长不能是 0" });
@@ -104,9 +99,7 @@ test("parseCron:永远不会触发的表达式判为错误,闰日和日周「或
   assert.deepEqual(bad(parseCron("0 0 30 2 *")), { field: null, message: "永远不会触发：2 月没有 30 日" });
   assert.deepEqual(bad(parseCron("0 0 31 4,6,9,11 *")), { field: null, message: "永远不会触发：选的月份里没有这些日子" });
   assert.equal(cronError("0 0 29 2 *"), null);
-  // 日、周都受限 → 或:2 月 31 日不存在,但 2 月的每个周一都会跑
   assert.equal(cronError("0 0 31 2 1"), null);
-  // 日段以 * 开头 → 且:*/40 只剩 1 号,1 号是周一的 2 月存在
   assert.equal(cronError("0 0 */40 2 1"), null);
 });
 
@@ -119,7 +112,6 @@ test("nextRuns:从下一分钟起算,正好在点上也排到下一次", () => {
 
 test("nextRuns:步长边界与跨小时、跨天、跨年", () => {
   assert.deepEqual(fmts(nextRuns("*/15 * * * *", at(2026, 6, 1, 10, 7), 4)), ["2026-06-01 10:15", "2026-06-01 10:30", "2026-06-01 10:45", "2026-06-01 11:00"]);
-  // 1-30/5 取到 26,不会出现 31
   assert.deepEqual(fmts(nextRuns("1-30/5 * * * *", at(2026, 6, 1, 10, 25, 10), 3)), ["2026-06-01 10:26", "2026-06-01 11:01", "2026-06-01 11:06"]);
   assert.deepEqual(fmts(nextRuns("*/30 * * * *", at(2026, 12, 31, 23, 45), 2)), ["2027-01-01 00:00", "2027-01-01 00:30"]);
 });
@@ -137,19 +129,15 @@ test("nextRuns:闰年 2/29,跨 2100(不是闰年)也找得到", () => {
 });
 
 test("nextRuns:日和周都受限按「或」,有一段以 * 开头按「且」(Vixie)", () => {
-  // 2026-11-01 是周日;13 号或周五:11/13 两者都是,12/13 是周日只因日命中
   assert.deepEqual(fmts(nextRuns("0 12 13 * 5", at(2026, 11, 1), 7)), [
     "2026-11-06 12:00", "2026-11-13 12:00", "2026-11-20 12:00", "2026-11-27 12:00",
     "2026-12-04 12:00", "2026-12-11 12:00", "2026-12-13 12:00",
   ]);
-  // */2 以 * 开头 → 单数日且周五:11/13、11/27、12/11
   assert.deepEqual(fmts(nextRuns("0 12 */2 * 5", at(2026, 11, 1), 3)), ["2026-11-13 12:00", "2026-11-27 12:00", "2026-12-11 12:00"]);
-  // 只限周:工作日
   assert.deepEqual(fmts(nextRuns("0 9 * * 1-5", at(2026, 11, 6, 10), 3)), ["2026-11-09 09:00", "2026-11-10 09:00", "2026-11-11 09:00"]);
 });
 
 test("nextRuns:不合法或永远不会触发的表达式返回空,不会死循环", () => {
-  // 对照:同一个起点,合法表达式照常给结果
   assert.deepEqual(fmts(nextRuns("0 9 * * *", at(2026, 1, 1), 1)), ["2026-01-01 09:00"]);
   assert.deepEqual(nextRuns("0 25 * * *", at(2026, 1, 1), 3), []);
   assert.deepEqual(nextRuns("0 0 30 2 *", at(2026, 1, 1), 3), []);
@@ -160,7 +148,6 @@ test("nextRuns:夏令时跳过的时刻不存在,跳到下一天", () => {
   const tz = process.env.TZ;
   try {
     process.env.TZ = "America/New_York";
-    // 2026-03-08 凌晨 2 点直接跳到 3 点,02:30 不存在
     assert.deepEqual(fmts(nextRuns("30 2 * * *", at(2026, 3, 7, 3), 2)), ["2026-03-09 02:30", "2026-03-10 02:30"]);
   } finally {
     if (tz === undefined) delete process.env.TZ;
@@ -249,7 +236,7 @@ test("describeTrigger:一句话说清怎么叫醒,不依赖现在", () => {
 });
 
 test("formatRunAt:相对现在写今天 / 明天 / 昨天 / 周几 / 月日 / 年月日", () => {
-  const now = at(2026, 11, 9, 8, 30); // 周一
+  const now = at(2026, 11, 9, 8, 30);
   assert.equal(formatRunAt(at(2026, 11, 9, 9, 0), now), "今天 09:00");
   assert.equal(formatRunAt(at(2026, 11, 10, 9, 0), now), "明天 09:00");
   assert.equal(formatRunAt(at(2026, 11, 8, 8, 0), now), "昨天 08:00");
@@ -257,7 +244,6 @@ test("formatRunAt:相对现在写今天 / 明天 / 昨天 / 周几 / 月日 / �
   assert.equal(formatRunAt(at(2026, 11, 5, 10, 12), now), "周四 10:12");
   assert.equal(formatRunAt(at(2026, 11, 19, 9, 0), now), "11/19 09:00");
   assert.equal(formatRunAt(at(2027, 1, 4, 9, 0), now), "2027/1/4 09:00");
-  // 跨年的明天
   assert.equal(formatRunAt(at(2027, 1, 1, 0, 0), at(2026, 12, 31, 23, 45)), "明天 00:00");
 });
 

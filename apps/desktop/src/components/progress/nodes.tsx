@@ -10,10 +10,6 @@ import { people } from '@/data'
 import { Avatar, GroupAvatar } from '../Avatar'
 import { DM_SOURCE, FOLD, MORE, REASON_TEXT, SUB_KIND_LABEL } from './copy'
 
-/*
-  看板节点:结构、样式、悬停、折叠照 mirasim「会话全景」(SR / NR / CR 组件);外观在 board.css。
-  可点的节点都用 Button 原语(按下回馈、焦点环),去掉它的底色和尺寸变体,由 board.css 按 mirasim 画。
-*/
 
 export const BoardButton = forwardRef<HTMLButtonElement, ButtonProps>(({ className, ...props }, ref) => (
   <Button ref={ref} variant={null} size={null} shape={null} className={cn('bd-press', className)} {...props} />
@@ -21,14 +17,12 @@ export const BoardButton = forwardRef<HTMLButtonElement, ButtonProps>(({ classNa
 BoardButton.displayName = 'BoardButton'
 
 export type Hov = { onMouseEnter: () => void; onMouseLeave: () => void; onFocus: () => void; onBlur: () => void }
-/** mirasim Da:悬停时链上的亮、其余变淡 */
 export const litAttrs = (id: string, lit: Set<string> | null) => ({
   'data-lit': lit?.has(id) ? '' : undefined,
   'data-dim': lit && !lit.has(id) ? '' : undefined,
 })
 export const pos = (b: BoardBox) => ({ left: b.x, top: b.y, width: b.w, height: b.h })
 
-/** 人 / 对话节点副标题「N 个 · N 等你 · N 失败」:按等你 → 失败 → 在跑最多带两项,全文在悬停提示里 */
 function PersonSub({ xs }: { xs: readonly BoardFact[] }) {
   const a = aggregate(xs)
   const parts = ([['wait', '等你'], ['failed', '失败'], ['run', '在跑']] as const).filter(([k]) => a[k] > 0).slice(0, 2)
@@ -153,7 +147,6 @@ export function Inside({ id, item, box, now, lit, hov, onClick }: { id: string; 
   )
 }
 
-/** 折叠:没展开时是「还有 N 个」;展开后「收起」吸在可视区底部,点了把列表顶部滚回视野(mirasim CR) */
 export function More({ m, onUnfold, onFold }: { m: LayoutMore; onUnfold: () => void; onFold: (el: HTMLElement) => void }) {
   if (m.unfold) {
     return (
@@ -173,7 +166,6 @@ export function More({ m, onUnfold, onFold }: { m: LayoutMore; onUnfold: () => v
   )
 }
 
-/** 收起后把被折叠那一列的顶部滚回可视区(mirasim CR 的 scrollBack) */
 export function scrollBack(el: HTMLElement) {
   const fold = el.closest('.bd-fold'), sc = el.closest('.bd-scroll')
   if (!fold || !sc) return

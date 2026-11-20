@@ -1,38 +1,26 @@
-// 斜杠命令(Telegram 式):在输入框里打 / 唤出能力。
 // 这里只放纯逻辑:命令模型、光标处识别、过滤排序、选中后的文本替换、参数解析与校验。
-// 命令清单和执行参数都是纯数据,将来由后端 commands.list 给清单、commands.run 接执行(见 toRunParams)。
 
 export type SlashArgKind = "text" | "person" | "choice" | "number" | "time";
 
 export interface SlashArg {
-  /** 参数名,显示在提示里,如「何时」「做什么」 */
   name: string;
   kind: SlashArgKind;
   required: boolean;
-  /** 占位说明:告诉用户这一格怎么填 */
   hint: string;
-  /** kind = choice 时的可选值 */
   options?: readonly string[];
-  /** 吞掉剩下的全部文本(只能是最后一个参数),适合「内容」这类带空格的长文本 */
   rest?: boolean;
 }
 
-/** 命令从哪来:内置 / 某个插件 / 某个助手 */
 export type SlashSource = "builtin" | `plugin:${string}` | `assistant:${string}`;
-/** 在哪能用:群聊 / 私聊 / 都可 */
 export type SlashScope = "group" | "dm" | "any";
 
 export interface SlashCommand {
-  /** 小写字母、数字和 -,如 summary、schedule */
   name: string;
-  /** 中文名 */
   title: string;
-  /** 一句说明 */
   desc: string;
   args: readonly SlashArg[];
   source: SlashSource;
   scope: SlashScope;
-  /** 别名,如 summary 也叫 ketchup;搜索和执行都认 */
   aliases?: readonly string[];
   /** 插件命令:注册这条命令时插件的版本。执行前要和插件当前版本对得上(不能绕过版本校验) */
   version?: string;
@@ -62,7 +50,6 @@ export interface SlashEntry {
   disabled?: string;
 }
 
-/** 光标处识别出的命令片段:start 指向 /,end 是这个词的结尾(替换范围),query 是 / 到光标之间的文字 */
 export interface SlashToken {
   start: number;
   end: number;
@@ -71,7 +58,6 @@ export interface SlashToken {
 
 export interface SlashArgState {
   arg: SlashArg;
-  /** 已经填了的值(去掉引号;person 去掉 @;choice / person 规范成标准写法);没填是 undefined */
   value: string | undefined;
   error: string | undefined;
 }
@@ -81,23 +67,16 @@ export interface SlashInvocation {
   /** 这条命令此刻不能用的原因(插件没装/停用/授权失效/没挂在本会话/版本变了);能用是 undefined */
   blocked: string | undefined;
   args: SlashArgState[];
-  /** 参数名 → 值,只含填了的 */
   values: Record<string, string>;
-  /** 正在填或下一个该填的参数下标;全部填完是 -1 */
   current: number;
-  /** current 这一格是不是还在输入中(末尾没有空白,或引号还没闭合) */
   typing: boolean;
-  /** 还没填的必填参数名 */
   missing: string[];
-  /** 校验错误(choice / number / time / person / 多余文字) */
   errors: string[];
-  /** 参数之外多出来的文字 */
   extra: string;
   ok: boolean;
 }
 
 export interface SlashParseOptions {
-  /** 会话里能 @ 的人名(可带空格,如 Claude Code)。给了才按名单匹配和校验 person 参数 */
   people?: readonly string[];
 }
 
@@ -107,7 +86,6 @@ const SCOPES: readonly string[] = ["group", "dm", "any"];
 const QUOTES: Readonly<Record<string, string>> = { '"': '"', "'": "'", "“": "”", "「": "」" };
 const isSpace = (c: string | undefined) => c !== undefined && /\s/.test(c);
 
-/** 命令名:小写字母数字和 -,不以 - 开头结尾,不超过 32 个字符 */
 export function isCommandName(s: string): boolean {
   return s.length <= 32 && NAME_RE.test(s);
 }
@@ -120,7 +98,6 @@ export function parseSource(src: string): { kind: "builtin" } | { kind: "plugin"
   return { kind: m[1] as "plugin" | "assistant", id: m[2]! };
 }
 
-/** 检查一条命令定义(后端给的也要过这一关),返回问题列表;没问题返回空数组 */
 export function checkCommand(c: SlashCommand): string[] {
   const out: string[] = [];
   if (!isCommandName(c.name)) out.push(`命令名「${c.name}」只能用小写字母、数字和 -`);
@@ -191,7 +168,6 @@ function isSlashAt(text: string, start: number) {
   return c === "、" && text.slice(0, start).trim() === "";
 }
 
-/** 光标处的命令片段。只认输入框开头或空白后面的 /xxx;网址、路径里的 / 不算。 */
 export function detectSlash(text: string, cursor: number): SlashToken | null {
   if (cursor < 0 || cursor > text.length) return null;
   let start = cursor;
@@ -199,7 +175,6 @@ export function detectSlash(text: string, cursor: number): SlashToken | null {
   if (start === cursor || !isSlashAt(text, start)) return null;
   let end = cursor;
   while (end < text.length && !isSpace(text[end])) end++;
-  // 词里再有 / 就是路径或网址(/tmp/a、//x),不弹
   if (/[/／]/.test(text.slice(start + 1, end))) return null;
   return { start, end, query: text.slice(start + 1, cursor) };
 }
@@ -210,7 +185,6 @@ function isSubsequence(q: string, s: string) {
   return i === q.length;
 }
 
-/** 一条命令和输入的匹配档次,越小越靠前:0 名字完全相同、1 名字前缀、2 名字或中文名包含、3 子序列模糊、4 说明里包含;不匹配 -1 */
 export function matchTier(c: SlashCommand, query: string): number {
   const q = query.trim().toLowerCase();
   const title = c.title.toLowerCase();
@@ -234,12 +208,10 @@ export function filterCommands(entries: readonly SlashEntry[], query: string): S
     .map((x) => x.e);
 }
 
-/** 用法串:/schedule <何时> <做什么>,可选参数用 [] */
 export function formatUsage(c: SlashCommand): string {
   return [`/${c.name}`, ...c.args.map((a) => (a.required ? `<${a.name}>` : `[${a.name}]`))].join(" ");
 }
 
-/** 选中命令(补全):把片段换成 "/name ";片段前面已经写了字,就把命令挪到开头,原来的字接在后面当参数 */
 export function completeToken(text: string, token: SlashToken, name: string): { text: string; cursor: number } {
   const before = text.slice(0, token.start).trim();
   const after = text.slice(token.end).trim();
@@ -249,7 +221,6 @@ export function completeToken(text: string, token: SlashToken, name: string): { 
   return { text: out, cursor: out.length };
 }
 
-/** 去掉片段(不带参数的命令选中即执行,输入框里剩下原来的字) */
 export function removeToken(text: string, token: SlashToken): { text: string; cursor: number } {
   const before = text.slice(0, token.start).replace(/\s+$/, "");
   const after = text.slice(token.end).replace(/^\s+/, "");
@@ -257,7 +228,6 @@ export function removeToken(text: string, token: SlashToken): { text: string; cu
   return { text: before + sep + after, cursor: before.length + sep.length };
 }
 
-/** 读一个词:引号包住的整段(可带空格)或到下一个空白为止 */
 function readToken(s: string, pos: number) {
   const open = s[pos]!;
   const close = QUOTES[open];
@@ -271,7 +241,6 @@ function readToken(s: string, pos: number) {
   return { value: s.slice(pos, end), end, closed: true };
 }
 
-/** 看起来像不像一个时间:钟点(9:30、9点)、cron 五段、或「每天 / 工作日 / 明天 / 周一…」这类说法 */
 export function looksLikeTime(s: string): boolean {
   const t = s.trim();
   if (!t) return false;
@@ -281,8 +250,6 @@ export function looksLikeTime(s: string): boolean {
   return /^(每天|每日|每周|每个|每隔|每小时|每\d+|工作日|周末|周[一二三四五六日天]|星期[一二三四五六日天]|今天|明天|后天|今晚|明早|上午|下午|中午|早上|晚上)/.test(t);
 }
 
-/** 把「何时」翻成现有定时编辑器能预填的几项(钟点、重复方式;cron 原样带上)。
- *  只做预填,不替代定时模块的表达式解析;认不出的项留空,让用户在编辑器里补。 */
 export function scheduleHint(when: string): { time?: string; repeat?: "每天" | "工作日" | "每周一" | "一次"; cron?: string } {
   const t = when.trim();
   const f = t.split(/\s+/);
@@ -291,7 +258,6 @@ export function scheduleHint(when: string): { time?: string; repeat?: "每天" |
     const [mi, hr, dom, mon, dow] = f as [string, string, string, string, string];
     const out: { time?: string; repeat?: "每天" | "工作日" | "每周一"; cron: string } = { cron: t };
     if (/^\d{1,2}$/.test(mi) && /^\d{1,2}$/.test(hr) && Number(mi) < 60 && Number(hr) < 24) out.time = `${pad(Number(hr))}:${pad(Number(mi))}`;
-    // 只有每天固定钟点这种能落到现有编辑器的才给重复方式;*/15 这类留给定时模块
     if (out.time && dom === "*" && mon === "*") {
       if (dow === "*") out.repeat = "每天";
       else if (dow === "1-5") out.repeat = "工作日";
@@ -314,8 +280,6 @@ export function scheduleHint(when: string): { time?: string; repeat?: "每天" |
   return out;
 }
 
-/** 解析输入框里的一条命令(以 /name 或别名开头)。不是已知命令返回 null。默认光标在末尾。
- *  灰显的命令也解析出来,但 blocked 写明原因、ok 为 false:手打也绕不过插件的安装、启用、授权、挂载和版本校验。 */
 export function parseInvocation(text: string, entries: readonly SlashEntry[], opts: SlashParseOptions = {}): SlashInvocation | null {
   const lead = text.length - text.trimStart().length;
   if (!isSlashAt(text, lead)) return null;
@@ -400,7 +364,6 @@ export function parseInvocation(text: string, entries: readonly SlashEntry[], op
   return { command, blocked, args: states, values, current, typing, missing, errors, extra, ok: !missing.length && !errors.length };
 }
 
-/** 交给后端执行时的参数(commands.run):纯数据。插件命令带上注册时的版本,由宿主执行前再核一遍 */
 export function toRunParams(inv: SlashInvocation, conv: string): { conv: string; command: string; source: SlashSource; version?: string; values: Record<string, string> } {
   const base = { conv, command: inv.command.name, source: inv.command.source, values: { ...inv.values } };
   return inv.command.version === undefined ? base : { ...base, version: inv.command.version };

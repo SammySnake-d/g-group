@@ -9,9 +9,7 @@ import { Preview } from './Preview'
 import { DocConflict } from './DocConflict'
 import { ARTICLE_INTRO, ARTICLE_SEC4, ASSET_NOTE_SPLIT, ASSET_ROWS, BOARD_NOTE, articleSections } from './constants'
 
-/* ---------- 分屏里的文件 / 任务板 / 资产预览 ---------- */
 
-/** 资产:键值表(和「文件」主面板同一份数据) */
 export function AssetTable() {
   return (
     <div className="overflow-hidden rounded-xl border border-line">

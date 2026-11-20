@@ -1,9 +1,7 @@
 import { useEffect, useLayoutEffect, useState, type RefObject } from 'react'
 
-/** 输入框最多长到 8 行,再多就在框里滚动 */
 const MAX_LINES = 8
 
-/** 自适应高度:空时一行,随内容长高,超过上限在框里滚动;外框变宽变窄时重算。返回是否已到上限 */
 export function useAutoHeight(inputRef: { current: HTMLTextAreaElement | null }, boxRef: RefObject<HTMLDivElement | null>, text: string) {
   const [tall, setTall] = useState(false)
   const fit = () => {

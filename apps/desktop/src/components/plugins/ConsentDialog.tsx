@@ -1,4 +1,3 @@
-/* 安装 / 更新前的权限同意:逐条看过、逐条勾选,全部勾上才能确认(更新只列新版本多要的那几项)。 */
 import { useState } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import type { PluginManifest, PluginPermission } from '@g-group/ui-core'

@@ -5,7 +5,6 @@ import { MessageList } from '@/components/Messages'
 import { Button } from '@/components/ui/button'
 import { PageFooter, PageScroll } from './kit/parts'
 
-/* ---------- GrokBot 式讨论:只读看原话,结论在群里 ---------- */
 export function HuddlePage({ conv, msgId }: { conv: string; msgId: string }) {
   const { convs, jump, closeAll, addQuote } = useApp()
   const c = convs.find((x) => x.id === conv)!

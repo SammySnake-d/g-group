@@ -1,4 +1,3 @@
-/* 群资料分栏的文案与常量:组件只引用,不写死。 */
 import { BookOpen, Copy, Cpu, FileText, FolderGit2, Link2, Pin, Sparkles, type LucideIcon } from 'lucide-react'
 
 export type GTab = 'members' | 'notice' | 'list' | 'cron' | 'plugin' | 'tools'
@@ -58,12 +57,9 @@ export const TOOLS = {
   manage: '去设置',
 } as const
 
-/** 连上后端时真能用的内置工具(其余要的数据或能力还没接:协作手册、工作区、关联会话、记下的事、复制团队、总结;
- *  群文件由文件列表那一块接上 pages/FilesPage 后把它加回来) */
 export const LIVE_TOOLS: readonly string[] = ['compute']
 
 export type ToolHow = '执行' | '打开' | '填入输入框'
-/** 内置工具:每项写清做什么、对应哪条 / 命令、点了是执行还是打开(打开的页面 key 与 push 的 t 一致) */
 export const BUILTIN_TOOLS: { key: string; icon: LucideIcon; title: string; cmd: string; desc: string; how: ToolHow; page?: 'playbook' | 'files' | 'workspace' | 'links' | 'commits' | 'pool' | 'clone' }[] = [
   { key: 'summary', icon: Sparkles, title: '总结未读', cmd: 'summary', desc: '让 Helper 把你不在时的消息总结成几条要点，发在本群，每条能点回原消息', how: '执行' },
   { key: 'playbook', icon: BookOpen, title: '协作手册', cmd: 'playbook', desc: '本群的约定和流程，助手接活前会读；改动要你批准', how: '打开', page: 'playbook' },
@@ -82,5 +78,4 @@ export const MEMBERS = {
   stopFirst: '移出前要先停下这些事，停稳它才离开',
 } as const
 
-/** 标题栏头像叠最多露几个 */
 export const STACK_MAX = 5

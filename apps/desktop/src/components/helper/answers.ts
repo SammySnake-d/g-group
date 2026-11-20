@@ -7,13 +7,11 @@ import {
 
 /* Helper 怎么回答:纯函数,只读会话数据、不碰界面状态。id 由调用方给(store.nid)。 */
 
-/** 群里每个助手的分工(本群分工优先,其次默认职位、角色) */
 export function dutiesOf(c: Conversation): { id: PersonId; duty: string }[] {
   const by = dutyByConv[c.id] ?? {}
   return c.members.filter((m) => m !== 'me' && !people[m]?.human).map((id) => ({ id, duty: by[id] ?? dutyDefault[id] ?? people[id]?.role ?? '' }))
 }
 
-/** 一条消息用一句话描述,给「带哪几条当背景」用 */
 export function msgLine(m: Msg): string {
   switch (m.k) {
     case 'text': return `${people[m.from]?.name ?? ''}：${m.text}`
@@ -24,7 +22,6 @@ export function msgLine(m: Msg): string {
   }
 }
 
-/** CSV 的每一行按关键词在本群分工里找推荐人 */
 export function csvCard(c: Conversation): CsvCard {
   const by = dutyByConv[c.id] ?? {}
   const rows = CSV_ROWS.map(({ text, keys }) => {
@@ -34,7 +31,6 @@ export function csvCard(c: Conversation): CsvCard {
   return { rows }
 }
 
-/** 另开群的确认卡:点了名的人(没点名就用默认两位)、要带的背景、从话里摘出的群名 */
 export function groupCard(c: Conversation, ask: string): GroupCard {
   const named = c.members.filter((m) => m !== 'me' && !people[m]?.human && ask.includes(people[m].name))
   const ids: PersonId[] = named.length ? named : GROUP_DEFAULT_PICKS.filter((m) => c.members.includes(m))
@@ -44,7 +40,6 @@ export function groupCard(c: Conversation, ask: string): GroupCard {
   return { title: topic || '新的讨论', picks: Object.fromEntries(ids.map((i) => [i, true])), bg }
 }
 
-/** 面板(只读当前聊天)对一句话的回答 */
 export function panelAnswer(c: Conversation, ask: string, id: string): PItem {
   if (/另开|拉.*群|新群|建群/.test(ask)) return { id, from: 'helper', text: PANEL_GROUP_REPLY, group: groupCard(c, ask) }
   if (/csv|CSV|表格|清单/.test(ask)) return { id, from: 'helper', text: PANEL_CSV_REPLY, csv: csvCard(c) }
@@ -57,7 +52,6 @@ export function panelAnswer(c: Conversation, ask: string, id: string): PItem {
   return { id, from: 'helper', text: panelFallback(c.title) }
 }
 
-/* ---------- 全局 Helper:默认什么都不读;读要授权,发要草稿 ---------- */
 
 /** 话里提到的群(长名字优先,避免「群聊」先匹配到短名) */
 export const findGroup = (convs: Conversation[], text: string) =>
@@ -68,7 +62,6 @@ export const summaryOf = (cid: string, title: string, id: string): GItem => ({
   id, from: 'helper', text: cid === DEMO_DESIGN_CONV ? DEMO_DESIGN_SUMMARY : globalSummaryOther(title),
 })
 
-/** 全局 Helper 对一句话的回答(不含你自己那条) */
 export function globalAnswer(text: string, convs: Conversation[], granted: string[], nid: () => string): GItem {
   const titleOf = (cid: string) => convs.find((c) => c.id === cid)?.title ?? ''
   const target = findGroup(convs, text)

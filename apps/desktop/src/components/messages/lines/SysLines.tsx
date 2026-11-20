@@ -1,4 +1,3 @@
-/* 居中的灰字行:日期、系统提示、助手之间的讨论、联系人记下的承诺、资产提示。不占气泡,点了在分栏或浮层里看 */
 import { ChevronRight, KeyRound, Pin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { people } from '@/data'
@@ -9,7 +8,6 @@ import { AvatarStack } from '@/components/Avatar'
 import { Pressable, TextLink } from '../Pressable'
 import type { MsgOf } from '../types'
 
-/** 居中灰字行的可点外形:悬停才出底色,文字变深一档 */
 const PILL = 'gap-1.5 rounded-full px-3 py-1 text-[12.5px] text-fg-3 hover:bg-hover hover:text-fg-2'
 
 export function DateLine({ text }: { text: string }) {
@@ -29,7 +27,6 @@ export function SysLine({ m }: { m: MsgOf<'sys'> }) {
   )
 }
 
-/* 助手之间的讨论:GrokBot 式一行灰字,点开在右侧只读看原话 */
 export function HuddleLine({ m, conv }: { m: MsgOf<'huddle'>; conv: string }) {
   const { push } = useApp()
   return (
@@ -44,7 +41,6 @@ export function HuddleLine({ m, conv }: { m: MsgOf<'huddle'>; conv: string }) {
   )
 }
 
-/* US11 / US6:联系人把一句话记成了自己的承诺 */
 export function CommitLine({ m }: { m: MsgOf<'commit'> }) {
   const { commits, push, active } = useApp()
   const list = commits.filter((c) => m.ids.includes(c.id))
@@ -62,7 +58,6 @@ export function CommitLine({ m }: { m: MsgOf<'commit'> }) {
   )
 }
 
-/* US3:资产提示,和普通消息视觉区分(虚线框) */
 export function AssetLine({ m }: { m: MsgOf<'asset'> }) {
   const { openSplit } = useApp()
   return (

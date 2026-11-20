@@ -4,7 +4,6 @@ import { IconButton } from '@/components/ui/icon-button'
 import { people, type QuoteRef } from '@/data'
 import { cn } from '@/lib/utils'
 
-/** 待发引用:每条一块,按内容宽度收缩,× 紧跟在内容后面;多条时说明只会自动 @ 谁 */
 export function QuoteBar({ quotes, onRemove }: { quotes: QuoteRef[]; onRemove: (q: QuoteRef) => void }) {
   return (
     <div className="flex flex-col items-start gap-1 px-2 pt-2" data-testid="quote-bar">

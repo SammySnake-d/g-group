@@ -13,7 +13,6 @@ import { DEFAULT_SHAPE, DEFAULT_SWATCH_INDEX } from './constants'
 /* ---------- 添加联系人:先挑形象和颜色(大头像实时预览),再填名字和擅长什么;模型用全局默认 ---------- */
 export function AddContactPage() {
   const { createContact, modelSettings } = useApp()
-  /* 连上后端时形象和颜色存不下(合同只有头像图片地址),不让选——选了却不生效等于假装成功;形象由软件按联系人自动分配 */
   const pickLook = useApp((s) => s.backend.mode !== 'connected')
   const [name, setName] = useState('')
   const [role, setRole] = useState('')

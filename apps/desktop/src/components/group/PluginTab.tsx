@@ -1,6 +1,3 @@
-/* 群资料·插件：本群挂了哪些插件。启停对所有聊天生效（插件是装在这台电脑上的）；从本群摘下只影响这里。
-   连上后端时读的是宿主里真实装好的插件(plugins.list):装好就对所有聊天生效,宿主没有「只挂到某个群」这一层,
-   所以不放「添加 / 摘下」,只留启停和去插件市场。 */
 import { useState } from 'react'
 import { ChevronRight, Plus, Store, X } from 'lucide-react'
 import { CATEGORY_LABEL, attachable, isInstalled } from '@g-group/ui-core'

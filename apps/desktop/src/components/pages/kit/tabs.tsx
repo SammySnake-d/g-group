@@ -46,7 +46,6 @@ export function TabList<T extends string>({ items, label, size = 'md', className
   )
 }
 
-/** 页签内容:只渲染当前页;切换时库负责旧页淡出、新页淡入和高度过渡。focus 环交给里面的控件 */
 export function TabPanel({ value, children, className }: { value: string; children: ReactNode; className?: string }) {
   return (
     <TabsPrimitive.Content value={value} tabIndex={-1} className={cn('outline-none', className)}>

@@ -2,7 +2,6 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-/* 区块标题:标题 + 计数 + 右侧操作。标题自己承担层级,不加眉题小字(impeccable craft floor)。 */
 export function SectionHeader({ title, count, action, className, id }: { title: React.ReactNode; count?: React.ReactNode; action?: React.ReactNode; className?: string; id?: string }) {
   return (
     <div className={cn("flex min-h-8 items-center gap-2", className)}>

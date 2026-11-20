@@ -1,9 +1,6 @@
 // 用量回报与缓存断点(AC-39 ③⑤⑥、D22 第 3 节第 3、7 条)。mind.ts 与 compact.ts 共用,不做网络 I/O。
 //   usageLine       :线路标识 = 服务商|端点主机名|模型。只取主机名——本机网关把令牌放在 URL 路径里,路径、端口、查询串、
 //                     用户名口令一律不进线路;万一密钥出现在服务商或模型名里也隐去。
-//   placeBreakpoints:发请求前(pi-ai 的 onPayload)把 cache_control 收拢到三处:工具声明末尾、第 1 块(system)末尾、
-//                     本轮请求最后一条消息末尾,最多 3 个(上限 4,多了端点会整次拒绝);pi-ai 没标的区段不新增。
-//   probeRequest    :按实际请求体算固定前缀哈希(工具声明 + system)与断点个数。
 //   usageOf / recordUsage:把 pi-ai 回的 usage 换成 ModelUsage 交给宿主的回执口;回执口出错不影响模型调用。
 import { createHash } from "node:crypto";
 import type { ModelUsage, UsageSink } from "@g-group/kernel";
@@ -26,7 +23,6 @@ export function usageLine(provider: string, baseUrl: string, model: string, secr
   return secret ? line.split(secret).join("[密钥已隐去]") : line;
 }
 
-/** 实际请求体里 cache_control 的个数:工具声明、system 各段、每条消息的每个内容块 */
 export function countBreakpoints(payload: unknown): number {
   if (!isObj(payload)) return 0;
   const marked = (xs: Obj[]) => xs.filter((x) => "cache_control" in x).length;
@@ -78,7 +74,6 @@ export interface RequestProbe {
   readonly explicitBreakpoints?: boolean;
 }
 
-/** Only leading instructional messages are part of the stable prefix. */
 function leadingInstructions(input: unknown): unknown {
   if (!Array.isArray(input)) return null;
   const prefix: Obj[] = [];
@@ -89,7 +84,6 @@ function leadingInstructions(input: unknown): unknown {
   return prefix.length ? prefix : null;
 }
 
-/** Hash the fixed prefix of the actual codec payload, not the changing transcript. */
 export function probeRequest(payload: unknown, protocol: PiProtocol = "anthropic-messages"): RequestProbe {
   const p = isObj(payload) ? payload : {};
   const tools = Array.isArray(p.tools) && p.tools.length > 0 ? p.tools : null;
@@ -105,7 +99,6 @@ export function probeRequest(payload: unknown, protocol: PiProtocol = "anthropic
   });
 }
 
-/** pi-ai 回的 usage 换成 ModelUsage;没有请求体探测结果或四项全是 0(请求没发出去)返回 null */
 export function usageOf(line: string, request: number, probe: RequestProbe | null, u: { input?: unknown; output?: unknown; cacheRead?: unknown; cacheWrite?: unknown } | undefined): ModelUsage | null {
   if (!probe || !u) return null;
   const n = (x: unknown): number => (typeof x === "number" && Number.isSafeInteger(x) && x >= 0 ? x : 0);
@@ -116,7 +109,6 @@ export function usageOf(line: string, request: number, probe: RequestProbe | nul
 /** 交给宿主的回执口;回执口出错不影响这次模型调用 */
 export function recordUsage(sink: UsageSink | undefined, u: ModelUsage | null, commit: () => void): void {
   if (!sink || !u) return;
-  // A synchronous sink may publish and then throw; it is never safe to replay.
   commit();
   try {
     sink(u);

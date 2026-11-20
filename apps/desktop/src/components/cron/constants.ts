@@ -1,8 +1,6 @@
-/* 定时模块的文案与选项:组件只引用,不写死。 */
 import type { CronTriggerKind } from '@g-group/ui-core'
 import type { Cron, CronRun } from '@/data'
 
-/** 什么时候醒:四种触发方式 */
 export const KINDS: readonly { value: CronTriggerKind; label: string }[] = [
   { value: 'cron', label: '按时间重复' },
   { value: 'once', label: '只跑一次' },
@@ -10,7 +8,6 @@ export const KINDS: readonly { value: CronTriggerKind; label: string }[] = [
   { value: 'event', label: '某件事发生' },
 ]
 
-/** 什么时候开口 */
 export const SPEAKS: readonly { value: Cron['speak']; label: string }[] = [
   { value: 'always', label: '每次都发结果' },
   { value: 'only-if', label: '有情况才说' },
@@ -20,7 +17,6 @@ export const SPEAK_HINT: Record<Cron['speak'], string> = {
   'only-if': '看过没情况就不说话，只记进运行历史',
 }
 
-/** 运行历史结果条:最多画几格、每种结果的颜色 */
 export const HEALTH_TICKS = 12
 export const TICK_CLS: Record<CronRun['result'], string> = { said: 'bg-ok/50', silent: 'bg-fg-3/30', error: 'bg-err' }
 

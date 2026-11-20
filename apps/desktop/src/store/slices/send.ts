@@ -1,4 +1,3 @@
-// 发送切片:输入框回车后的整条路径——发出消息,再按内容分流(@Helper、记成定时、口头同意写盘、
 // 回复汇报验收/返工、补进某件事、总结外部来源、改前提作废选项、被 @ 的助手接话)。
 import { REACTION_EMOJI } from '@/config/emoji'
 import { people, type Msg, type PersonId } from '@/data'
@@ -10,7 +9,6 @@ import { lens, type Slice } from '../state'
 import { activeConv, draftOf } from '../select'
 
 type TextMsg = Extract<Msg, { k: 'text' }>
-/** 回复汇报时表示「通过」的那个表情(和回应表情同一套配置) */
 const THUMBS_UP = REACTION_EMOJI[0]
 /** 坏实现 AC-46-3 拿来冒充已读的表情 */
 const EYES = REACTION_EMOJI[3]
@@ -18,7 +16,6 @@ const PASS = new RegExp(`通过|没问题|可以|OK|ok|${THUMBS_UP}`)
 const strip = (t: string) => t.replace(/@\S+\s*/g, '')
 
 export type SendSlice = {
-  /** override:斜杠命令(/handoff、助手命令)把要发的话直接递过来,走同一条发送路径(引用、@ 交代都照常) */
   send: (override?: string) => void
 }
 
@@ -33,7 +30,6 @@ export const createSendSlice: Slice<SendSlice> = (set, get) => {
       const t = (override ?? draftOf(s, broken('AC-24'))).trim()
       if (editing) { s.editMsg(editing, t); return }
       if (!t && !q.length) return
-      /* 连上后端:发给后端,回复、派活、进展都由后端的事件带回来;下面按正文分流的演示剧本一概不走 */
       if (live(s)) {
         s.setDraft('')
         L.quotes((all) => ({ ...all, [active]: [] }))

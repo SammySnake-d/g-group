@@ -21,11 +21,9 @@ export function WaitingRuler({ conv, scrollRef }: { conv: Conversation; scrollRe
   const { pending, checklist, computes, jump } = useApp((s) => ({ pending: s.pending, checklist: s.checklist, computes: s.computes, jump: s.jump }))
   const items = useMemo(() => waitingIn(conv, pending, checklist, computes), [conv, pending, checklist, computes])
   const [ticks, setTicks] = useState<Tick[]>([])
-  /* 上一次从刻度跳到的那件:你没自己滚过,⌥↓ 就从它数下一件(不受平滑滚动走到一半的影响);你一滚就改回按可视区中线数 */
   const last = useRef<string | null>(null)
   const go = useCallback((id: string) => { last.current = id; jump(id) }, [jump])
 
-  /* 刻度位置 = 那条消息在整段聊天里的高度比例;内容尺寸变了(图片、展开、窗口宽度)就重算 */
   const measure = useCallback(() => {
     const root = scrollRef.current
     if (!root || !root.scrollHeight) return setTicks([])
@@ -57,7 +55,6 @@ export function WaitingRuler({ conv, scrollRef }: { conv: Conversation; scrollRe
     return () => { root.removeEventListener('wheel', forget); root.removeEventListener('touchmove', forget) }
   }, [scrollRef])
 
-  /* ⌥↓ / ⌥↑:跳到下一件 / 上一件(接着上一次跳到的那件数;没有就以可视区中线为基准) */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.altKey || e.metaKey || e.ctrlKey || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || !ticks.length) return

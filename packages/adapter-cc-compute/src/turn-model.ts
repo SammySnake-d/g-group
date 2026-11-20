@@ -1,5 +1,4 @@
 // 轮边界换模型的计划(AC-51、需求文档 D27 第 4 节):纯函数,不碰进程。
-// 输入是会话当前实际在用的 {model, effort}(以 harness 回报为准)与这一轮宿主现场解析出的生效值,输出这一轮在写入输入之前要做的步骤。
 //   - 没给生效值、或与当前一致:只发送,不发任何切换请求(AC-51 对照「模型没改 → 不发任何切换请求、不重启」);
 //   - 模型不同:能力声明支持会话内换模型 → set-model;不支持 → restart(结束旧进程,用同一会话 id 带新模型重启,D27 第 4 节第 5 条);
 //   - 只改 effort:能会话内改 → set-effort;不能 → restart 带新 effort、模型不变;
@@ -17,11 +16,9 @@ export type TurnStep =
 export interface SwitchCapabilities {
   /** harness 支持会话内换模型 id(Claude Code set_model) */
   readonly inSessionModelSwitch: boolean;
-  /** harness 支持会话内改推理强度 */
   readonly inSessionEffort: boolean;
 }
 
-/** 会话当前实际在用的值;model 为 null 表示不明 */
 export interface SessionModel {
   readonly model: string | null;
   readonly effort?: string;
@@ -29,7 +26,6 @@ export interface SessionModel {
 
 const isOptStr = (v: unknown) => v === undefined || (typeof v === "string" && v.length > 0);
 
-/** 生效值是外部输入:纯数据、只收 model(非空字符串)与 effort(可选非空字符串);不合格抛受控 TypeError */
 export function checkTurnModel(x: unknown): TurnModel | undefined {
   if (x === undefined) return undefined;
   const p = plainData(x, "turn");
@@ -41,7 +37,6 @@ export function checkTurnModel(x: unknown): TurnModel | undefined {
   return Object.freeze(v.effort === undefined ? { model: v.model } : { model: v.model, effort: v.effort as string });
 }
 
-/** 会话当前值与能力声明也是外部输入(经包根导出,R6-01):先过纯数据合同再读字段,不合格抛受控 TypeError */
 function checkSession(x: unknown): SessionModel {
   const p = plainData(x, "current");
   if (!p.ok) throw new TypeError(`会话当前模型必须是纯数据:${p.path} ${p.why}`);
@@ -85,7 +80,6 @@ export function planTurn(currentInput: SessionModel, desired: TurnModel | undefi
 
 /** harness 拒绝切换的原因分类:模型被拒(check_failed 等)→ 这一轮失败给两条修复路径;切换请求本身不可用 → 走兜底重启 */
 export function switchRefusalKind(errorCode: unknown, errorText: unknown): "model-rejected" | "unavailable" {
-  // 只收字符串或缺省:对象(含 Proxy、带 toString 的对象)不做隐式转换,抛受控 TypeError(R6-01、R7-02)
   for (const [name, v] of [["errorCode", errorCode], ["errorText", errorText]] as const) {
     if (v !== undefined && v !== null && typeof v !== "string") throw new TypeError(`switchRefusalKind 的 ${name} 必须是字符串`);
   }

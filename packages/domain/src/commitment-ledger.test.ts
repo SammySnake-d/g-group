@@ -414,7 +414,6 @@ test("绑定范围限于对应承诺且拒绝无效或终态输入", () => {
   assert.deepEqual(applyLedger(done, done.version, bindCompute("closed", "worker")), { ok: false, reason: "commitment-closed" });
 });
 
-// The broader scenarios above remain as regression tests; these isolate their criteria.
 test("独立判据：接收保留消息编号", () => {
   const result = applyLedger(emptyLedger("c"), 0, receive());
   assert.deepEqual(result.ok && result.ledger.messages.map((m) => m.id), ["m1"]);
@@ -948,7 +947,6 @@ test("独立判据：阻塞原因保留", () => {
   assert.equal(result.ok && result.ledger.commitments[0]?.resolution?.detail, "明确原因");
 });
 
-// Round 2 reviewer cases: each assertion isolates one accepted behavior.
 test("独立判据：同动作处理承诺元素内容冲突", () => {
   const state = registered();
   const command: Command = { type: "process", actionId: "process-1", seq: 1, accepted: true,
@@ -1227,7 +1225,6 @@ test("独立判据：无任务来源可登记指定任务承诺", () => {
   assert.equal(result.ok && result.ledger.commitments[0]?.taskId, "task-b");
 });
 
-// 第三轮审查：逐条钉住输入、快照、活动和对账的可观察行为。
 test("独立判据：接收拒绝未知发送者种类", () => {
   const state = emptyLedger("c");
   const command = { type: "receive", actionId: "bad-kind", message: { ...message("m1", 1), sender: { kind: "admin", id: "x" } } } as unknown as Command;

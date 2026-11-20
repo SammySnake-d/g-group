@@ -4,9 +4,6 @@ import path from "node:path";
 import { _electron as electron, type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
 
-// 聊天主界面按原型做全(连真实后端,只点界面、只读界面):GG_BACKEND=server、规则替身脑子(每轮先等一会儿,看得见「正在回复」)、剧本 Compute。
-// 覆盖:就近的消息操作(右键 / 悬停)——表情、编辑、撤回、删除(只在你这边)、多选删除、置顶、转发、私聊回到某条;
-// 已读回执与草稿重启后还在;正在回复卡只写真实活动;新消息分隔线;发文件。
 const appDir = path.resolve(import.meta.dirname, "..");
 const env = Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => e[0] !== "ELECTRON_RUN_AS_NODE" && typeof e[1] === "string"));
 const LONG = { timeout: 30_000 };
@@ -44,7 +41,6 @@ async function send(win: Page, text: string) {
 const rows = (win: Page) => win.getByTestId("chat-column").locator("[data-msg]");
 const mine = (win: Page, text: string) => rows(win).filter({ hasText: text }).and(win.locator('[data-from="me"]'));
 const theirs = (win: Page, text: string) => rows(win).filter({ hasText: text }).and(win.locator('[data-from]:not([data-from="me"])'));
-/** 右键这条消息,点菜单里的一项 */
 async function menu(win: Page, row: ReturnType<typeof rows>, item: string, shotName?: string) {
   await row.locator("[data-anchor]").first().click({ button: "right" });
   const m = win.getByTestId("ctx-menu");
@@ -52,7 +48,6 @@ async function menu(win: Page, row: ReturnType<typeof rows>, item: string, shotN
   if (shotName) await shot(win, shotName, 250);
   if (item.startsWith("ctx-")) await m.getByTestId(item).click();
   else await m.getByText(item, { exact: true }).click();
-  // 菜单收起的动画走完再往下,下一次右键不会同时有两个菜单
   await expect(win.getByTestId("ctx-menu")).toHaveCount(0);
 }
 
@@ -138,7 +133,6 @@ test("私聊里就近操作消息:表情、编辑、撤回、删除都由后端�
       await expect(mine(w2, "第二句")).toHaveCount(0);
       await expect(theirs(w2, "收到:第二句")).toHaveCount(0);
       await shot(w2, "dm-ops-after-restart");
-      // 点开回执:已读名单里有小克,读到时间是宿主记的那一刻(重启前读的也有)
       await mine(w2, "你好呀").locator("[data-read]").click();
       const pop = w2.locator('[data-testid^="receipts-"]').first();
       await expect(pop.getByTestId("receipts-tab-read")).toContainText("已读 1", LONG);
@@ -173,7 +167,7 @@ test("群里置顶、转发、多选删除、清空:置顶条显示并在重启�
       await expect(mine(win, "上线时间定在周五")).toHaveCount(1, LONG);
       await menu(win, mine(win, "上线时间定在周五"), "ctx-pin");
       await expect(win.getByTestId("strip-text")).toContainText("上线时间定在周五", LONG);
-      await expect(win.getByText("已设为置顶消息")).toHaveCount(0, LONG); // 提示条消失后再拍,不挡置顶条
+      await expect(win.getByText("已设为置顶消息")).toHaveCount(0, LONG);
       await shot(win, "group-pinbar");
     });
 
@@ -246,14 +240,12 @@ test("私聊回到某条:确认框写明真实要撤下几条;之后的撤下、
       await expect(win.locator('[data-msg="new-divider"]')).toBeVisible(LONG);
       await expect(theirs(win, "收到:第一句")).toHaveCount(1);
       await shot(win, "dm-new-divider");
-      // 分隔线锚在打开那一刻的第一条未读上:紧跟在它后面的就是那句回复
       await expect(win.locator('[data-msg="new-divider"] + *')).toContainText("收到:第一句");
     });
 
     await test.step("回到「第一句」:确认框说之后 3 条会撤下;确认后它们不见了,留一行灰字,没有假的「恢复」", async () => {
       await send(win, "第二句");
       await expect(theirs(win, "收到:第二句")).toHaveCount(1, LONG);
-      // 又来了新消息,分隔线没被推着走,还在「收到:第一句」前面
       await expect(win.locator('[data-msg="new-divider"] + *')).toContainText("收到:第一句");
       await menu(win, mine(win, "第一句"), "ctx-rewind");
       const dlg = win.getByTestId("rewind-dialog");
@@ -302,10 +294,8 @@ test("联系人连着几句都回你同一条:引用只在第一句上画一次,
     await send(win, "帮我写 hello.txt");
     await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" })).toHaveCount(1, LONG);
     await expect(theirs(win, "好的,我安排 Compute 去写 hello.txt")).toHaveCount(1);
-    // 它连着说的几句都是回「帮我写 hello.txt」:引用块只画一次,不一句一遍
     const quoted = win.getByTestId("chat-column").locator('[data-msg][data-from]:not([data-from="me"])').filter({ has: win.getByTestId("sent-quotes").filter({ hasText: "帮我写 hello.txt" }) });
     await expect(quoted).toHaveCount(1);
-    // 第二句紧跟在第一句后面,并在同一个头像下(不另起一组)
     await expect(theirs(win, "好的,我安排 Compute 去写 hello.txt")).toHaveAttribute("data-first", "0");
     await shot(win, "dm-quote-once");
     expect(run.errors, "页面不该抛错").toEqual([]);
