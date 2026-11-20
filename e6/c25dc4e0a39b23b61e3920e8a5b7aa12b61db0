@@ -1,0 +1,21 @@
+scripts/gates/selftest.ts
+  s_2cca368c709707::t_e41c883e758cb6 321
+docs/subsystems/gates-and-autonomy.md
+  s_2cca368c709707::t_59a9db5dc9b3b1 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e6c25dc4e0a39b23b61e3920e8a5b7aa12b61db0",
+  "prompts": {},
+  "sessions": {
+    "s_2cca368c709707": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f8ad-734d-79b0-9c3c-4fac458689b6",
+        "model": "fnqtz-gpt/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
