@@ -258,7 +258,7 @@ export function renderInboundText(x: Inbound): string {
     let head = `#${x.seq} · ${x.roomId} · ${s.name}(${s.kind}:${s.id}) · ${x.at}`;
     if (x.replyToSeq !== null) head += ` · ↩ #${x.replyToSeq}`;
     if (x.quotedSeqs.length > 0) head += ` · 引 ${x.quotedSeqs.map((q) => `#${q}`).join(",")}`;
-    if (x.mentions.length > 0) head += ` · ${x.mentions.map((m) => `@${m}`).join(" ")}`;
+    if (x.mentions.length > 0) head += ` · @收件人：${x.mentions.join(" ")}`;
     if (x.command !== null) head += ` · /${x.command.name}${x.command.args === undefined ? "" : ` ${JSON.stringify(x.command.args)}`}`;
     return `${head}\n${x.text}\n`;
   }
