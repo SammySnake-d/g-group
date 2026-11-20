@@ -1,0 +1,33 @@
+docs/subsystems/contact-and-gateway.md
+  s_2cca368c709707::t_036d70b6f29046 6-9
+packages/server/src/room-post-budget.test.ts
+  s_2cca368c709707::t_eb6971d6080b23 25,29,33,40,45,48,93,98,110,116,119,131-133,137,143-145,151,157
+packages/server/src/loop-guard.test.ts
+  s_2cca368c709707::t_21a113a888d9bb 150
+packages/server/src/room-post-budget.ts
+  s_2cca368c709707::t_21a113a888d9bb 16,34,53
+packages/server/src/loop-guard.ts
+  s_2cca368c709707::t_21a113a888d9bb 2,16,18,42,46,92-94,109-111,113
+docs/spec/需求文档.md
+  s_2cca368c709707::t_1eb76c691a279c 881
+packages/server/src/group-supplement.test.ts
+  s_2cca368c709707::t_a373c39b1fdb48 171,195,198
+packages/server/src/host.ts
+  s_2cca368c709707::t_21a113a888d9bb 293,1243,1245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4b2167188cfa396d44ada2be59f4737cb757cd6",
+  "prompts": {},
+  "sessions": {
+    "s_2cca368c709707": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f8ad-734d-79b0-9c3c-4fac458689b6",
+        "model": "fnqtz-gpt/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
