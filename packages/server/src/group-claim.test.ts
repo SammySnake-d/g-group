@@ -149,6 +149,101 @@ test("同一条消息只能被一位联系人接:先落盘的拿到,后来的被
   await host.close();
 });
 
+test("已有待认领任务由联系人原子认领:后到者知道负责人,放弃后可由另一人再领", async () => {
+  const compute = scriptedCompute({ script: () => [] });
+  let taskId = "";
+  let owner = "";
+  let revision = 0;
+  const conflictInputs: string[] = [];
+  let phase: "idle" | "claim" | "release" | "reclaim" = "idle";
+  const mind = (): ContactMind => ({ async round(input) {
+    conflictInputs.push(...input.fresh.flatMap(f => f.kind === "claim-conflict" ? [`${input.contact.id}:${f.summary}`] : []));
+    const user = input.fresh.find((f) => f.kind === "message" && f.sender.kind === "user");
+    if (user?.kind !== "message") return { actions: [], stateNote: null };
+    if (phase === "claim" && user.text === "大家认领") return { actions: [{ kind: "claim", taskId, expectedRevision: revision, text: `${input.contact.name}来做这项。` }], stateNote: null };
+    if (phase === "release" && user.text === "请放弃这项，让别人接" && input.contact.id === owner) return { actions: [{ kind: "release", taskId, expectedRevision: revision, text: `${input.contact.name}先放弃，退回待认领。` }], stateNote: null };
+    if (phase === "reclaim" && user.text === "现在由另一位接着做") return { actions: [
+      ...(input.contact.id === owner ? [] : [{ kind: "claim" as const, taskId, expectedRevision: createdRevision, text: "旧版本不能领" }]),
+      { kind: "claim", taskId, expectedRevision: revision, text: `${input.contact.name}接着做。` },
+    ], stateNote: null };
+    return { actions: [], stateNote: null };
+  } });
+  const host = new Host({ file: file(), mind, compute: () => compute.adapter, maxDeferMs: 5 });
+  const a = host.createContact({ name: "小克" });
+  const b = host.createContact({ name: "小研" });
+  const g = host.createGroup("项目群", [{ kind: "contact", id: a.id }, { kind: "contact", id: b.id }]);
+  const created = host.createTask({ roomId: g.id, clientActionId: "manual-open", title: "整理结论" });
+  taskId = created.id;
+  const createdRevision = created.stateVer!;
+  revision = createdRevision;
+  await settle(host, compute);
+  phase = "claim";
+  host.send({ roomId: g.id, clientActionId: "invite-claim", text: "大家认领" });
+  await settle(host, compute);
+  let current = host.taskViewById(taskId);
+  assert.ok(current.state === "T2_Claimed" || current.state === "T3_Running");
+  assert.ok(current.ownerContactId === a.id || current.ownerContactId === b.id);
+  owner = current.ownerContactId!;
+  const loser = owner === a.id ? b.id : a.id;
+  const ownerName = owner === a.id ? a.name : b.name;
+  assert.ok(rejections(host).some((r) => r.kind === "claim" && r.error.includes(ownerName)), "后到的认领应明确指出负责人");
+  assert.deepEqual(conflictInputs, [`${loser}:任务已由 ${ownerName} 认领`], "仅失败的联系人在下一轮收到拒绝原因");
+  revision = current.stateVer!;
+  phase = "release";
+  host.send({ roomId: g.id, clientActionId: "ask-release", text: "请放弃这项，让别人接" });
+  await settle(host, compute);
+  current = host.taskViewById(taskId);
+  assert.equal(current.state, "T1_Open");
+  assert.equal(current.ownerContactId, null);
+  assert.ok(host.listMessages(g.id, {}).messages.some((m) => m.sender.kind === "contact" && m.text.includes("放弃")));
+  revision = current.stateVer!;
+  phase = "reclaim";
+  host.send({ roomId: g.id, clientActionId: "reclaim", text: "现在由另一位接着做", mentions: [{ id: loser, source: "manual" }] });
+  await settle(host, compute);
+  current = host.taskViewById(taskId);
+  assert.ok(current.state === "T2_Claimed" || current.state === "T3_Running");
+  assert.equal(current.ownerContactId, loser);
+  const messages = host.listMessages(g.id, {}).messages;
+  assert.ok(messages.some((m) => m.sender.id === loser && m.text.endsWith("接着做。")));
+  assert.ok(!messages.some((m) => m.text === "旧版本不能领"));
+  assert.equal(messages.filter(m => m.text.endsWith("接着做。")).length, 1);
+  assert.ok(rejections(host).some(r => r.kind === "claim" && r.error.includes("@ 的是别的联系人")));
+  assert.ok(rejections(host).some((r) => r.kind === "claim" && r.error.includes("任务版本已变化")));
+  compute.close();
+  await host.close();
+});
+
+test("同一轮处理同一条接手消息时，只认领已有清单项，不再另建 Compute 任务", async (t) => {
+  const compute = scriptedCompute({ script: () => [] });
+  let item: ReturnType<Host["createTask"]>;
+  const host = new Host({ file: file(), maxDeferMs: 5, compute: () => compute.adapter, mind: () => ({
+    async round(input) {
+      const source = input.fresh.find(f => f.kind === "message" && f.sender.kind === "user" && ["接手已有待办", "请记另一项"].includes(f.text));
+      if (source?.kind !== "message") return { actions: [], stateNote: null };
+      const dispatch: MindAction = { kind: "dispatch", roomId: source.roomId, sourceSeq: source.seq, title: "Compute 任务", task: source.text };
+      return { actions: source.text === "接手已有待办"
+        ? [{ kind: "claim", taskId: item.id, expectedRevision: item.stateVer!, text: "我来接手这件。" }, dispatch]
+        : [dispatch], stateNote: null };
+    },
+  }) });
+  t.after(async () => { compute.close(); await host.close(); });
+  const contact = host.createContact({ name: "接手人" });
+  const room = host.createGroup("清单群", [{ kind: "contact", id: contact.id }]);
+  item = host.createTask({ roomId: room.id, clientActionId: "task", title: "已有待办" });
+  await settle(host, compute);
+  const invite = host.send({ roomId: room.id, clientActionId: "claim", text: "接手已有待办" });
+  await settle(host, compute);
+  assert.deepEqual(host.listTasks({ roomId: room.id }).map(task => task.id), [item.id]);
+  assert.equal(host.taskViewById(item.id).ownerContactId, contact.id);
+  assert.equal(compute.spawned.length, 1);
+  assert.ok(host.listMessages(room.id, {}).messages.some(m => m.sender.id === contact.id && m.text === "我来接手这件。"));
+  assert.deepEqual(rejections(host), [{ kind: "dispatch", error: `这条消息已用于认领清单任务，不能另建任务(${room.id} #${invite.seq})` }]);
+  const independent = host.send({ roomId: room.id, clientActionId: "different-task", text: "请记另一项" });
+  await settle(host, compute);
+  assert.ok(host.listTasks({ roomId: room.id }).some(task => task.id !== item.id && task.sourceSeq === independent.seq));
+  assert.equal(compute.spawned.length, 2);
+});
+
 test("联系人每轮知道自己是谁:第 1 块写明名字与 id,并说明 @ 别人的活不归自己、交付不重复发", async () => {
   const seen: RoundInput[] = [];
   const compute = scriptedCompute();

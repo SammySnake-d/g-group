@@ -21,7 +21,7 @@ const delivered = () => must(applyAll(inReview(), [approve("abc", 0), { kind: "D
 const D1 = { taskId: "t1", deliveryRound: 1, commit: "abc" } as const;
 const DC1 = { taskId: "t", deliveryRound: 1, commit: "c" } as const;
 const SAMPLE: { [K in EventKind]: Extract<TaskEvent, { kind: K }> } = {
-  Claim: { kind: "Claim", by: "x" }, Dispatch: { kind: "Dispatch", computeId: "c", model: "gpt-6", requestId: "t#L0" },
+  Claim: { kind: "Claim", by: "x" }, Release: { kind: "Release", by: "o" }, Reassign: { kind: "Reassign", by: "u1", to: "x" }, Dispatch: { kind: "Dispatch", computeId: "c", model: "gpt-6", requestId: "t#L0" },
   ProducerModelAdded: { kind: "ProducerModelAdded", model: "gpt-6", computeId: "cc" }, NeedHuman: { kind: "NeedHuman", qId: "q", computeId: "cc", constraintVer: 0 },
   HumanReply: { kind: "HumanReply", qId: "q", constraintVer: 0, answer: "approve" }, Amend: { kind: "Amend", by: "u1", computeResumable: true },
   SubmitForReview: { kind: "SubmitForReview", commit: "c2", computeId: "cc", constraintVer: 0 },
@@ -44,7 +44,7 @@ const inState = (s: TaskState): Task => ({
 // 独立需求期望(D20.3 第三台表主干 + AC-19/26/28 + R-09),不读生产 TABLE:
 // "rej" = 必须被拒;"ign" = 必须原样忽略;对象 = 必须转到 to,副作用恰为 fx,版本为 ver(给出时);
 // 负责人默认不变(给出 owner 时为该值),累积生产模型默认不变(给出 pm 时为该值)——身份与厂商集合每格都查(R2-TEST-01)。
-type Exp = "rej" | "ign" | { to: TaskState; fx?: Effect[]; ver?: number; owner?: string; pm?: string[] };
+type Exp = "rej" | "ign" | { to: TaskState; fx?: Effect[]; ver?: number; owner?: string | null; pm?: string[] };
 const PM2 = [PRODUCER, "gpt-6"];
 const STOP: Effect[] = [{ kind: "stop-compute", computeId: "cc" }];
 const RESUME: Effect[] = [{ kind: "resume-compute", computeId: "cc", constraintVer: 1 }];
@@ -54,49 +54,49 @@ const allIgn = (): { [E in EventKind]: Exp } => Object.fromEntries(EVENT_KINDS.m
 const ORPHAN_STOP = (s: TaskState): Exp => ({ to: s, fx: [{ kind: "stop-compute", computeId: "c" }] });
 const SPEC: { [S in TaskState]: { [E in EventKind]: Exp } } = {
   T1_Open: {
-    Claim: { to: "T2_Claimed", owner: "x" }, Dispatch: "rej", ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign",
+    Claim: { to: "T2_Claimed", owner: "x" }, Release: "rej", Reassign: "rej", Dispatch: "rej", ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign",
     Amend: { to: "T1_Open", ver: 1 }, SubmitForReview: "rej", Review: "rej", ReviewUnavailable: "rej", DeliveredCard: "rej", UserAccept: "rej",
     UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T10_Cancelled", fx: [] }, StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T2_Claimed: {
-    Claim: "rej", Dispatch: { to: "T3_Running", pm: PM2 }, ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign",
+    Claim: "rej", Release: { to: "T1_Open", fx: [{ kind: "cancel-spawn", requestId: "t#L0" }], owner: null }, Reassign: { to: "T2_Claimed", fx: [{ kind: "cancel-spawn", requestId: "t#L0" }, { kind: "spawn-compute", withHandoff: false, requestId: "t#L1", constraintVer: 0 }], owner: "x" }, Dispatch: { to: "T3_Running", pm: PM2 }, ProducerModelAdded: "rej", NeedHuman: "rej", HumanReply: "ign",
     Amend: { to: "T2_Claimed", ver: 1, fx: [{ kind: "cancel-spawn", requestId: "t#L0" }, { kind: "spawn-compute", withHandoff: false, requestId: "t#L1", constraintVer: 1 }] },
     SubmitForReview: "rej", Review: "rej", ReviewUnavailable: "rej", DeliveredCard: "rej", UserAccept: "rej",
     UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: [{ kind: "cancel-spawn", requestId: "t#L0" }] }, StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T3_Running: {
-    Claim: "rej", Dispatch: ORPHAN_STOP("T3_Running"), ProducerModelAdded: { to: "T3_Running", pm: PM2 }, NeedHuman: { to: "T4b_BlockedOnHuman" }, HumanReply: "ign",
+    Claim: "rej", Release: { to: "T9_StopRequested", fx: STOP }, Reassign: "rej", Dispatch: ORPHAN_STOP("T3_Running"), ProducerModelAdded: { to: "T3_Running", pm: PM2 }, NeedHuman: { to: "T4b_BlockedOnHuman" }, HumanReply: "ign",
     Amend: { to: "T3_Running", fx: [{ kind: "update-constraints", computeId: "cc", constraintVer: 1 }], ver: 1 }, SubmitForReview: { to: "T5_InReview", fx: [{ kind: "request-review", round: 1, commit: "c2", constraintVer: 0 }] }, Review: "rej", ReviewUnavailable: "rej", DeliveredCard: "rej",
     UserAccept: "rej", UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
   },
   T4b_BlockedOnHuman: {
-    Claim: "rej", Dispatch: ORPHAN_STOP("T4b_BlockedOnHuman"), ProducerModelAdded: { to: "T4b_BlockedOnHuman", pm: PM2 }, NeedHuman: "rej", HumanReply: { to: "T3_Running", fx: [] },
+    Claim: "rej", Release: { to: "T9_StopRequested", fx: STOP }, Reassign: "rej", Dispatch: ORPHAN_STOP("T4b_BlockedOnHuman"), ProducerModelAdded: { to: "T4b_BlockedOnHuman", pm: PM2 }, NeedHuman: "rej", HumanReply: { to: "T3_Running", fx: [] },
     Amend: { to: "T3_Running", fx: [{ kind: "update-constraints", computeId: "cc", constraintVer: 1 }], ver: 1 }, SubmitForReview: "rej", Review: "rej", ReviewUnavailable: "rej", DeliveredCard: "rej", UserAccept: "rej",
     UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
   },
   T5_InReview: {
-    Claim: "rej", Dispatch: ORPHAN_STOP("T5_InReview"), ProducerModelAdded: { to: "T5_InReview", pm: PM2 }, NeedHuman: "rej", HumanReply: "ign",
+    Claim: "rej", Release: "rej", Reassign: "rej", Dispatch: ORPHAN_STOP("T5_InReview"), ProducerModelAdded: { to: "T5_InReview", pm: PM2 }, NeedHuman: "rej", HumanReply: "ign",
     Amend: REWORK, SubmitForReview: { to: "T5_InReview", fx: [{ kind: "request-review", round: 2, commit: "c2", constraintVer: 0 }] }, Review: { to: "T7_Delivering", fx: [{ kind: "send-card", taskId: "t", deliveryRound: 1, commit: "c", constraintVer: 0 }] },
     ReviewUnavailable: { to: "T7_Delivering", fx: [{ kind: "send-card", taskId: "t", deliveryRound: 1, commit: "c", constraintVer: 0 }] }, DeliveredCard: "rej",
     UserAccept: "rej", UserReject: "rej", AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign",
     ExecFailed: { to: "T9_StopRequested", fx: STOP },
   },
   T7_Delivering: {
-    Claim: "rej", Dispatch: ORPHAN_STOP("T7_Delivering"), ProducerModelAdded: { to: "T7_Delivering", pm: PM2, fx: [] }, NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
+    Claim: "rej", Release: "rej", Reassign: "rej", Dispatch: ORPHAN_STOP("T7_Delivering"), ProducerModelAdded: { to: "T7_Delivering", pm: PM2, fx: [] }, NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
     SubmitForReview: "rej", Review: "ign", ReviewUnavailable: "ign", DeliveredCard: { to: "T8a_Delivered", fx: [] }, UserAccept: "rej", UserReject: "rej",
     AcceptTimeout: "ign", Cancel: { to: "T9_StopRequested", fx: STOP }, StoppedConfirmed: "ign", ExecFailed: "ign",
   },
   T8a_Delivered: {
-    Claim: "rej", Dispatch: ORPHAN_STOP("T8a_Delivered"), ProducerModelAdded: { to: "T8a_Delivered", pm: PM2, fx: [] }, NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
+    Claim: "rej", Release: "rej", Reassign: "rej", Dispatch: ORPHAN_STOP("T8a_Delivered"), ProducerModelAdded: { to: "T8a_Delivered", pm: PM2, fx: [] }, NeedHuman: "rej", HumanReply: "ign", Amend: REWORK,
     SubmitForReview: "rej", Review: "ign", ReviewUnavailable: "ign", DeliveredCard: "ign", UserAccept: { to: "T8_Accepted", fx: [] }, UserReject: REWORK,
     AcceptTimeout: "rej", Cancel: "ign", StoppedConfirmed: "ign", ExecFailed: "ign",
   },
-  T8_Accepted: { ...allIgn(), Dispatch: ORPHAN_STOP("T8_Accepted"), ProducerModelAdded: { to: "T8_Accepted", pm: PM2, fx: [] }, Amend: REWORK, UserReject: REWORK },
-  T9_StopRequested: { ...allIgn(), Claim: "rej", Dispatch: ORPHAN_STOP("T9_StopRequested"), StoppedConfirmed: { to: "T10_Cancelled", fx: [{ kind: "release-slot", computeId: "cc" }] } },
-  T10_Cancelled: { ...allIgn(), Dispatch: ORPHAN_STOP("T10_Cancelled") },
-  T11_Failed: { ...allIgn(), Dispatch: ORPHAN_STOP("T11_Failed") },
+  T8_Accepted: { ...allIgn(), Release: "rej", Reassign: "rej", Dispatch: ORPHAN_STOP("T8_Accepted"), ProducerModelAdded: { to: "T8_Accepted", pm: PM2, fx: [] }, Amend: REWORK, UserReject: REWORK },
+  T9_StopRequested: { ...allIgn(), Claim: "rej", Release: "rej", Reassign: "rej", Dispatch: ORPHAN_STOP("T9_StopRequested"), StoppedConfirmed: { to: "T10_Cancelled", fx: [{ kind: "release-slot", computeId: "cc" }] } },
+  T10_Cancelled: { ...allIgn(), Release: "rej", Reassign: "rej", Dispatch: ORPHAN_STOP("T10_Cancelled") },
+  T11_Failed: { ...allIgn(), Release: "rej", Reassign: "rej", Dispatch: ORPHAN_STOP("T11_Failed") },
 };
 // 这些状态的代表性任务从未分配过交付代次,样例里的第 1 代次是未分配的未来代次:四类交付事件在任何状态都必须拒绝(R7-CORR-02)
 for (const s of ["T1_Open", "T2_Claimed", "T3_Running", "T4b_BlockedOnHuman", "T5_InReview", "T9_StopRequested", "T10_Cancelled", "T11_Failed"] as const) {
@@ -122,6 +122,7 @@ test("AC-09 每个状态×每个事件都有明确处理:拒绝格实际拒绝�
 });
 
 test("AC-09 每格的实际处理符合独立需求期望(目标状态、副作用、版本、负责人、累积生产模型),不以生产表为判据", () => {
+  assert.deepEqual(new Set(EVENT_KINDS), new Set(Object.keys(SAMPLE)));
   for (const s of STATES) for (const e of EVENT_KINDS) {
     const want = SPEC[s][e];
     const t = inState(s);
@@ -133,7 +134,7 @@ test("AC-09 每格的实际处理符合独立需求期望(目标状态、副作�
     assert.equal(r.ok && r.task.state, want.to, `${at} 目标状态`);
     if (want.fx) assert.deepEqual(r.ok && r.effects, want.fx, `${at} 副作用`);
     if (want.ver !== undefined) assert.equal(r.ok && r.task.constraintVer, want.ver, `${at} 条件版本`);
-    assert.equal(r.ok && r.task.owner, want.owner ?? t.owner, `${at} 负责人`);
+    assert.equal(r.ok && r.task.owner, Object.hasOwn(want, "owner") ? want.owner : t.owner, `${at} 负责人`);
     assert.deepEqual(r.ok && r.task.producerModels, want.pm ?? t.producerModels, `${at} 累积生产模型`);
   }
 });
@@ -640,7 +641,10 @@ test("AC-28① 交付待确认没有归档出口:状态集合里没有归档状�
     if (r.task.state === "T8_Accepted") assert.equal(e, "UserAccept");
     assert.ok(!["T10_Cancelled", "T11_Failed"].includes(r.task.state), `${e} 把 T8a 带进了终态`);
   }
-  assert.equal(apply(t, SAMPLE.AcceptTimeout).ok, false);
+  const timeout = apply(t, SAMPLE.AcceptTimeout);
+  assert.equal(timeout.ok, false);
+  assert.match(timeout.ok ? "" : timeout.reason, /#2273/);
+  assert.deepEqual(apply(t, SAMPLE.Release), { ok: false, reason: "T8a_Delivered × Release:已交付不能放弃认领" });
 });
 
 test("AC-28① 用户一直不说话:当前代次的 AcceptTimeout 在 T8a 被拒(用户定案 2273),任务原样停在 T8a,不归档、不算通过、不清当前交付(阳性埋雷)", () => {
@@ -1285,6 +1289,8 @@ test("R6-TEST-01 当前代次号但 commit 不符的退回被当作旧回包忽�
 type Dom = "s" | "n" | "p" | "b" | readonly string[];
 const SHAPES: { [K in EventKind]: { req: Record<string, Dom>; opt?: Record<string, Dom> } } = {
   Claim: { req: { by: "s" } },
+  Release: { req: { by: "s" } },
+  Reassign: { req: { by: "s", to: "s" } },
   Dispatch: { req: { computeId: "s", model: "s", requestId: "s" } },
   ProducerModelAdded: { req: { model: "s", computeId: "s" } },
   NeedHuman: { req: { qId: "s", computeId: "s", constraintVer: "n" } },
@@ -1964,7 +1970,10 @@ test("R13 进程内改写 TABLE/行/格/STATES/EVENT_KINDS 都抛 TypeError,未�
   assert.throws(() => { (EVENT_KINDS as unknown as string[])[0] = "Forged"; }, TypeError);
   const r = apply(newTask("t1", "u1"), { kind: "Dispatch", computeId: "cc-1", model: PRODUCER, requestId: "t1#L0" });
   assert.equal(r.ok, false);
+  assert.deepEqual(r, { ok: false, reason: "T1_Open × Dispatch:尚未认领,不能派发" });
   assert.equal(TABLE.T1_Open.Dispatch.kind, "reject");
+  assert.equal(TABLE.T2_Claimed.Release?.kind, "go");
+  assert.ok(Object.isFrozen(TABLE.T2_Claimed.Release));
   assert.equal(STATES.length, 11);
   assert.equal(EVENT_KINDS[0], "Claim");
 });

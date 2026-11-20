@@ -110,6 +110,30 @@ test("tasks.assign:给 T1_Open 任务指定负责人后它认领并开工,会话
   await host.close();
 });
 
+test("tasks.reassign:用户可在首派尚未回绑前改派,旧启动被撤销且新负责人接管", async (testContext) => {
+  const { compute, host, a, b, g, call } = await setup();
+  let resumeSpawn!: () => void;
+  const pendingSpawn = new Promise<void>(resolve => { resumeSpawn = resolve; });
+  const spawn = compute.adapter.spawn.bind(compute.adapter);
+  compute.adapter.spawn = async (...args) => { await pendingSpawn; return spawn(...args); };
+  testContext.after(async () => { resumeSpawn(); await settle(host, compute); compute.close(); await host.close(); });
+  const t = await call("tasks.create", { clientActionId: "c1", roomId: g.id, title: "改派测试" });
+  const assigned = host.assignTask({ taskId: t.id, contactId: a.id, clientActionId: "as1" });
+  assert.equal(assigned.ownerContactId, a.id);
+  const before = host.lastSeq(g.id);
+  await assert.rejects(call("tasks.reassign", { taskId: t.id, contactId: b.id, clientActionId: "stale", expectedRevision: t.stateVer! }), /任务版本已变化/);
+  assert.equal(host.lastSeq(g.id), before);
+  const moved = await call("tasks.reassign", { taskId: t.id, contactId: b.id, clientActionId: "rs1", expectedRevision: assigned.stateVer! });
+  assert.equal(moved.ownerContactId, b.id);
+  resumeSpawn();
+  await settle(host, compute);
+  assert.equal((await call("tasks.get", { taskId: t.id })).ownerContactId, b.id);
+  const viaContract = await createService(host).handle("tasks.get", { taskId: t.id });
+  assert.deepEqual(viaContract.ok && [(viaContract.value as TaskView).state, (viaContract.value as TaskView).ownerContactId], ["T3_Running", b.id]);
+  assert.ok(host.listMessages(g.id, {}).messages.some((m) => m.clientActionId === "rs1" && m.mentions.some((x) => x.id === b.id)));
+  assert.deepEqual(compute.stopped, [compute.spawned[0]!.computeId]);
+});
+
 test("负责人不是本会话联系人成员 → invalid_params,什么都没新增(任务、消息、Compute);assign 同样拒绝", async () => {
   const { compute, host, outsider, g, call, code } = await setup();
   const before = host.lastSeq(g.id);
