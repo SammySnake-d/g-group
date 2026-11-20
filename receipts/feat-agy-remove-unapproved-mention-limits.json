@@ -6,7 +6,7 @@
     "session": "codex:cd5a827f-66ac-4411-9525-15782b923e1d"
   },
   "red": {
-    "commit": "278499aba538130713a8959e5c69ea0694c3d3b2",
+    "commit": "dcedb351695d061f2c2ab26118ccc20dedcc9d3a",
     "tests": [
       "默认配置下同一用户消息派生的第 5 至第 8 次唤醒仍可送达",
       "曾触及次数限额的旧因果根在默认配置下允许新的唤醒",
@@ -14,7 +14,7 @@
     ]
   },
   "green": {
-    "commit": "f4b2167188cfa396d44ada2be59f4737cb757cd6"
+    "commit": "54c8e0c9dfd0324c9c4ed46eaf7974bf03d63319"
   },
   "review": null,
   "waiver": null,

@@ -1,12 +1,12 @@
 Default group follow-up caps · 2026-11-20
 
 Base: a91adc8a
-Red: 278499ab. Run the three named tests from the slice receipt on this commit.
+Red: dcedb351. Run the three named tests from the slice receipt on this commit.
 * Default per-root wakes 5–8 were refused.
 * A root previously stopped for hop count could not schedule a new wake.
 * Six alternating distinct posts admitted only the first two.
 
-Green: f4b21671. The identical three tests pass. The server delivery path also
+Green: 54c8e0c9. The identical three tests pass. The server delivery path also
 admits three distinct autonomous follow-ups and drops the identical repost.
 The focused suite below reported 56 passed, 0 failed, 0 skipped.
 
@@ -15,4 +15,5 @@ npm run check: exit 0 (docs, contract, structure, typecheck)
 
 Explicit embedding limits, duplicate message/target delivery, and separate room
 post checks are covered by the suite. Live dialogue termination is a separate
-acceptance case.
+acceptance case. Existing persisted roots stopped under a former default are
+not treated as stopped when the corresponding explicit limit is now absent.
