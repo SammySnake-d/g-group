@@ -290,7 +290,7 @@ interface ContactDoc extends Omit<ContactView, "activity"> {
   /** Legacy rows lack provenance, so only contacts created without a model in B4 follow the default. */
   readonly speakingModelInherited?: boolean;
 }
-interface RoomPostState { readonly budget: RoomPostBudget }
+interface RoomPostState { readonly budget: RoomPostBudget; readonly lastHumanAt?: number }
 
 interface TaskDoc {
   readonly task: Task;
@@ -1189,6 +1189,14 @@ export class Host {
     const e = appendEvent(this.db.store, `room:${roomId}`, sender, { kind: "message", text: f.text }, at);
     recordAction(this.db.store, key, { seq: e.seq });
     this.loopGuard.recordMessage(roomId, e.seq, f.causeRoots ?? []);
+    if (sender.kind === "user" && this.opts.roomPostBudget !== false) {
+      // Only an existing autonomous-post budget needs a human boundary recorded.
+      const budget = getDoc<RoomPostState>(this.db, `room-post:${roomId}`);
+      if (budget) {
+        const lastHumanAt = Math.max(this.clock(), budget.value.budget.posts.at(-1)?.at ?? 0);
+        putDoc(this.db, `room-post:${roomId}`, budget.ver, { ...budget.value, lastHumanAt });
+      }
+    }
     indexMessageTx(this.db, { roomId, seq: e.seq, at, sender, threadRoot: f.threadRootSeq ?? null, text: f.text, attachments: f.attachments ?? [] });
     // 回复 = @原作者 + 引用(AC-37 ①):主回复对象一定在引用里;引用保序去重
     const quoted = [...new Set([...(f.quotedSeqs ?? []), ...(f.replyToSeq != null ? [f.replyToSeq] : [])])];
@@ -1239,10 +1247,14 @@ export class Host {
   private roomPostRefusalTx(roomId: string, contact: ContactDoc, text: string): string | null {
     const key = `room-post:${roomId}`;
     const previous = getDoc<RoomPostState>(this.db, key);
+    const lastHumanAt = previous?.value.lastHumanAt;
     const decision = decideRoomPost(previous?.value.budget ?? emptyRoomPostBudget(), {
-      botId: contact.id, botName: contact.name, text, now: this.clock(),
+      botId: contact.id, botName: contact.name, text,
+      // A post made in the same wall-clock millisecond as the latest human message is still later.
+      now: Math.max(this.clock(), lastHumanAt === undefined ? 0 : lastHumanAt + 1),
+      ...(lastHumanAt === undefined ? {} : { lastHumanAt }),
     });
-    putDoc(this.db, key, previous?.ver ?? 0, { budget: decision.budget });
+    putDoc(this.db, key, previous?.ver ?? 0, { budget: decision.budget, ...(lastHumanAt === undefined ? {} : { lastHumanAt }) });
     return decision.allowed ? null : `room-post:${decision.refusal}: ${decision.message}`;
   }
 

@@ -164,6 +164,7 @@ test("默认配置下同一用户消息派生的第 5 至第 8 次唤醒仍可�
   });
   assert.deepEqual(decisions, Array(8).fill(true));
   assert.deepEqual(guard.blockedWakes(), []);
+  assert.equal(guard.isStopped("room-a", 9), false);
   assert.equal(guard.admit("room-a", 9, "b").duplicate, true);
 });
 
