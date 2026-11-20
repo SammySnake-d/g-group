@@ -318,7 +318,7 @@ console.log(JSON.stringify(out));`;
 const out = {};
 for (const [k, mounts] of ${JSON.stringify(probes)}) { const r = sandboxed(["--input-type=module", "-e", ${JSON.stringify(reader)}, ${JSON.stringify(JSON.stringify([...deny, ...allow]))}], ${JSON.stringify(work)}, mounts); out[k] = { status: r.status, stdout: r.stdout, stderr: r.stderr }; }
 console.log(JSON.stringify(out));`;
-    const r = spawnSync(node, ["--input-type=module", "-e", driver], { encoding: "utf8", timeout: 120_000, env: { ...gitEnv(), PATH: `${path.dirname(node)}:/usr/bin:/bin`, HOME: link } });
+    const r = spawnSync(node, ["--input-type=module", "-e", driver], { encoding: "utf8", timeout: 120_000, env: { ...gitEnv(), PATH: docker ? (process.env.PATH ?? "/usr/bin:/bin") : path.dirname(node) + ":/usr/bin:/bin", HOME: link } });
     const line = (r.stdout ?? "").trim().split("\n").pop() ?? "";
     let res: Record<string, { status: number | null; stdout: string; stderr: string }>;
     try { res = JSON.parse(line); } catch { return `探针没有给出结果(退出 ${r.status}):${(r.stdout ?? "").slice(-300)}${(r.stderr ?? "").slice(-300)}`; }
