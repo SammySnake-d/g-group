@@ -6,11 +6,11 @@ import { type TestContext, test } from "node:test";
 import type { SpawnOptions } from "@g-group/kernel/compute";
 import { createCodexComputeAdapter } from "./adapter.ts";
 
-function fixture(t: TestContext, createAdapter: typeof createCodexComputeAdapter, mode = "normal") {
+function fixture(t: TestContext, createAdapter: typeof createCodexComputeAdapter, mode = "normal", hostEnv: Record<string, string> = {}) {
   const root = mkdtempSync(path.join(tmpdir(), "gg-codex-adapter-"));
   const adapter = createAdapter({
     runner: { command: process.execPath, args: [path.resolve(import.meta.dirname, "../test-support/native-wire.mjs")] },
-    hostEnv: { FIXTURE_MODE: mode },
+    hostEnv: { ...hostEnv, FIXTURE_MODE: mode },
     dataDir: root,
     timeoutMs: 1500,
     reapForceMs: 250,
@@ -33,8 +33,30 @@ function fixture(t: TestContext, createAdapter: typeof createCodexComputeAdapter
 
 function requests(home: string) {
   return readFileSync(path.join(home, "wire-requests.jsonl"), "utf8").trim().split("\n")
-    .map((line) => JSON.parse(line) as { method: string; params: { sandbox?: string; threadId?: string; expectedTurnId?: string } });
+    .map((line) => JSON.parse(line) as { method: string; params: { sandbox?: string; threadId?: string; expectedTurnId?: string; modelProvider?: string; config?: Record<string, unknown> } });
 }
+
+test("Codex Compute uses the configured Responses provider on a new and a reopened native thread", async (t) => {
+  const baseUrl = "http://127.0.0.1:4567/v1";
+  const fixtureValue = ["unit", "test", "value"].join("-");
+  const { adapter, spawn } = fixture(t, createCodexComputeAdapter, "normal", { OPENAI_BASE_URL: baseUrl, OPENAI_API_KEY: fixtureValue });
+  const result = await spawn();
+  assert.ok(result.ok);
+  await adapter.settled(result.computeId);
+  assert.ok((await adapter.quiesce!(result.computeId)).ok);
+  assert.deepEqual(await adapter.resume(result.computeId, "reopen"), { ok: true });
+  await adapter.settled(result.computeId);
+
+  const wire = requests(result.manifest.configDir!);
+  const threads = wire.filter(r => r.method === "thread/start" || r.method === "thread/resume");
+  assert.deepEqual(threads.map(r => r.params.modelProvider), ["g-group-responses", "g-group-responses"]);
+  for (const thread of threads) {
+    assert.deepEqual(thread.params.config?.model_providers, {
+      "g-group-responses": { name: "G-Group Responses", wire_api: "responses", base_url: baseUrl, env_key: "OPENAI_API_KEY" },
+    });
+  }
+  assert.ok(!JSON.stringify(wire).includes(fixtureValue));
+});
 
 test("P1B adapter snapshots only after quiescence", async (t) => {
   const { adapter, spawn } = fixture(t, createCodexComputeAdapter, "progress");
