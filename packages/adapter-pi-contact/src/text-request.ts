@@ -1,4 +1,4 @@
-import { normalizeContext, type SystemMessage, type UserMessage } from "@earendil-works/pi-ai";
+import { normalizeContext, type AssistantMessage, type SystemMessage, type UserMessage } from "@earendil-works/pi-ai";
 import type { UsageSink } from "@g-group/kernel";
 import { PiContactMindError } from "./errors.ts";
 import type { PiContactMindOptions } from "./mind.ts";
@@ -22,7 +22,7 @@ export async function textRequest(cfg: Resolved, input: TextRequest): Promise<st
   const context = normalizeContext({ messages: [system, user] });
   return (await withProtocols(cfg, input.signal, async (attempt) => {
     const fail = (why: string) => new PiContactMindError("provider-error", cfg.redact(`${input.failureLabel}:${why}`));
-    let msg;
+    let msg: AssistantMessage;
     try {
       msg = await streamRequest(cfg, attempt, context, {
         options: { signal: input.signal }, cache: false, request: 1,
