@@ -1,0 +1,23 @@
+packages/server/src/host.ts
+  s_2cca368c709707::t_00ae34f7d6a610 293,1243,1245
+packages/server/src/loop-guard.ts
+  s_2cca368c709707::t_7af287fc8a7523 2,16,18,42,46,92-94,109-111,113
+packages/server/src/room-post-budget.ts
+  s_2cca368c709707::t_787f6534b493c5 16,34,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "665760897508bfa97027fc470dfa3446df73fc36",
+  "prompts": {},
+  "sessions": {
+    "s_2cca368c709707": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f8ad-734d-79b0-9c3c-4fac458689b6",
+        "model": "fnqtz-gpt/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
