@@ -1,0 +1,77 @@
+docs/adr/0001-comment-decisions.md
+  s_b9ccea1f504419::t_34333f46fa260f 1-76
+apps/desktop/src/components/messages/Row.tsx
+  s_b9ccea1f504419::t_34333f46fa260f 23
+apps/desktop/e2e/parity-chat.electron.spec.ts
+  s_b9ccea1f504419::t_34333f46fa260f 170
+packages/kernel/src/classify.ts
+  s_b9ccea1f504419::t_34333f46fa260f 67
+.claude/skills/delete-comment/SKILL.md
+  s_b9ccea1f504419::t_34333f46fa260f 1-37
+apps/desktop/src/store/types.ts
+  s_b9ccea1f504419::t_34333f46fa260f 17-18,41
+package.json
+  s_b9ccea1f504419::t_34333f46fa260f 17
+packages/kernel/src/plugins.test.ts
+  s_b9ccea1f504419::t_34333f46fa260f 1431,1433,1435,1583,1827,1863,1905
+packages/ui-core/src/plugins.ts
+  s_b9ccea1f504419::t_34333f46fa260f 113
+scripts/check-comments.mjs
+  s_b9ccea1f504419::t_34333f46fa260f 1-192
+packages/kernel/src/plain.test.ts
+  s_b9ccea1f504419::t_34333f46fa260f 195
+apps/desktop/src/components/models/ContactModelSettings.tsx
+  s_b9ccea1f504419::t_34333f46fa260f 33
+packages/adapter-cc-compute/test-support/fake-claude-resident.mjs
+  s_b9ccea1f504419::t_34333f46fa260f 202
+apps/desktop/src/components/models/EffectivePanel.tsx
+  s_b9ccea1f504419::t_34333f46fa260f 47
+apps/desktop/e2e/astryx.ui.spec.ts
+  s_b9ccea1f504419::t_34333f46fa260f 89
+packages/kernel/src/compute.ts
+  s_b9ccea1f504419::t_34333f46fa260f 116
+packages/kernel/src/cron.test.ts
+  s_b9ccea1f504419::t_34333f46fa260f 24,32
+packages/kernel/src/assemble.ts
+  s_b9ccea1f504419::t_34333f46fa260f 179
+apps/desktop/e2e/group-side.electron.spec.ts
+  s_b9ccea1f504419::t_34333f46fa260f 111,143
+packages/ui-core/src/cron.test.ts
+  s_b9ccea1f504419::t_34333f46fa260f 239
+apps/desktop/e2e/closed-loop.electron.spec.ts
+  s_b9ccea1f504419::t_34333f46fa260f 118
+packages/kernel/src/plugins.ts
+  s_b9ccea1f504419::t_34333f46fa260f 275
+scripts/comment-policy.json
+  s_b9ccea1f504419::t_34333f46fa260f 1-58
+.github/workflows/trusted-gates.yml
+  s_b9ccea1f504419::t_34333f46fa260f 44-45,47
+apps/desktop/src/components/models/GlobalModelDefaults.tsx
+  s_b9ccea1f504419::t_34333f46fa260f 29
+packages/domain/src/task.ts
+  s_b9ccea1f504419::t_34333f46fa260f 3-5
+scripts/comments-baseline.json
+  s_b9ccea1f504419::t_34333f46fa260f 1-1183
+apps/desktop/src/data.ts
+  s_b9ccea1f504419::t_34333f46fa260f 25
+packages/kernel/src/retry-policy.ts
+  s_b9ccea1f504419::t_34333f46fa260f 163,193
+.codex/skills/delete-comment/SKILL.md
+  s_b9ccea1f504419::t_6a0cf65b9e2ad3 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c7798077d8ae8352cf7a9c9168704d5f280204d7",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
