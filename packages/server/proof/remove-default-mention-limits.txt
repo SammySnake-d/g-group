@@ -1,0 +1,19 @@
+Default group follow-up caps · 2026-11-20
+
+Base: a91adc8a
+Red: c6f2630b. Run the three named tests from the slice receipt on this commit.
+* Default per-root wakes 5–8 were refused.
+* A root previously stopped for hop count could not schedule a new wake.
+* Six alternating distinct posts admitted only the first two.
+
+Green: 888418e0. The identical three tests pass. The server delivery path also
+admits three distinct autonomous follow-ups and drops the identical repost.
+The focused suite below reported 56 passed, 0 failed, 0 skipped.
+
+node --test --test-concurrency=2 packages/server/src/loop-guard.test.ts packages/server/src/room-post-budget.test.ts packages/server/src/loop-guard-r1-regression.test.ts packages/server/src/loop-guard-r1-calibration.test.ts packages/server/src/group-supplement.test.ts
+npm run check: exit 0 (docs, contract, structure, typecheck)
+
+Explicit embedding limits, duplicate message/target delivery, and separate room
+post checks are covered by the suite. Live dialogue termination is a separate
+acceptance case. Existing persisted roots stopped under a former default are
+not treated as stopped when the corresponding explicit limit is now absent.

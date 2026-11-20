@@ -168,7 +168,7 @@ test("结构化 @everyone 展开为当前成员,与逐个点名去重并立即�
   } finally { await host.close(); rmSync(dir, { recursive: true, force: true }); }
 });
 
-test("宿主自动群发的重复与无人回答额度拒收,有真人新消息仍可发言", { timeout: 10_000 }, async () => {
+test("宿主自动群发去重,无人回答时仍可追加不同的发言", { timeout: 10_000 }, async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "gg-room-budget-"));
   let leader = "", follower = "", roomId = "";
   let followerSawUser!: () => void;
@@ -192,9 +192,9 @@ test("宿主自动群发的重复与无人回答额度拒收,有真人新消息�
     await host.idle();
     const peer = host.listMessages(roomId, {}).messages.find((m) => m.text === "发起原文");
     assert.ok(peer);
-    assert.deepEqual(host.listMessages(roomId, {}).messages.filter((m) => m.sender.id === follower).map((m) => m.text), ["自动补充", "自动补充二"]);
+    assert.deepEqual(host.listMessages(roomId, {}).messages.filter((m) => m.sender.id === follower).map((m) => m.text), ["自动补充", "自动补充二", "自动补充三"]);
     host.send({ roomId, clientActionId: "follow", text: "真人追问", mentions: [{ id: follower, source: "manual" }] });
     await host.idle();
-    assert.deepEqual(host.listMessages(roomId, {}).messages.filter((m) => m.sender.id === follower).map((m) => m.text), ["自动补充", "自动补充二", "自动补充"]);
+    assert.deepEqual(host.listMessages(roomId, {}).messages.filter((m) => m.sender.id === follower).map((m) => m.text), ["自动补充", "自动补充二", "自动补充三", "自动补充"]);
   } finally { await host.close(); rmSync(dir, { recursive: true, force: true }); }
 });
