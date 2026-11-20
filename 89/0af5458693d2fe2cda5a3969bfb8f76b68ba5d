@@ -1,0 +1,25 @@
+packages/server/src/manual-task.test.ts
+  s_b9ccea1f504419::t_ed0c1537cfdfe0 113-135
+packages/adapter-pi-contact/src/mind.test.ts
+  s_b9ccea1f504419::t_18622a27fe29b4 137,150
+packages/domain/src/task.test.ts
+  s_b9ccea1f504419::t_03fdcf8cfb0f42 24,47,57,62,68,74,80,87,92,96-99,125,137,644-647,1292-1293,1973,1975-1976
+packages/server/src/group-claim.test.ts
+  s_b9ccea1f504419::t_b71d7a38ca8754 86-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "890af5458693d2fe2cda5a3969bfb8f76b68ba5d",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
