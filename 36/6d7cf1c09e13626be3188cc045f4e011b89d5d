@@ -1,0 +1,50 @@
+docs/subsystems/domain-and-state-machines.md
+  s_b9ccea1f504419::t_d7d97ad06a7546 6-7
+packages/server/src/task-doc.ts
+  s_b9ccea1f504419::t_ac598b2f98b19b 1-23
+docs/subsystems/contact-and-gateway.md
+  s_b9ccea1f504419::t_d7d97ad06a7546 9-10
+packages/server/src/assemble.ts
+  s_b9ccea1f504419::t_3a432f5ce5a7e3 62-63
+  s_b9ccea1f504419::t_190ebcd4755b99 106,115-117
+packages/server/src/host.ts
+  s_b9ccea1f504419::t_6c1d7130c1abb7 2066,2068-2069,2074,2765,3058,3192-3198,3240,3344,3418,3420-3442,3449-3451
+  s_b9ccea1f504419::t_ac598b2f98b19b 161
+  s_b9ccea1f504419::t_190ebcd4755b99 3443-3448
+packages/kernel/src/rounds.ts
+  s_b9ccea1f504419::t_190ebcd4755b99 207-208,282
+packages/adapter-pi-contact/src/tools.ts
+  s_b9ccea1f504419::t_3a432f5ce5a7e3 11,57-60,62,65,73,242,304-306
+packages/adapter-pi-contact/src/mind.test.ts
+  s_b9ccea1f504419::t_b3e6d081dc445c 150
+packages/adapter-pi-contact/src/mind.ts
+  s_b9ccea1f504419::t_3a432f5ce5a7e3 113-116
+packages/domain/src/task.ts
+  s_b9ccea1f504419::t_3a432f5ce5a7e3 306,312,316,437
+packages/api-contract/src/api.ts
+  s_b9ccea1f504419::t_3a432f5ce5a7e3 264
+packages/server/src/group-claim.test.ts
+  s_b9ccea1f504419::t_b3e6d081dc445c 156-157,160,163-168,177,189-190,198,205-208
+packages/kernel/src/runtime-ports.ts
+  s_b9ccea1f504419::t_3a432f5ce5a7e3 48-55,107-108,155
+packages/server/src/manual-task.test.ts
+  s_b9ccea1f504419::t_b3e6d081dc445c 118-121
+packages/server/src/bg-compaction.ts
+  s_b9ccea1f504419::t_d7d97ad06a7546 141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "366d7cf1c09e13626be3188cc045f4e011b89d5d",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "blueloon-gpt/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
