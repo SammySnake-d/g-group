@@ -2,13 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
-// 概念版的动效证据(连拍):每条用例本身都断言动效确实发生;设了 GG_SHOTS 时把帧存到 <GG_SHOTS>/concept/<点子>-frame-<主题>-<序号>.png。
-// 云端没有 ffmpeg,不录视频。动效是否发生由页面内按帧采样断言(真实时间);中间帧用 Chrome screencast 收真实画出的帧。
 const DIR = process.env.GG_SHOTS ? path.join(process.env.GG_SHOTS, "concept") : null;
 const VIEW = { width: 1280, height: 800 };
 const THEMES = ["light", "dark"] as const;
 
-/** slowmo:按库的 tempo 规则把概念版动效放慢 N 倍(只为在慢机器上拍清过程,形状不变) */
 async function open(browser: Browser, theme: string, opts: { scale?: number; slowmo?: number } = {}) {
   const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: VIEW, deviceScaleFactor: opts.scale ?? 2, locale: "zh-CN", timezoneId: "Asia/Shanghai" });
   const page = await ctx.newPage();
@@ -16,7 +13,6 @@ async function open(browser: Browser, theme: string, opts: { scale?: number; slo
   return page;
 }
 
-/** 在页面里按帧采样某个元素的缩放(动画是真实时间跑的,不靠假时钟):返回采样期间的最小、最大值和最后一个值 */
 async function sampleScale(page: Page, sel: string, ms: number) {
   return page.evaluate(([sel, ms]) => new Promise<{ min: number; max: number; last: number }>((done) => {
     let min = Infinity, max = -Infinity, last = NaN
@@ -30,8 +26,6 @@ async function sampleScale(page: Page, sel: string, ms: number) {
   }), [sel, ms] as const);
 }
 
-/** 真实帧连拍:用 Chrome 的 screencast 把动作前后 ms 毫秒里浏览器真的画出来的每一帧收下来(和录像同源,不重放、不模拟),
- *  存成 <name>-cast-<theme>-<序号>.jpg;没设 GG_SHOTS 时只执行动作 */
 async function screencast(page: Page, name: string, theme: string, ms: number, act: () => Promise<unknown>) {
   if (!DIR) return act();
   fs.mkdirSync(DIR, { recursive: true });
@@ -42,7 +36,6 @@ async function screencast(page: Page, name: string, theme: string, ms: number, a
   const r = await act();
   await page.waitForTimeout(ms);
   await cdp.send("Page.stopScreencast");
-  /* 只留均匀分布的 14 帧(取回云端截图包要走网络,全留太大) */
   const keep = frames.length <= 14 ? frames : Array.from({ length: 14 }, (_, i) => frames[Math.round((i * (frames.length - 1)) / 13)]);
   keep.forEach((b, i) => fs.writeFileSync(path.join(DIR, `${name}-cast-${theme}-${String(i).padStart(2, "0")}.jpg`), b));
   await cdp.detach();
@@ -50,7 +43,6 @@ async function screencast(page: Page, name: string, theme: string, ms: number, a
 }
 
 type Clip = { x: number; y: number; width: number; height: number };
-/** 拍一帧(只拍给定区域,CSS 像素),存成 <name>-frame-<theme>-<n>.png */
 async function frame(page: Page, name: string, theme: string, n: number | string, clip?: Clip) {
   if (!DIR) return;
   fs.mkdirSync(DIR, { recursive: true });
@@ -122,7 +114,6 @@ for (const theme of THEMES) {
     await expect(happy).toHaveAttribute("data-mood", "happy");
     await page.waitForTimeout(900);
     if (DIR) await happy.screenshot({ path: path.join(DIR, `gaze-frame-${theme}-5-happy.png`) });
-    // 眼睛方向真的在变:打字过程中水平分量往右
     const xs = looks.slice(1).map((l) => Number(l.split(",")[0]));
     expect(xs[1]).toBeGreaterThan(xs[0]);
     expect(xs[2]).toBeGreaterThanOrEqual(xs[1]);

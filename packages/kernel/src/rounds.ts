@@ -4,7 +4,6 @@
 //   1 固定前缀      :系统提示词 → 工具声明 → 人设(SOUL.md)→ 群公告 → 当前作用域已确认规矩与用户纠正(原文,带来源 #seq)。
 //                    只由 prefix 输入决定;账本、状态笔记、新消息、指针一律不进这里,所以前缀输入相同的两轮逐字节相同。
 //                    规矩按 (sourceSeq, id) 排序后输出,规矩表的存储顺序变化不会打破缓存前缀。
-//                    系统提示词、工具声明、人设、群公告这四段是配置文本,段内出现日期、时刻、#序号、任务号、「最近 N 条」就报错
 //                    (与 assemble.ts 同一套判据)。规矩与纠正是来源消息的原文,天然会引用 #seq、时刻(「#2063 那条作废」
 //                    「22:00 后别 @ 我」),它们随规矩表变化而变化,不是每轮会变的内容,所以不扫;规矩变更时前缀如实跟着变(D22 规则 2)。
 //   2 承诺账本      :未了结承诺由代码按原文复制,不改写;本轮绑定的放详情原文,其余只放一行索引(id、短名、状态、来源 #seq、任务)。
@@ -12,9 +11,6 @@
 //   4 新消息        :processed_seq 之后的全部输入(消息、所属 Compute 事件、定时触发),按到达顺序、原文,消息带 #seq 与发送人。
 //                    同一会话的消息 seq 必须严格递增;seq 不大于该会话 processed_seq 的旧消息显式拒绝(不在五块之外夹带旧消息)。
 //   5 指针与按需换入:调用方取回的原文(引用链 D24 的最小版:被引用消息原文由调用方作为 pointers 给出),text 为空时只给指针。
-// 只有第 1 块末尾标 cacheBreakpoint。basedOnSeq 按会话记第 4 块里消息的最大 seq(Compute 事件与定时触发没有 seq,不计)。
-// 超预算显式失败并说明超出多少字节,不静默截掉任何要求。
-// 输入先过统一的普通数据判定(plain.ts):getter 永不调用,Proxy、类实例、函数一律拒绝;之后只读冻结副本。
 import { dataDesc, pushOwn } from "./own.ts";
 import { plainData } from "./plain.ts";
 import { BLOCK_LABELS, type BlockNo, type ComputeSignal, type Inbound, type InboundSenderKind, type RoundBlock, type RoundRequest } from "./runtime-ports.ts";
@@ -29,17 +25,13 @@ export interface PrefixRule {
 export interface RoundPrefix {
   /** 系统提示词,不能为空 */
   readonly system: string;
-  /** 工具声明文本;没有给 "" */
   readonly tools: string;
-  /** 人设(SOUL.md)原文;没有给 "" */
   readonly persona: string;
-  /** 群公告原文;私聊或没有公告给 "" */
   readonly roomNotice: string;
   readonly rules: readonly PrefixRule[];
   /** 联系人的全局记忆(D25 第 6 节:每轮都适用的才进前缀,按会话快照放入,中途变化走第 5 块);不给即没有 */
   readonly memories?: readonly { readonly id: string; readonly title: string; readonly text: string }[];
 }
-/** 一条未了结承诺。text 是账本里的原文,代码原样复制 */
 export interface LedgerEntry {
   readonly id: string;
   readonly sourceSeq: number;
@@ -51,7 +43,6 @@ export interface LedgerEntry {
 }
 export interface RoundLedger {
   readonly open: readonly LedgerEntry[];
-  /** 本轮绑定的承诺 id:放详情原文;其余只放一行索引 */
   readonly boundIds: readonly string[];
 }
 export interface RoundStateNote {
@@ -72,11 +63,9 @@ export interface RoundAssembleInput {
   /** processed_seq 之后的全部输入,按到达顺序 */
   readonly fresh: readonly Inbound[];
   readonly pointers: readonly RoundPointer[];
-  /** 整个请求(五块文本之和)的 UTF-8 字节上限 */
   readonly budgetBytes: number;
 }
 
-/** 第 1 块里要扫会变内容的配置文本段 */
 export type PrefixTextPart = "system" | "tools" | "persona" | "roomNotice";
 export type AssembleRoundResult =
   | { readonly ok: true; readonly request: RoundRequest; readonly totalBytes: number }
@@ -85,7 +74,6 @@ export type AssembleRoundResult =
   | { readonly ok: false; readonly reason: "stale-fresh"; readonly roomId: string; readonly seq: number; readonly processedSeq: number; readonly detail: string }
   | { readonly ok: false; readonly reason: "over-budget"; readonly need: number; readonly budget: number; readonly over: number; readonly blockBytes: readonly number[]; readonly detail: string };
 
-/** 固定前缀里不许出现的会变内容:与 assemble.ts 的 stable 段同一套可判定格式(日期、时刻、#序号、任务号、带数字的最近 N 条) */
 const VOLATILE_PATTERNS: readonly [string, RegExp][] = [
   ["日期", /\d{4}[-/年]\d{1,2}[-/月]\d{1,2}/],
   ["时刻", /\b\d{1,2}:\d{2}(?::\d{2})?\b/],
@@ -176,7 +164,6 @@ function checkSeqList(xs: unknown, seq: number, at: string): string | undefined 
   return undefined;
 }
 
-/** 一条输入的形状(runtime-ports.ts 的 Inbound) */
 function checkInbound(x: unknown, at: string): string | undefined {
   if (!isRec(x)) return `${at} 必须是对象`;
   if (!isLine(x.roomId)) return `${at}.roomId 必须是单行非空字符串`;
@@ -219,7 +206,6 @@ function checkPointers(ps: unknown): string | undefined {
   return undefined;
 }
 
-// ---------------------------------------------------------------- 渲染:只拼接,原文一律原样放入
 
 function renderPrefix(p: RoundPrefix) {
   const rules: PrefixRule[] = [];
@@ -266,7 +252,6 @@ function renderStateNote(n: RoundStateNote | null) {
   return n === null ? "[状态笔记]\n(尚无)\n" : `[状态笔记 v${n.version}]\n${n.text}\n`;
 }
 
-/** 一条输入在第 4 块里的呈现(消息带 #seq、会话、发送人、时刻与引用;Compute 事件与定时触发各有标签),压缩材料也用它 */
 export function renderInboundText(x: Inbound): string {
   if (x.kind === "message") {
     const s = x.sender;
@@ -295,7 +280,6 @@ function renderPointers(ps: readonly RoundPointer[]) {
   return t;
 }
 
-/** 联系人一轮的五块重拼。纯函数:同样的输入得到逐字节相同的输出;失败时给出原因,不返回半截请求 */
 export function assembleRound(input: RoundAssembleInput): AssembleRoundResult {
   const pl = plainData(input, "五块装配输入");
   if (!pl.ok) return invalid(`五块装配输入只接受普通数据对象:${pl.path} ${pl.why}`);

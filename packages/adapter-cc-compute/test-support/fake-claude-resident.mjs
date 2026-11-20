@@ -1,31 +1,13 @@
 #!/usr/bin/env node
-// 测试用假 claude CLI(常驻模式):接受与真实 `claude -p --input-format stream-json --output-format stream-json --verbose` 相同的参数,
-// 进程常驻,从 stdin 逐行读 stream-json:user 消息开一轮(输出 system/init → 汇报 → result),control_request 处理 set_model 与
-// apply_flag_settings。行为照 Claude Code 2.1.319 实测(g-group-requirements/evidence/model-hotswap-20261107):
 //   - 每轮开始输出一个 init,model 是会话当前模型;result 带 model_usage_since_last_result(这一轮用过的模型)与 modelUsage(会话累计);
-//   - set_model 成功回 control_response success {model},并回显一条 isReplay 的 user 帧;
 //   - 一轮进行中收到 set_model 立刻生效:这一轮剩下的请求由新模型发出(D27 第 3 节边界 1 —— 宿主必须压到轮边界);
 //   - 换到被拒的模型回 subtype:error、error_code:check_failed,仍用原模型;
-//   - priority:"now" 的 user 消息在一轮进行中当插话,不另开一轮。
 // 会话上下文存在 <fake-dir>/sessions/<会话id>.json:--resume 接回同一会话时读回,换模型、重启后都能答出之前的暗号。
-// 剧本(FAKE_SCRIPT,JSON):
 //   rejectModels: [模型] 换到这些模型回 check_failed;rejectDelayMs:回拒绝前等多久
 //   silentModels: [模型] 换到这些模型永不回包(超时);unsupportedSetModel:true set_model 回「不支持的控制请求」
-//   noEffort:true apply_flag_settings 回「不支持」
-//   turnMs: 每轮从 init 到 result 的时长(默认 30);byText: { "<输入原文>": { turnMs?, reports?, result?, text?, initSession? } }
-//   initSession: 这一轮 init 报的会话 id(模拟 CLI 换了会话)
-//   reports: 这一轮经 report_progress 汇报的内容(真的走 MCP 服务器)
-//   byIncludes: { "<子串>": 剧本 } 输入原文含这个子串就用它(宿主拼的首个提示很长,按子串选剧本);byText 优先
 // 勾选能力(AC-29):--mcp-config 里 host 以外的服务器照真实 CLI 列进 init(不真起进程,状态取 mcpStatus[名],默认 connected),
-//   每个连上的服务器暴露 mcp__<名>__echo;extraInitMcp:[名] 模拟 CLI 多挂了未勾选的服务器。
-//   skill 照真实 CLI 2.1.319 实测(packages/server/proof/v02-config-dir.txt):带 --bare 只加载 --plugin-dir 里的(<插件名>:<目录名>);
-//   不带 --bare 时另加载 CLAUDE_CONFIG_DIR/skills(没设就 HOME/.claude/skills)里的。
 // 活动(AC-43,D26 第 8.3 节):每轮 init 之后输出 system/status requesting(真实 CLI 每次发请求前都有);带 --include-partial-messages 时
-//   回答前输出 stream_event 增量(真实 CLI 2.1.319 在 stdin 收 stream-json 时同样支持,proof/resident-partial-messages-probe.txt)。
-//   每轮剧本 tools:[{ name, input, holdMs?, isError?, inner? }] 逐个输出 tool_use,等 holdMs 后输出 tool_result;inner:true 时在等待中
-//   输出一条带 parent_tool_use_id 的子代理消息。hang:true 这一轮发出请求后再无输出(上游无响应),直到被停止。
 // 停止确认(AC-23):每轮剧本 grandchild:{ setsid?, ignoreTerm? } 在这一轮开始时起一个常驻孙进程,pid 写进 FAKE_RECORD.grandchild.pid
-//   (setsid:true 另建会话与进程组;ignoreTerm:true 忽略 SIGTERM)。顶层 ignoreTerm:true 让 CLI 主进程忽略 SIGTERM,只有组 SIGKILL 能结束。
 // 每次启动、每条 stdin 输入、每个控制请求都追加到 FAKE_RECORD(JSON 行),带 pid、当时模型、是否在一轮中。
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
@@ -118,9 +100,6 @@ function reply(text) {
   return "完成";
 }
 
-// 孙进程:常驻,收到 SIGTERM 时写 <FAKE_RECORD>.grandchild.term;ignoreTerm 时不退出。
-// 测试目录(--fake-dir)被删掉后自己退出:门禁在 macOS 沙箱里跑测试时 ps 不让执行,测试的收尾按命令行找不到它,
-// 它又不和测试共用 stdio,不自己退就会一直留着。测试进行中目录一直在,这条不影响停止确认的判定
 function startGrandchild(g) {
   const term = `${recordFile}.grandchild.term`;
   const code = `const fs = require("node:fs"); process.on("SIGTERM", () => { fs.writeFileSync(${JSON.stringify(term)}, ""); if (!${g.ignoreTerm === true}) process.exit(0); }); setInterval(() => { if (!fs.existsSync(${JSON.stringify(fakeDir || process.cwd())})) process.exit(0); }, 200);`;
@@ -137,7 +116,6 @@ async function runTurn(text) {
   out({ type: "system", subtype: "init", cwd: process.cwd(), session_id: plan.initSession ?? sid, tools: initTools, mcp_servers: initMcp(), skills: initSkills, model, permissionMode: flag("--permission-mode") ?? "default" });
   record({ kind: "turn-start", text, model, effort });
   if (plan.grandchild) startGrandchild(plan.grandchild);
-  // 真实 CLI 输出 init 之后过一会儿才发请求;这里隔 20 毫秒,宿主先记下 started 再看到 requesting(和真实帧序一致)
   await sleep(20);
   out({ type: "system", subtype: "status", status: "requesting", session_id: sid });
   if (plan.hang) { record({ kind: "hang" }); await new Promise(() => {}); }
@@ -221,7 +199,7 @@ rl.on("line", (line) => {
     const content = m.message?.content;
     const text = typeof content === "string" ? content : Array.isArray(content) ? content.map((b) => b.text ?? "").join("") : "";
     record({ kind: "in", text, priority: m.priority ?? null, inTurn, model, effort });
-    if (inTurn && m.priority === "now") return; // 插话:进当前这一轮,不另开
+    if (inTurn && m.priority === "now") return;
     if (inTurn) { queue.push(text); return; }
     void runTurn(text);
   }

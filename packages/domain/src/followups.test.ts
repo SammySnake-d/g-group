@@ -77,7 +77,6 @@ test("AC-16 登记幂等且版本不倒退:同一条重复送达不重复登记,
 const sides = () => {
   let a = running("A", "cp-A");
   let fuA = emptyFollowUps("A");
-  // #m(误挂)和 #n(合法补充)先后挂到 A,各推进一次版本
   const am = must(amendWithFollowUp({ task: a, followUps: fuA }, { roomId: "g", seq: 10, text: "测试报告加覆盖率表", by: "u1", computeResumable: true }));
   const an = must(amendWithFollowUp({ task: am.task, followUps: am.followUps }, { roomId: "g", seq: 12, text: "需求文档补压缩换页", by: "u1", computeResumable: true }));
   a = an.task;
@@ -102,7 +101,6 @@ test("AC-15 A 产生单调递增的新版本 v_A_new = 当前版本 + 1,旧版�
   const r = must(rebindFollowUp(a, b, { roomId: "g", seq: 10, expectedBindingVer: 0, by: "u1", computeResumable: true }));
   assert.equal(r.from.task.constraintVer, before + 1);
   assert.ok(r.from.task.constraintVer > Math.max(...a.followUps.links.map((l) => l.ver)));
-  // 版本没有回到 #m 之前的旧值:按旧版本提审的产物被幂等忽略,A 仍在执行
   const late = apply(r.from.task, { kind: "SubmitForReview", commit: "old", computeId: "cp-A", constraintVer: before });
   assert.ok(late.ok);
   assert.equal(late.task.state, "T3_Running");
@@ -119,7 +117,6 @@ test("AC-15 完整保留并重放 消息 m 之后仍合法的补充 消息 n:A �
   assert.equal(replay.ver, r.from.task.constraintVer);
   assert.equal(r.from.followUps.links.find((l) => l.seq === 12)!.state, "Received");
   assert.deepEqual(activeRequirements(r.from.followUps).map((x) => x.text), ["需求文档补压缩换页"]);
-  // A 的执行器收到新约束(同一实例续接),不是新开任务
   assert.ok(r.from.taskEffects.some((e) => e.kind === "update-constraints" && e.computeId === "cp-A"));
   const toReplay = r.to.effects.find((e) => e.kind === "replay");
   assert.ok(toReplay && toReplay.kind === "replay" && toReplay.requirements.some((x) => x.seq === 10));
@@ -164,12 +161,9 @@ test("AC-15 消息 m 已落实进工作区:先发停止旧执行器,确认停止
   assert.deepEqual(r.from.effects.map((e) => e.kind), ["stop-for-rollback"]);
   assert.ok(!r.from.effects.some((e) => e.kind === "restore-workspace"), "旧执行器没停稳之前不能回滚工作区");
   assert.equal(r.from.followUps.pendingRollback?.beforeSeq, 10);
-  // #n 在 #m 之后落实过,随回滚失效,退回 Received 按新版本重做
   assert.equal(r.from.followUps.links.find((l) => l.seq === 12)!.state, "Received");
   assert.equal(r.from.followUps.links.find((l) => l.seq === 12)!.ver, r.from.task.constraintVer);
-  // 等回滚期间产物不算落实
   assert.equal(applyArtifact(r.from.followUps, { artifact: "x", artifactVer: 99 }).ok, false);
-  // 别的实例的停止确认不算数
   assert.equal(must(confirmRollbackStopped(r.from.followUps, "cp-other")).effects.length, 0);
   const c = must(confirmRollbackStopped(r.from.followUps, "cp-A"));
   assert.equal(c.effects.length, 1);

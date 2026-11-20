@@ -32,7 +32,6 @@ test("第 8.4 节表每一行:按原文认出类别,画板人话、retry_class�
     assert.deepEqual(brief(got), want, text);
     assert.equal(got.raw, text, `${text} 原文保留`);
   }
-  // 卡死、无响应两行由宿主的卡死判定给出(结构化),不靠原文
   assert.deepEqual(brief(classifyFailure({ text: "", stall: "stalled" })), ["stalled", "MidTurn", "allowed", "卡住无进展"]);
   assert.deepEqual(brief(classifyFailure({ text: "", stall: "no_response" })), ["no_response", "Transient", "not_same_upstream", "上游没回应"]);
   assert.deepEqual(brief(classifyFailure({ text: "", stall: "stream_dropped" })), ["stream_dropped", "Transient", "allowed", "上游一直断流"]);
@@ -51,7 +50,6 @@ test("认不出的失败记 unknown 并原样保留原文,不硬塞别的类(AC-
   const empty = classifyFailure({ text: "" });
   assert.equal(empty.reasonClass, "unknown");
   assert.equal(empty.raw, "");
-  // harness 自报的 kind=unknown 不算结构化依据,也不把原文认不出的硬归到别处
   assert.equal(classifyFailure({ text: raw, kind: "unknown" }).reasonClass, "unknown");
   assert.equal(classifyFailure({ text: raw, kind: "weird_kind" }).reasonClass, "unknown");
 });
@@ -105,11 +103,9 @@ test("结构化字段优先于原文:用户停止 > 卡死判定 > HTTP 状态 >
   const k = classifyFailure({ text: "Overloaded", kind: "rate_limit_error" });
   assert.deepEqual([k.reasonClass, k.via], ["rate_limited", "kind"]);
   assert.equal(classifyFailure({ text: "x", kind: "authentication_error" }).reasonClass, "auth_or_quota");
-  // 结构化只给笼统类(404 / invalid_request)时,原文命中更具体的会话丢失用具体类
   assert.equal(classifyFailure({ text: "No conversation found with session ID: 9", httpStatus: 404 }).reasonClass, "session_lost");
   // 笼统类不能被不具体的原文改写:400 + 「overloaded」仍是请求无效
   assert.equal(classifyFailure({ text: "overloaded", httpStatus: 400 }).reasonClass, "invalid_request");
-  // 原文判据:真正的原文命中记 via=text 和命中的规则
   const t = classifyFailure({ text: "Prompt is too long" });
   assert.equal(t.via, "text");
   assert.match(t.pattern ?? "", /prompt is too long/i);
@@ -149,7 +145,6 @@ test("每一类在表里都有人话标签、修法与 retry_class;不会自愈�
     const c = classifyFailure({ text: "", ...(k === "user_stopped" ? { userStopped: true } : {}), ...(k === "stalled" || k === "no_response" || k === "stream_dropped" ? { stall: k } : {}) });
     if (c.reasonClass === k) assert.deepEqual([c.label, c.retryClass, c.autoRerun, c.fix], [info.label, info.retryClass, info.autoRerun, info.fix]);
   }
-  // 人停的不是失败的一类:画板文字和失败不同
   assert.notEqual(classifyFailure({ text: "", userStopped: true }).label, classifyFailure({ text: "" }).label);
 });
 

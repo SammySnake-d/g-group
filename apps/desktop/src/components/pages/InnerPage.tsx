@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Surface } from '@/components/ui/surface'
 import { PageFooter, PageScroll, Subhead } from './kit/parts'
 
-/* ---------- US10-View 从群聊私信:看他在这个群里怎么安排活;在这里说话 = 在群里 @他 ---------- */
 function InnerComposer({ id, conv }: { id: PersonId; conv: string }) {
   const { sendAs, convs } = useApp()
   const [t, setT] = useState('')

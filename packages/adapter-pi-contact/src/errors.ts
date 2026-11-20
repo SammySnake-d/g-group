@@ -1,5 +1,4 @@
 export type PiContactMindErrorCode = "invalid-options" | "invalid-request" | "model-mismatch" | "provider-error" | "request-limit" | "internal";
-/** 可辨认的失败。message 已隐去密钥。 */
 export class PiContactMindError extends Error {
   readonly code: PiContactMindErrorCode;
   readonly committed: boolean;
@@ -12,7 +11,6 @@ export class PiContactMindError extends Error {
     this.retryableTruncation = retryableTruncation;
   }
 }
-/** 宿主中止本轮(signal abort)。name 为 AbortError,便于按惯例识别。 */
 export class RoundAbortedError extends Error {
   readonly code = "aborted" as const;
   constructor() {

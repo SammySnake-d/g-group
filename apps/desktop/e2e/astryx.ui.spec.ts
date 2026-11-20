@@ -2,7 +2,6 @@ import { expect, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
 import { BASELINE_CONSOLE } from "./console-baseline";
 
-// Astryx 底座探针:主题真生效(不是默认 neutral 色)、Tailwind 类能盖过 Astryx、键盘交互完整、无新增控制台报错。
 const css = (page: Page, sel: string, prop: string) =>
   page.locator(sel).first().evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
 const varOf = (page: Page, name: string) =>
@@ -24,7 +23,6 @@ for (const theme of ["light", "dark"] as const) {
       const r = await pill.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius));
       expect(r, "Tailwind rounded-full 盖过 Astryx 圆角").toBeGreaterThan(100);
       expect(await pill.evaluate((el) => getComputedStyle(el).paddingLeft)).toBe("24px");
-      // 亮暗跟随我们自己的 dark 状态
       expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe(theme);
       await shot(page, `astryx/probe-${theme}`, 0);
       expect(errors, errors.join("\n")).toEqual(BASELINE_CONSOLE);
@@ -84,12 +82,11 @@ for (const theme of ["light", "dark"] as const) {
     await expect(error).not.toBeChecked();
     await debug.click();
     await expect(debug).toBeChecked();
-    // 外观选项仍使用已验收的预览卡，不为迁移重做布局。
     await page.getByRole("radio", { name: theme === "light" ? "深色" : "浅色", exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme === "light" ? "dark" : "light");
     await expect(waiting).not.toBeChecked();
     await expect(debug).toBeChecked();
-    await page.keyboard.press("Escape"); // 设置是浮层；遵循现有关闭路径，不能穿透遮罩点导航。
+    await page.keyboard.press("Escape");
     await page.getByTestId("nav-files").click();
     await page.getByTestId("nav-settings").click();
     await expect(debug).toBeChecked();

@@ -1,4 +1,3 @@
-/* 详情页右栏「在哪里生效」:挂在哪些聊天、谁能调用,就地增删。三样(启用、挂上、在名单里)都满足才用得上。 */
 import { useState, type ReactNode } from 'react'
 import { Plus, X } from 'lucide-react'
 import type { PluginState } from '@/data'

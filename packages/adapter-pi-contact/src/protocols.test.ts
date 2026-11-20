@@ -1,8 +1,6 @@
 // 四种模型协议的行为测试(需求文档 U33、D07 §2「pi-ai 是四协议统一 LLM 通信层」):
 // 同一套中性工具清单(TOOL_DECLARATIONS)与同一套五块装配,换成四种协议的适配器之后,
 // 实际发出的请求体(工具声明摆在哪儿、工具结果怎么回填、密钥放哪个头)与响应里的工具调用都按各自协议核对。
-// 假端点按 opts.fetch 注入:请求仍由 pi-ai 的对应适配器照常构造,只把网络套接字换成函数(门禁沙箱禁网时也能跑)。
-// google-generative-ai 例外:pi-ai 的该适配器明确拒绝自定义 fetch(抛「Custom fetch is not supported by the Google
 // Generative AI adapter」),所以这一条改成在测试期间替换 globalThis.fetch——请求构造还是适配器自己的,不改协议形状。
 // 核对的是实际发出的请求体(D07 第 4 节第 8 条),不是宿主拼了什么。
 import assert from "node:assert/strict";
@@ -82,10 +80,6 @@ function streamOf(protocol: PiProtocol, turn: { readonly text?: string; readonly
   return done([enc.encode(`data: ${JSON.stringify({ candidates: [{ content: { role: "model", parts: googleParts }, finishReason: "STOP" }], usageMetadata: { promptTokenCount: 3, candidatesTokenCount: 2, totalTokenCount: 5 } })}\n\n`)]);
 }
 
-/**
- * 进程内假端点:记下每次真实收到的请求体与请求头,按脚本回放响应。
- * transport 是交给 createPiContactMind/PiCompactor 的传输选项;google 那一条走替换 globalThis.fetch,所以为 undefined。
- */
 function fakeEndpoint(protocol: PiProtocol, turns: readonly Turn[]) {
   const seen: Seen[] = [];
   const fetchFn: typeof globalThis.fetch = async (input, init) => {

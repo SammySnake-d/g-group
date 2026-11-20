@@ -1,4 +1,3 @@
-/* 右键菜单(QQ 桌面版习惯):表情 / 回复 / 复制 / 转发 / 收藏 / 多选 / 引用 / 置顶或回到这里 / 编辑 / 撤回 / 删除 */
 import type { ReactNode } from 'react'
 import { Bookmark, CheckSquare, Copy, Forward, History, Pencil, Pin, Quote as QuoteIcon, Reply, Trash2, Undo2, Zap } from 'lucide-react'
 import { useApp } from '@/ctx'

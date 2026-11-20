@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createAttentionLoop, type RoundStatus, type TimerApi } from "./attention.ts";
 
-/** 假计时器:advance(ms) 推进虚拟时间并触发到期回调。 */
 function fakeTimers() {
   let now = 0;
   let next = 1;
@@ -33,7 +32,6 @@ function fakeTimers() {
     count: () => pending.size,
   };
 }
-/** 可手动放行的一轮。 */
 function gate() {
   let open!: (s: RoundStatus) => void;
   let fail!: (e: unknown) => void;

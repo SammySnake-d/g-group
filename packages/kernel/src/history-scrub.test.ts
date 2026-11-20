@@ -1,5 +1,4 @@
 // 撤回原文的纯规则(T-177 G4b;G6 实测缺口 k1-g4on-R1:联系人回话里抄了用户原文,用户撤回后,原文经预取行回到第 5 块)。
-// 一条可见消息的正文里可能抄了后来被撤回的原文(联系人回话、用户的另一条消息、引用副本都算),这些正文进请求前要过这里:
 //   哪些文本算已撤回原文(retractedBodies)、抄来的原文怎么处理(scrubLineBody)——与状态笔记同一规则(scrubRetracted)。
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -47,7 +46,6 @@ test("正文里出现已撤回原文:只换掉那一段,别的字留着(联系�
 });
 
 test("抄写时分了行或加了空格、精确替换不掉:整段隐去,不留半截", () => {
-  // 抄来的原文后面还接着别的话:替换不掉时整段都隐去(不是只把抄来的那段删掉留个洞)
   const spaced = scrubLineBody("收到:我的储物柜号码是 4471, 钥匙放在前台,回头再说", [SECRET]);
   assert.equal(spaced.text, SCRUBBED_BODY);
   assert.equal(spaced.scrubbed, true);

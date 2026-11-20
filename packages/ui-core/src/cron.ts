@@ -1,7 +1,3 @@
-/* 定时:标准 5 段 cron(分 时 日 月 周)的解析、校验、下次运行时间、中文说明,以及定时的四种叫醒方式。
-   - 一律按本地时区算,和用户桌面上的钟一致;夏令时跳掉的时刻不存在,直接跳过。
-   - 日、周两段都受限时按 Vixie cron 的「或」语义;只要有一段以 * 开头(含 *\/2 这类),两段按「且」匹配。
-   - 错误信息是给人看的中文,能定位到段就写「第 N 段(名)」。 */
 
 export interface CronFieldDef {
   readonly name: string;
@@ -9,7 +5,6 @@ export interface CronFieldDef {
   readonly max: number;
 }
 
-/** 5 段的名字和取值范围。周段 0 和 7 都是周日 */
 export const CRON_FIELDS: readonly CronFieldDef[] = [
   { name: "分", min: 0, max: 59 },
   { name: "时", min: 0, max: 23 },
@@ -23,21 +18,17 @@ const DOW_NAMES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const DOW_ZH = ["日", "一", "二", "三", "四", "五", "六"];
 
 export interface CronSpec {
-  /** 规整后的表达式:段之间一个空格,英文名转大写 */
   readonly expr: string;
   readonly fields: readonly string[];
   readonly minutes: readonly number[];
   readonly hours: readonly number[];
   readonly days: readonly number[];
   readonly months: readonly number[];
-  /** 0–6,7 已并入 0 */
   readonly weekdays: readonly number[];
-  /** 日段 / 周段是否以 * 开头(Vixie 的 DOM_STAR / DOW_STAR) */
   readonly dayStar: boolean;
   readonly weekdayStar: boolean;
 }
 
-/** field:出错的是第几段(1–5);整体问题(段数不对、永远不会触发)为 null */
 export interface CronError {
   readonly field: number | null;
   readonly message: string;
@@ -89,7 +80,6 @@ function parseField(token: string, idx: number): number[] {
       if (a === "") throw new FieldError(`${where}：范围「${range}」缺少起点`);
       if (b === "") throw new FieldError(`${where}：范围「${range}」缺少终点`);
       lo = fieldValue(a, idx, where);
-      // 「5/15」= 从 5 到最大值每 15 个
       hi = b !== undefined ? fieldValue(b, idx, where) : stepRaw !== undefined ? def.max : lo;
       if (lo > hi) throw new FieldError(`${where}：范围 ${a}-${b} 起点大于终点`);
     }
@@ -108,7 +98,6 @@ function dayMatches(spec: CronSpec, year: number, month: number, day: number): b
   return !spec.dayStar && !spec.weekdayStar ? domOk || dowOk : domOk && dowOk;
 }
 
-/** 28 年里星期和闰年的组合全部出现一遍(1901–2099 内),找不到一天能跑就是永远不会触发 */
 function firesSomeDay(spec: CronSpec): boolean {
   for (let y = 2000; y < 2028; y++)
     for (const m of spec.months)
@@ -154,16 +143,13 @@ export function parseCron(expr: string): CronParse {
   return { ok: true, spec };
 }
 
-/** 校验:合法返回 null,否则返回给人看的错误(带段号) */
 export function cronError(expr: string): string | null {
   const p = parseCron(expr);
   return p.ok ? null : p.error.message;
 }
 
-/** 搜索上限:30 年。2/29 这种最长要等 8 年(跨 2100),够用,也不会死循环 */
 const HORIZON_DAYS = 366 * 30;
 
-/** 从 from 的下一分钟起,按本地时区算接下来 count 次。表达式不合法返回空数组 */
 export function nextRuns(expr: string, from: Date, count: number): Date[] {
   const p = parseCron(expr);
   const out: Date[] = [];
@@ -181,7 +167,6 @@ export function nextRuns(expr: string, from: Date, count: number): Date[] {
     const M = day.getMonth() + 1;
     const D = day.getDate();
     if (!spec.months.includes(M)) {
-      // 整月不跑:直接跳到下个月 1 号的前一天(循环会 +1)
       i += daysInMonth(Y, M) - D;
       continue;
     }
@@ -192,7 +177,6 @@ export function nextRuns(expr: string, from: Date, count: number): Date[] {
       for (const m of spec.minutes) {
         if (first && h === start.getHours() && m < start.getMinutes()) continue;
         const t = new Date(Y, M - 1, D, h, m, 0, 0);
-        // 夏令时跳过的时刻在本地不存在,会被挪到别的钟点:跳过
         if (t.getHours() !== h || t.getMinutes() !== m || t.getDate() !== D) continue;
         if (t.getTime() <= from.getTime()) continue;
         out.push(t);
@@ -206,7 +190,6 @@ export function nextRuns(expr: string, from: Date, count: number): Date[] {
 const pad = (n: number) => String(n).padStart(2, "0");
 const hhmm = (h: number, m: number) => `${pad(h)}:${pad(m)}`;
 
-/** [1,2,3,5] → 「1–3、5」:连续 3 个以上收成范围 */
 function compress(nums: readonly number[], show: (n: number) => string = String): string {
   const out: string[] = [];
   for (let i = 0; i < nums.length; ) {
@@ -219,7 +202,6 @@ function compress(nums: readonly number[], show: (n: number) => string = String)
   return out.join("、");
 }
 
-/** 周显示按周一到周日排 */
 function weekPhrase(ws: readonly number[]): string {
   const order = [...ws].map((w) => (w === 0 ? 7 : w)).sort((a, b) => a - b);
   const key = order.join(",");
@@ -258,7 +240,6 @@ function fallback(s: CronSpec): string {
   return `逐段：${parts.join(" · ")}${or}`;
 }
 
-/** 中文人话:「每天 09:00」「工作日 09:00」「每周一 10:00」「每 30 分钟」「每小时第 7 分」;复杂的逐段说明。不合法返回空串 */
 export function describeCron(expr: string): string {
   const p = parseCron(expr);
   if (!p.ok) return "";
@@ -290,7 +271,6 @@ export function describeCron(expr: string): string {
   return fallback(s);
 }
 
-/* ---------- 常用预设 ---------- */
 
 export interface CronPreset {
   readonly id: string;
@@ -306,14 +286,12 @@ export const CRON_PRESETS: readonly CronPreset[] = [
 ];
 export const CUSTOM_PRESET = "custom";
 
-/** 表达式对上哪个预设(空白、大小写不敏感);对不上是 "custom" */
 export function cronPresetId(expr: string): string {
   const p = parseCron(expr);
   if (!p.ok) return CUSTOM_PRESET;
   return CRON_PRESETS.find((x) => x.expr === p.spec.expr)?.id ?? CUSTOM_PRESET;
 }
 
-/* ---------- 定时的四种叫醒方式 ---------- */
 
 /** 定时怎么被叫醒。同一种东西,只是触发方式不同(#2273):
  *  - cron:按表达式重复,本地时区;
@@ -328,7 +306,6 @@ export type CronTrigger =
 
 export type CronTriggerKind = CronTrigger["kind"];
 
-/** 「YYYY-MM-DDTHH:mm」按本地时间解析;日期不存在(2/30)返回 null */
 export function parseLocalDateTime(s: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(s.trim());
   if (!m) return null;
@@ -344,7 +321,6 @@ export function toLocalDateTime(d: Date): string {
 
 export const MAX_MESSAGES_TRIGGER = 1000;
 
-/** 保存前校验:合法返回 null,否则返回给人看的错误 */
 export function triggerError(t: CronTrigger, now: Date): string | null {
   switch (t.kind) {
     case "cron":
@@ -362,7 +338,6 @@ export function triggerError(t: CronTrigger, now: Date): string | null {
   }
 }
 
-/** 下一次按钟点醒来的时刻;按条数、按事件的没有钟点,返回 null;只跑一次且已过去也是 null */
 export function triggerNext(t: CronTrigger, now: Date): Date | null {
   if (t.kind === "cron") return nextRuns(t.expr, now, 1)[0] ?? null;
   if (t.kind === "once") {
@@ -372,7 +347,6 @@ export function triggerNext(t: CronTrigger, now: Date): Date | null {
   return null;
 }
 
-/** 按条数触发:还差几条醒来 */
 export function messagesLeft(t: CronTrigger): number {
   return t.kind === "messages" ? Math.max(0, t.n - t.seen) : 0;
 }
@@ -395,7 +369,6 @@ export function describeTrigger(t: CronTrigger): string {
 
 const dayNo = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000;
 
-/** 相对「现在」的时刻:今天 / 明天 / 昨天 09:00,一周内写周几,同年写 11/19,跨年写 2027/1/4 */
 export function formatRunAt(d: Date, now: Date): string {
   const t = hhmm(d.getHours(), d.getMinutes());
   const diff = dayNo(d) - dayNo(now);
@@ -407,7 +380,6 @@ export function formatRunAt(d: Date, now: Date): string {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${t}`;
 }
 
-/** UTC 偏移(分钟,东正西负)→「UTC+8」「UTC-3:30」「UTC」 */
 export function utcOffsetLabel(offsetMinutes: number): string {
   if (offsetMinutes === 0) return "UTC";
   const sign = offsetMinutes > 0 ? "+" : "-";
@@ -417,7 +389,6 @@ export function utcOffsetLabel(offsetMinutes: number): string {
   return `UTC${sign}${h}${m ? `:${pad(m)}` : ""}`;
 }
 
-/** 本地时区说明,定时按它算:「Asia/Shanghai · UTC+8」。偏移取 now 那一刻的(夏令时会变),取不到时区名只写偏移 */
 export function localZoneLabel(now: Date, zone?: string): string {
   const name = zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const off = utcOffsetLabel(-now.getTimezoneOffset());

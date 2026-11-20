@@ -5,7 +5,6 @@ import { MessageList } from '@/components/Messages'
 import { ConvItem } from './kit/conv-item'
 import { Hint, PageScroll } from './kit/parts'
 
-/* ---------- US2 转发:选目标会话;对方只看到选中的几条 ---------- */
 export function ForwardPickPage({ from, msgIds }: { from: string; msgIds: string[] }) {
   const { convs, forward, closeAll } = useApp()
   const src = convs.find((c) => c.id === from)!
@@ -19,7 +18,6 @@ export function ForwardPickPage({ from, msgIds }: { from: string; msgIds: string
   )
 }
 
-/** 转发过来的记录:只读 */
 export function ForwardViewPage({ conv, msgId }: { conv: string; msgId: string }) {
   const { convs } = useApp()
   const m = convs.find((c) => c.id === conv)!.messages.find((x) => 'id' in x && x.id === msgId) as Extract<Msg, { k: 'forward' }>

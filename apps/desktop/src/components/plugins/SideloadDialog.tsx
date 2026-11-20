@@ -1,4 +1,3 @@
-/* 从文件或地址安装:清单先在本机逐条校验;下载安装包、核对签名要连接后端,如实说明,不假装装好。 */
 import { useRef, useState } from 'react'
 import { Check, FileUp } from 'lucide-react'
 import { readInstallSource, type InstallSource, type PluginManifest } from '@g-group/ui-core'
@@ -11,7 +10,6 @@ import { COPY } from './constants'
 import { CategoryTag, CommandTag, PluginIcon, RiskBadge } from './tags'
 
 export function SideloadDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  /* 草稿留在外层:关掉再打开,粘贴过的清单还在 */
   const [text, setText] = useState('')
   const [res, setRes] = useState<InstallSource | null>(null)
   return (

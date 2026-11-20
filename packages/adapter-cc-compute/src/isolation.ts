@@ -1,13 +1,10 @@
 // 勾选能力(AC-29,需求文档 D07 §3):联系人专属配置目录、勾选 skill 的插件目录、勾选 MCP 服务器。
-// 一次性适配器(adapter.ts)与常驻适配器(resident.ts)共用:spawn 选项的判定、--mcp-config 的合并、首个提示里的 skill 段、
-// init 自报的实际加载清单与勾选的核对。只在启动时按白名单配置 harness、按 harness 自报核对配置已生效;不在运行中拦截 Compute 的工具调用。
 import path from "node:path";
 import { HOST_MCP, MCP_SERVER_NAME, firstPrompt, skillCatalog, skillsSection, toolOverreach } from "./cli.ts";
 import { initLoaded } from "./events.ts";
 import { isPlainRecord } from "./plain.ts";
 import type { Brief, HandoffSnapshot, LoadedCapabilities, ManifestSection, McpServerSpec } from "./types.ts";
 
-/** 勾选能力:都已是纯数据副本 */
 export interface Isolation {
   readonly configDir: string | undefined;
   readonly pluginDirs: readonly string[];
@@ -16,7 +13,6 @@ export interface Isolation {
 export const NO_ISOLATION: Isolation = Object.freeze({ configDir: undefined, pluginDirs: Object.freeze([]), mcpServers: Object.freeze({}) });
 const isStrArr = (x: unknown): x is readonly string[] => Array.isArray(x) && x.every((s) => typeof s === "string");
 
-/** spawn 选项里的勾选能力字段:o 已是纯数据副本。不合格返回拒收理由 */
 export function isolationOf(o: Readonly<Record<string, unknown>>): Isolation | string {
   const { configDir, pluginDirs, mcpServers } = o;
   if (configDir !== undefined && (typeof configDir !== "string" || !path.isAbsolute(configDir))) return "spawn 选项 configDir 必须是绝对路径";
@@ -38,13 +34,11 @@ export function isolationOf(o: Readonly<Record<string, unknown>>): Isolation | s
   return { configDir: configDir as string | undefined, pluginDirs: (pluginDirs as readonly string[] | undefined) ?? [], mcpServers: servers };
 }
 
-/** --mcp-config 的内容:勾选的 MCP 服务器与 host(report_progress)合并;勾选名不会是 host(isolationOf 已拒收) */
 export function mcpConfigFor(iso: Isolation, server: { readonly command: string; readonly args?: readonly string[] }): { readonly mcpServers: Readonly<Record<string, { command: string; args: string[]; env: Record<string, string> }>> } {
   const picked = Object.fromEntries(Object.entries(iso.mcpServers).map(([n, x]) => [n, { command: x.command, args: [...(x.args ?? [])], env: { ...(x.env ?? {}) } }]));
   return { mcpServers: { ...picked, host: { command: server.command, args: [...(server.args ?? [])], env: {} } } };
 }
 
-/** 首个提示加勾选 skill 段:--bare 下 CLI 没有 Skill 工具,在首个提示里列出可用 skill 与 SKILL.md 路径(V-02 实测) */
 export function promptWithSkills(brief: Brief, handoff: HandoffSnapshot | undefined, pluginDirs: readonly string[]): { readonly prompt: string; readonly sections: readonly ManifestSection[] } {
   const fp = firstPrompt(brief, handoff);
   const catalog = skillCatalog(pluginDirs);
@@ -53,7 +47,6 @@ export function promptWithSkills(brief: Brief, handoff: HandoffSnapshot | undefi
   return { prompt: `${fp.prompt}\n\n${skillText}`, sections: [...fp.sections, { name: "skills" as const, detail: { items: catalog.map((s) => ({ name: s.name, file: s.file })) } }] };
 }
 
-/** init 那一行的 JSON 对象(已被 checkInit 判合格,这里只为读加载清单);解析不了给空对象 */
 const rawRecord = (line: string): Record<string, unknown> => {
   try {
     const v: unknown = JSON.parse(line);

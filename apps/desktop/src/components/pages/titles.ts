@@ -1,7 +1,6 @@
 import { people, sources } from '@/data'
 import type { Page } from '@/ctx'
 
-/* 浮层每一页的标题(返回按钮上显示上一页的标题) */
 export function pageTitle(p: Page, convs: { id: string; title: string }[]): string {
   const ct = (id: string) => convs.find((c) => c.id === id)?.title ?? ''
   switch (p.t) {
@@ -37,5 +36,4 @@ export function pageTitle(p: Page, convs: { id: string; title: string }[]): stri
   }
 }
 
-/** 页面身份:同一页参数不变就不重挂载;压栈/换页才重挂载(新页从前进方向进来) */
 export const pageKey = (p: Page, depth: number) => `${depth}:${JSON.stringify(p)}`

@@ -10,11 +10,9 @@ import { ContactList } from './ContactList'
 import { ConvList } from './ConvList'
 import { FileList } from './FileList'
 
-/** 列表栏(可调宽):搜索 + 新建,下面按左侧所在区域列会话 / 通讯录 / 文件 */
 export function ListPane() {
   const { section, width, push, fileQuery, setFileQuery } = useApp((s) => ({ section: s.section, width: s.widths.list, push: s.push, fileQuery: s.fileQuery, setFileQuery: s.setFileQuery }))
   const [localQuery, setLocalQuery] = useState('')
-  // 文件区的搜索词放在 store 里:列表和右边的文件总览按同一个词筛
   const [query, setQuery] = section === 'files' ? [fileQuery, setFileQuery] : [localQuery, setLocalQuery]
   return (
     <aside className="flex shrink-0 flex-col bg-side" style={{ width }} data-testid="list">

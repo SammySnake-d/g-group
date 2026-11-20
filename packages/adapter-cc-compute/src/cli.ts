@@ -1,5 +1,3 @@
-// 拼装 claude CLI 的启动参数、环境与首个提示。全部是纯函数,适配器只负责把它们交给子进程。
-// 这些函数经包根导出,是外部入口(R6-01):对象参数先过纯数据合同(brief 过 checkBrief、交接快照过 checkSnapshot、
 // hostEnv/initTools 过 plainData),状态参数先判 typeof;getter/setter、Proxy(含嵌套、已撤销)、带 toPrimitive/toString 的对象
 // 不调用即抛受控 TypeError,之后只读冻结副本。合同限定内置原型未被改的环境(g-group#2662)。
 import fs from "node:fs";
@@ -16,7 +14,6 @@ export const SYSTEM_PROMPT =
   "无法继续需要用户时报 blocked(带 needs)然后立即停止,全部完成报 completed。知道当前约束版本、未决问题或已完成的副作用时," +
   "随汇报带上 constraintVer/openQuestions/doneSideEffects。凭据只有引用句柄,需要时向宿主申请,不要猜测明文。不要只用文字汇报。";
 
-/** 外部给的 brief:先过 checkBrief(纯数据合同 + 五字段白名单),不合格抛受控 TypeError,之后只用冻结副本 */
 function safeBrief(input: unknown, at: string): Brief {
   const b = checkBrief(input);
   if (!b.ok) throw new TypeError(`${at} 的 brief 不合格:${b.reason}`);
@@ -27,7 +24,6 @@ function safeString(x: unknown, name: string): string {
   if (typeof x !== "string") throw new TypeError(`${name} 必须是字符串`);
   return x;
 }
-/** 字符串数组:先过纯数据合同,再查元素类型 */
 function safeStrings(x: unknown, name: string): readonly string[] {
   const p = plainData(x, name);
   if (!p.ok || !Array.isArray(p.value) || !p.value.every((s) => typeof s === "string")) throw new TypeError(`${name} 必须是纯数据字符串数组`);
@@ -55,14 +51,12 @@ export function firstPrompt(input: Brief, handoffInput?: HandoffSnapshot): { rea
     parts.push(`[凭据引用]\n${brief.credentialRefs.map((c) => `- ${c}(句柄,不是明文)`).join("\n")}`);
     sections.push({ name: "credentialRefs", detail: { refs: [...brief.credentialRefs] } });
   }
-  // 返回值深冻结:调用方拿到的清单改不动
   return freezeDeep({ prompt: parts.join("\n\n"), sections });
 }
 
 /** 勾选 MCP 服务器名:字母数字、下划线、连字符,1–64 个字符;host 留给 report_progress(AC-29) */
 export const MCP_SERVER_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 export const HOST_MCP = "host";
-/** 勾选 MCP 服务器名列表:纯数据字符串数组,每个合规、不是 host、不重复 */
 function safeMcpNames(x: unknown, name: string): readonly string[] {
   if (x === undefined) return Object.freeze([]);
   const names = safeStrings(x as readonly string[], name);
@@ -74,14 +68,12 @@ function safeMcpNames(x: unknown, name: string): readonly string[] {
   return names;
 }
 
-/** --allowedTools:brief 的工具 + report_progress + 每个勾选 MCP 服务器整组放行(mcp__<名>) */
 export function allowedTools(input: Brief, mcpServersInput?: readonly string[]): readonly string[] {
   const brief = safeBrief(input, "allowedTools");
   const mcp = safeMcpNames(mcpServersInput, "allowedTools 的 mcpServers");
   return Object.freeze([...brief.tools, REPORT_TOOL, ...mcp.map((n) => `mcp__${n}`)]);
 }
 
-/** CLI init 里实际挂上的工具超出授权的部分(空数组表示没有越界):勾选 MCP 服务器只放行 mcp__<名>__ 开头的工具 */
 export function toolOverreach(input: Brief, initToolsInput: readonly string[], mcpServersInput?: readonly string[]): readonly string[] {
   const brief = safeBrief(input, "toolOverreach");
   const mcp = safeMcpNames(mcpServersInput, "toolOverreach 的 mcpServers");
@@ -117,7 +109,6 @@ export function skillCatalog(pluginDirsInput: readonly string[]): readonly { rea
   return freezeDeep(out);
 }
 
-/** 首个提示里的 [可用 skill] 段;没有 skill 返回 null */
 export function skillsSection(catalog: readonly { readonly name: string; readonly description: string; readonly file: string }[]): string | null {
   if (!catalog.length) return null;
   return `[可用 skill](联系人勾选的;要用时先用 Read 读对应 SKILL.md 再照做)\n${catalog.map((s) => `- ${s.name}:${s.description || "(无描述)"} —— ${s.file}`).join("\n")}`;
@@ -149,12 +140,10 @@ export function cliArgs(input: Brief, promptInput: string, mcpConfigPathInput: s
     "--output-format", "stream-json", "--verbose",
     // 流式增量:模型开始回应(首字节)和长输出进行中都有行可看,宿主的整轮卡死检测才不会把长生成误判成没回应(D26 第 8.3 节)
     "--include-partial-messages",
-    // --bare:不读 CLAUDE.md、auto-memory、hooks 与插件,Compute 不带宿主一侧的记忆
     "--bare",
     // --bare 下 skill 只从 --plugin-dir 加载:只给联系人勾选的那些(AC-29,V-02 实测)
     ...pluginDirs.flatMap((d) => ["--plugin-dir", d]),
     "--mcp-config", mcpConfigPath, "--strict-mcp-config",
-    // --tools 限定可见的内置工具,--allowedTools + dontAsk 让清单外的调用一律被拒
     "--tools", brief.tools.join(","),
     "--allowedTools", allowedTools(brief, mcp).join(","),
     "--permission-mode", "dontAsk",
@@ -169,7 +158,6 @@ export function cliEnv(input: Brief, computeIdInput: string, hostEnvInput: Reado
   const computeId = safeString(computeIdInput, "cliEnv 的 computeId");
   const configDir = configDirInput === undefined ? undefined : safeString(configDirInput, "cliEnv 的 configDir");
   if (configDir !== undefined && !path.isAbsolute(configDir)) throw new TypeError("cliEnv 的 configDir 必须是绝对路径");
-  // hostEnv 与 createComputeAdapter 的判定一致:纯数据、字符串到字符串,值为 undefined 也拒绝
   const p = plainData(hostEnvInput, "hostEnv");
   if (!p.ok || !isPlainRecord(p.value) || !Object.values(p.value).every((v) => typeof v === "string")) throw new TypeError("cliEnv 的 hostEnv 必须是纯数据的字符串到字符串对象");
   const hostEnv = p.value as Readonly<Record<string, string>>;

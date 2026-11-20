@@ -9,11 +9,9 @@ import { ListRow } from '../ListRow'
 
 const groupLabel = 'px-2 pb-1 pt-3 text-[12px] font-medium text-fg-3'
 
-/** 通讯录:新建入口、助手(带它的定时数)、群聊 */
 export function ContactList({ query }: { query: string }) {
   const { convs, contact, push, pickContact, setActive, contactIds } = useApp((s) => ({ convs: s.convs, contact: s.contact, push: s.push, pickContact: s.pickContact, setActive: s.setActive, contactIds: s.contactIds }))
   const setSection = useApp((s) => s.setSection)
-  /* 通讯录列谁由联系人切片定(演示数据或后端 contacts.list),资料从登记表查 */
   const bots = contactIds.flatMap((id) => people[id] ?? [])
   const groups = convs.filter((c) => c.kind === 'group')
   return (
@@ -48,7 +46,6 @@ function Entry({ icon, onClick, children }: { icon: ReactNode; onClick: () => vo
   )
 }
 
-/** 联系人行尾:它开着的定时数,有失败的标红 */
 function CronCount({ id }: { id: PersonId }) {
   const crons = useApp((s) => s.crons)
   const mine = crons.filter((c) => c.owner === id && !c.paused)

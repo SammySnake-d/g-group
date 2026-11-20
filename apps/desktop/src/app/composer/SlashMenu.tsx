@@ -5,9 +5,6 @@ import { Command, CommandEmpty, CommandItem, CommandList } from '@/components/ui
 import { cn } from '@/lib/utils'
 import { SourceBadge } from './SourceBadge'
 
-/* 打 / 弹出的命令菜单(cmdk):贴着输入框上沿、和输入框左对齐。能用的在前,灰显的在后并写明原因。
-   焦点一直留在输入框里——过滤、上下键、回车由输入框转发,这里只按受控的选中项渲染;指针移上去也会改选中。
-   打 / 是键盘触发的高频操作,菜单直接出现,不加入场动画。 */
 export function SlashMenu({ items, sel, query, onHover, onPick }: { items: SlashEntry[]; sel: number; query: string; onHover: (i: number) => void; onPick: (e: SlashEntry) => void }) {
   const listRef = useRef<HTMLDivElement>(null)
   const value = sel >= 0 ? (items[sel]?.command.name ?? '') : ''

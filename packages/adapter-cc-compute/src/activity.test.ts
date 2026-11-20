@@ -1,6 +1,5 @@
 // AC-43 ⑦/⑩/⑪ 的 harness 侧(需求文档 D26 第 8.3 节):从 Claude Code stream-json 的一行里认出「活动」——
 // 模型调用已发出(首字节窗口起点)、真实进展、工具开始 / 结束、重试公告(不算进展)。宿主据此给运行台账计时。
-// system/status 与 system/api_retry 两种帧的形状取自本机真实 Claude Code 2.1.319(抓取方式与原始行见 packages/server/proof/run-ledger-real-frames.txt)。
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -28,7 +27,6 @@ test("真实 CLI 发请求前的 system/status requesting 认成 model_call;api_
   assert.deepEqual(activityOf('{"type":"system","subtype":"api_retry","attempt":2,"max_retries":10,"error_status":503,"error":"server_error"}'), [
     { kind: "retry", error: "API 重试 第 2/10 次:API Error: 503 server_error", httpStatus: 503 },
   ]);
-  // 别的 status 不是发请求
   assert.deepEqual(activityOf('{"type":"system","subtype":"status","status":"compacting"}'), []);
 });
 
@@ -82,7 +80,6 @@ test("CLI 参数打开流式增量(--include-partial-messages):首字节与长�
   const args = cliArgs(brief, "提示", "/nonexistent/mcp.json");
   assert.ok(args.includes("--include-partial-messages"));
   assert.ok(args.indexOf("--include-partial-messages") > args.indexOf("stream-json"));
-  // 其余参数不受影响:提示原文、MCP 配置路径照旧
   assert.equal(args[args.indexOf("-p") + 1], "提示");
   assert.equal(args[args.indexOf("--mcp-config") + 1], "/nonexistent/mcp.json");
 });

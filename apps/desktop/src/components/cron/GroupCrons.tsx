@@ -1,4 +1,3 @@
-/** 群资料「定时」页签：只看本群（不把别的群混进来）。出错的排最前，暂停的最后 */
 import { useState } from 'react'
 import { AlarmClock, ArrowUpRight, Plus } from 'lucide-react'
 import { localZoneLabel } from '@g-group/ui-core'

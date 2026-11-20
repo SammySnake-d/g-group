@@ -1,6 +1,4 @@
 // AC-44 ② Compute 受阻时附截图:report_progress 的 blocked 可带 attachments(工作目录内文件的相对路径),
-// 适配器原样透传到 blocked 事件;不是字符串数组的汇报被拒收。和 adapter.test.ts 一样起真实子进程:
-// 假 CLI(test-support/fake-claude.mjs)按 --mcp-config 真的起 report_progress MCP 服务器、走 JSON-RPC 汇报。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";

@@ -1,5 +1,4 @@
 // T-177 G3-01:检索接缝 searchHistory(上游 acp-kernel 的 hybrid 检索)。只对调用方给的、已可见的文本排序。
-// 夹具是 11-10 对照探针用过的 7 条中文聊天(deliverables/g-group-bc-design/evidence/search-probe.ts),问法是改写过的,字面子串找不到。
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { type HistoryDoc, searchHistory } from "./history-search.ts";

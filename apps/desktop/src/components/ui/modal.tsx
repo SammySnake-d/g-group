@@ -5,17 +5,12 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { IconButton } from "./icon-button"
 
-/* 居中对话框原语:头 / 体 / 脚三段(替代各模块手写的 Modal / ModalHead / ModalFoot)。
-   进出场交给 Animate UI 的 Dialog(数值都是库的 token,不自己写):翻转 + 缩放 + 去模糊进场,退场比进场快,减少动态时只淡入淡出。
-   「从触发点方向长出」:打开那一刻看触发点(刚按下的位置,键盘打开取聚焦元素)在屏幕中心的哪一侧,把它交给库的 from。
-   Radix 负责焦点圈定、Esc / 点遮罩关闭、关闭后焦点回到触发点;关闭按钮放在 DOM 最后,打开时焦点先落到内容上。 */
 
 type Side = DialogPrimitive.DialogFlipDirection
 let lastPress: { x: number; y: number; t: number } | null = null
 if (typeof window !== "undefined") {
   window.addEventListener("pointerdown", (e) => { lastPress = { x: e.clientX, y: e.clientY, t: performance.now() } }, true)
 }
-/** 打开这一刻触发点在屏幕中心的哪一侧;判断不了就用库的默认(上方) */
 function triggerSide(): Side {
   let p: { x: number; y: number } | null = null
   if (lastPress && performance.now() - lastPress.t < 1000) p = lastPress
@@ -28,7 +23,6 @@ function triggerSide(): Side {
   const dy = p.y - window.innerHeight / 2
   return Math.abs(dy) >= Math.abs(dx) ? (dy > 0 ? "bottom" : "top") : dx > 0 ? "right" : "left"
 }
-/** 每次从关到开时取一次方向,开着的时候不变 */
 function useOpenSide(open: boolean): Side {
   const was = React.useRef(false)
   const side = React.useRef<Side>("top")
@@ -37,7 +31,6 @@ function useOpenSide(open: boolean): Side {
   return side.current
 }
 
-/** 关闭动画期间内容还要显示上一份数据:传入会变成 null 的值,返回最后一次非空值 */
 export function useExitValue<T>(v: T | null | undefined): T | null {
   const ref = React.useRef<T | null>(null)
   if (v != null) ref.current = v
@@ -53,7 +46,6 @@ export interface ModalProps extends ContentProps {
   description?: React.ReactNode
   /** 标题左边的图标(插件图标、状态圆标) */
   icon?: React.ReactNode
-  /** 最大宽度(px) */
   width?: number
   testid?: string
   closeLabel?: string
@@ -86,7 +78,6 @@ export function Modal({ open, onClose, title, description, icon, width = 520, te
   )
 }
 
-/** 可滚动的主体 */
 export function ModalBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn("scroll-thin min-h-0 flex-1 overflow-y-auto px-6 pb-1 pt-3", className)} {...props} />
 }

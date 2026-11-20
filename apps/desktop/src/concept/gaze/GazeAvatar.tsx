@@ -18,7 +18,6 @@ import type { Bodied } from '@/components/messages/types'
 const defs: Record<string, AvatarDefinition> = { ...Object.fromEntries(examples.map((d) => [d.id, d])), ...gallery }
 const BOX = '[data-testid=composer-box]'
 
-/** 头像该看哪儿:输入框有焦点 → 光标;否则 → 输入框中间(你回话的地方) */
 function target(): { x: number; y: number } | null {
   const box = document.querySelector<HTMLElement>(BOX)
   if (!box) return null
@@ -28,8 +27,6 @@ function target(): { x: number; y: number } | null {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
 }
 
-/** 和消息流的合并规则是同一份(messages/grouping.ts):同一个人连着说的几条共用第一条的头像,
- *  所以这一串里任何一条在等你,头像都要看你 */
 function runOf(all: Msg[], msgId: string, pending: Pending[], computes: Record<string, Compute>) {
   const { list, trailOf } = foldComputeTrails(all, computes)
   const endsTurn = (x: Msg) => 'id' in x && (pending.some((p) => 'ask' in p && p.ask === x.id) || !!trailOf[x.id])
@@ -49,7 +46,6 @@ export function GazeAvatar({ msgId, id, size }: { msgId: string; id: PersonId; s
     const msgs = s.convs.find((c) => c.id === s.active)?.messages ?? []
     return runOf(msgs, msgId, s.pending, s.computes).some((x) => isWaitingMsg(x, s.pending, s.checklist, s.computes))
   })
-  /* 打开会话时就在等你的,才换成会看人的头像;其余照旧是静止头像(性能见 Avatar.tsx 的说明) */
   const [watched] = useState(waiting)
   const p = people[id]
   if (!watched || !p?.shape) return <Avatar id={id} size={size} status={false} />
@@ -68,7 +64,6 @@ function Watcher({ shape, color, name, size, waiting, msgId }: { shape: string; 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shape])
 
-  /* 离开视口就停帧(和 Avatar.tsx 一样的省电规则) */
   useEffect(() => {
     const el = host.current
     if (!el || typeof IntersectionObserver === 'undefined') return

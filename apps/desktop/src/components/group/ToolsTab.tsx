@@ -1,6 +1,3 @@
-/* 群资料·工具：每项写清楚做什么、来自哪里、对应哪条 / 命令，点了直接执行或打开对应页面。
-   插件带来的命令点了填进输入框（参数在那边补）；斜杠补全菜单在输入框里做。
-   连上后端时只列真能用的内置项(群文件、临时算力),再列群里每位联系人勾选的能力(skill / MCP,说明来自能力库)。 */
 import { useEffect, useState, type ReactNode } from 'react'
 import { ChevronRight, Puzzle } from 'lucide-react'
 import type { CapabilityLibraryView } from '@g-group/api-contract'
@@ -39,7 +36,6 @@ const BuiltinIcon = ({ I }: { I: (typeof BUILTIN_TOOLS)[number]['icon'] }) => (
   <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg bg-hover text-fg-2 transition-colors duration-fast group-hover:bg-bg group-hover:text-fg"><I className="h-4 w-4" strokeWidth={1.75} /></span>
 )
 
-/** 群里每位联系人勾选的能力;点一位去它的工作台改 */
 function ContactCaps({ conv }: { conv: Conversation }) {
   const { openWorkbench } = useApp()
   const [lib, setLib] = useState<CapabilityLibraryView | null>(null)

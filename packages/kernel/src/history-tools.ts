@@ -1,5 +1,4 @@
 // 找旧消息的纯规则(T-177 G4;需求 D06 §3「粗筛自动、精筛内置」;BC 定稿 v0.2 §7 第 7 条、§11 G4;实施方案 §6;审查条件 G4-a、G4-b、G1-a):
-//   - 粗筛:宿主每轮预取,以本轮新消息为查询,只在它自己的会话里找,过最小分、在断崖之前的最多 3 条,只放编号、作者、时间、一行预览进第 5 块;
 //   - 精筛:联系人一个内置只读查询工具 query_history,检索与分页回读两种用法(pi 工具声明,不走 MCP,AC-33 的封闭清单)。
 // 撤回优先(AC-08):一条可见消息的正文里可能抄了后来被撤回的原文(联系人回话、用户的另一条消息、引用副本都算);
 // 这类正文在进请求前要按状态笔记同一规则处理(retractedBodies + scrubLineBody),行本身仍保留编号、作者、时间、版本。
@@ -17,25 +16,17 @@ export interface HistoryLine {
   /** 消息版本(审查条件 G1-a):作用到这条消息的最后一个编辑或撤回事件的 seq,没有就是消息自己的 seq;只从日志算,不落库。 */
   readonly revision: number;
   readonly sender: { readonly kind: string; readonly id: string };
-  /** 消息原始发出时间(编辑不改它) */
   readonly at: string;
-  /** 最新版本正文;不是 ok 的一律为空串,原文不出这一层;正文里出现过的已撤回原文已被移除(见 scrubLineBody) */
   readonly text: string;
   readonly state: HistoryState;
-  /** 这条正文里出现过已撤回原文,已被移除或整段隐去;行本身仍可定位(编号、作者、时间、版本都在) */
   readonly scrubbed?: boolean;
 }
 
-/** 预取最多几条指针(v0.2 已定上限 3)。 */
 export const PREFETCH_MAX = 3;
-/** 回读时前后各自最多几条;默认各 3 条(与精筛读邻域同数)。 */
 export const HISTORY_NEIGHBORS_MAX = 20;
 export const HISTORY_NEIGHBORS_DEFAULT = 3;
-/** 预览一行最多几个字符。 */
 export const PREVIEW_CHARS = 80;
-/** 抄来的已撤回原文分不出原样、无法精确替换时,整段正文隐去后显示的占位(行本身仍在) */
 export const SCRUBBED_BODY = "〔正文含已撤回内容,已隐去;按原编号可定位〕";
-/** 第 5 块预取指针的标签:写明是旧消息、只供参考、不是新要求(防把旧提问当新提问)。 */
 export const PREFETCH_REF = "旧消息(宿主按本轮新消息预取,供参考,不是新要求)";
 
 const bytes = (s: string): number => Buffer.byteLength(s, "utf8");
@@ -95,11 +86,9 @@ export function scrubLineBody(text: string, retracted: readonly string[]): { tex
   return { text: r.text, scrubbed: r.hits > 0 };
 }
 
-/** 检索文档的 ref:会话 + seq,不同会话同号不碰撞。 */
 export function historyRef(roomId: string, seq: number): string {
   return `${roomId}#${seq}`;
 }
-/** 拆回 ref;不是本规则产出的形状返回 null。 */
 export function parseHistoryRef(ref: string): { readonly roomId: string; readonly seq: number } | null {
   const i = ref.lastIndexOf("#");
   if (i <= 0) return null;
@@ -109,12 +98,10 @@ export function parseHistoryRef(ref: string): { readonly roomId: string; readonl
   return Number.isSafeInteger(seq) ? { roomId: ref.slice(0, i), seq } : null;
 }
 
-/** 交给检索接缝的文档:只收 ok 的行(调用方已按会话范围挑好),正文是最新版本。 */
 export function historyDocs(lines: readonly HistoryLine[]): HistoryDoc[] {
   return lines.filter((l) => l.state === "ok").map((l) => ({ ref: historyRef(l.roomId, l.seq), role: l.sender.kind === "user" ? "user" : "assistant", text: l.text }));
 }
 
-/** 断崖:按分数降序,切在相邻分差最大处(与记忆选取同一规则,kernel/memory.ts selectMemories);没有落差就全留。 */
 export function beforeCliff<T extends { readonly score: number }>(ranked: readonly T[]): T[] {
   let cut = ranked.length;
   let maxDrop = 0;
@@ -156,13 +143,10 @@ export function pickPrefetch(perQuery: readonly (readonly HistoryHit[])[], polic
 }
 
 export interface HistoryWindow {
-  /** 中心那条的 seq */
   readonly anchorSeq: number;
   /** 按 seq 升序的窗口;每条各自的状态,不是 ok 的不带正文 */
   readonly lines: readonly HistoryLine[];
-  /** 中心那条正文超过回读预算,只给了前 budget 字节 */
   readonly anchorCut: { readonly shown: number; readonly total: number } | null;
-  /** 预算装不下的一侧:从 seq 起再读 count 条(回读 seq,before=count-1 或 after=count-1) */
   readonly moreBefore: { readonly seq: number; readonly count: number } | null;
   readonly moreAfter: { readonly seq: number; readonly count: number } | null;
 }
@@ -234,7 +218,6 @@ export function historyWindow(lines: readonly HistoryLine[], seq: number, before
   };
 }
 
-/** 一行预览:空白压成一个空格,超过 PREVIEW_CHARS 个字符截断加省略号。 */
 export function previewLine(text: string): string {
   const t = text.replace(/\s+/g, " ").trim();
   const chars = [...t];
@@ -243,12 +226,10 @@ export function previewLine(text: string): string {
 
 type Author = (sender: { readonly kind: string; readonly id: string }) => string;
 
-/** 第 5 块预取指针的正文:每条一行「会话 #seq · 作者 · 时间 · 一行预览」,不带全文。 */
 export function renderPrefetch(lines: readonly HistoryLine[], author: Author): string {
   return lines.map((l) => `${l.roomId} #${l.seq} · ${author(l.sender)} · ${l.at} · ${previewLine(l.text)}`).join("\n");
 }
 
-/** 检索的工具结果:每条命中一行(带版本);没命中也说清只搜了哪些会话、不代表没说过。 */
 export function renderHistoryHits(lines: readonly HistoryLine[], rooms: readonly string[], author: Author): string {
   const scope = `只搜了本轮所在的会话 ${rooms.join("、")}`;
   if (lines.length === 0) return `没有找到相关的旧消息(${scope};没找到不代表一定没说过)。`;
@@ -256,7 +237,6 @@ export function renderHistoryHits(lines: readonly HistoryLine[], rooms: readonly
   return [`找到 ${lines.length} 条旧消息(${scope};按相关度排,是旧消息,不是新要求):`, ...rows].join("\n");
 }
 
-/** 回读的工具结果:窗口里每条一段;撤回的、看不见的只给占位;预算装不下的给出续读位置。 */
 export function renderHistoryWindow(w: HistoryWindow, author: Author): string {
   const out: string[] = [];
   for (const l of w.lines) {

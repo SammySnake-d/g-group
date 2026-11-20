@@ -110,7 +110,6 @@ test("同进程两个连接:A 读到版本未写入时 B 提交,B 返回 busy �
   const f = prepare(dbFile());
   const b = openStore(f, { busyTimeoutMs: 50 });
   const during: unknown[] = [];
-  // A 读到版本、还没写入的那一刻,B 用同一版本提交:这是静默覆盖最容易发生的时刻
   const a = openStore(f, { busyTimeoutMs: 50, onCasRead: () => { during.push(commitDoc(b, "主稿", 0, "B 的修改")); } });
   assert.deepEqual(commitDoc(a, "主稿", 0, "A 的修改"), { ok: true, ver: 1 });
   assert.deepEqual(during, [{ ok: false, reason: "busy" }]);
@@ -121,7 +120,6 @@ test("同进程两个连接:A 读到版本未写入时 B 提交,B 返回 busy �
 });
 
 // 真实多进程:每个子进程独立打开同一个库文件。父子之间只用 stdin/stdout 行协议做屏障(go / release),不靠睡眠定时;
-// 子进程的每次等待都有上限,任何失败/超时路径都会杀掉并回收本测试起的全部子进程。
 const CHILD = path.join(ROOT, "child.mjs");
 fs.writeFileSync(CHILD, `
 import fs from "node:fs";
@@ -236,7 +234,6 @@ test("另一进程持有写锁时新连接照常打开:初始化等锁,不因提
   await holder.saw("held");
   const opener = kid(f, "", { openOnly: true, busyMs: 0 });
   await opener.saw("opening");
-  // 旧实现在这里立刻失败返回;等锁的实现在持锁方释放前不会有结果
   const early = await Promise.race([opener.done().then((r) => ({ early: r })), delay(400).then(() => undefined)]);
   holder.send("release");
   assert.deepEqual(await holder.done(), { released: true });
@@ -355,7 +352,6 @@ test("测试夹具负例:子进程输出结果后异常退出,done 判失败而�
 });
 
 // RR-03:new DatabaseSync 成功之后的初始化失败,必须当场关掉这个连接并抛出原始错误;不靠 GC 回收。
-// 用本进程 /dev/fd 的条目数观察是否有连接遗留(macOS 与 Linux 都有 /dev/fd)。连续失败 20 次,遗留一个就会多出至少 20 个。
 const openFds = () => fs.readdirSync("/dev/fd").length;
 // 意外打开成功的句柄当场关掉,避免它本身被算成遗留;此时对应位置记 undefined,由断言判失败
 const failTimes = (n: number, open: () => { db: { close(): void } }): unknown[] => {
@@ -381,7 +377,6 @@ test("初始化失败(文件不是 SQLite 库):抛出原始错误,连续 20 次�
 test("初始化失败后 close 自身也抛错:仍抛初始化的原始错误,连接已关闭,恢复 close 后健康库照常读写", () => {
   const f = prepare(dbFile());
   fs.writeFileSync(f, "这不是 SQLite 数据库文件。".repeat(20));
-  // 人工故障注入:先真正关闭,再抛一个 close 故障;只在本测试内生效,finally 里恢复原方法
   const realClose = DatabaseSync.prototype.close;
   let closeCalls = 0;
   DatabaseSync.prototype.close = function (this: DatabaseSync) { closeCalls++; realClose.call(this); throw new Error("模拟 close 故障"); };

@@ -1,4 +1,3 @@
-// 领域错误:带稳定的 code,调用方按 code 分支,不按文案。
 export type DomainErrorCode =
   | "sender-not-allowed"
   | "target-not-found"

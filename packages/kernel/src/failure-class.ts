@@ -1,13 +1,10 @@
 // 失败原因分类器(需求文档 D26 第 8.4 节,AC-43 ⑧/⑬/⑭;retry_class 沿用 AC-36 的 Transient / Permanent / MidTurn / UnknownEffect)。
 // 归类由代码按带版本号的规则表做,不让模型判:
-//   1. 宿主自己的结构化事实最先:用户点了停止(userStopped)、宿主卡死判定给出的情形(stall);
 //   2. 其次 harness / 网关给的结构化字段:HTTP 状态、错误 kind(只认表里列出的 kind,harness 自报的 unknown 等不算依据);
 //   3. 再次原文规则(按表的顺序,先命中的算);
 //   例外:结构化字段只给出笼统类(400/404/invalid_request、401/403 等)时,原文命中更具体的「上下文超长 / 平台拒绝 / 会话丢失」改用具体类——
 //   mirasim 把「Prompt is too long · automatic compaction failed」记成 apiError{kind: invalid_request},照抄 kind 就分不出该开新会话(D26 第 8.2 节)。
 // 认不出记 unknown 并原样保留原文,不硬塞进别的类。reasonClass 给人看、定修法;retryClass 给重试策略用,两者分开(v3.13,#2747)。
-// user_stopped 是人停的,不是失败的一类,只为让台账有统一出口;画板文字与失败不同、永不自动重跑。
-// 纯函数,不做 I/O;导出的表与常量全部冻结。
 
 export const FAILURE_RULES_VERSION: string = "2026-11-09.1";
 
@@ -30,15 +27,12 @@ export type RetryClass = "Transient" | "Permanent" | "MidTurn" | "UnknownEffect"
 export type AutoRerun = "allowed" | "backoff" | "not_same_upstream" | "new_session_only" | "never";
 
 export interface ReasonInfo {
-  /** 画板上写的人话 */
   readonly label: string;
-  /** 修法 */
   readonly fix: string;
   readonly retryClass: RetryClass;
   readonly autoRerun: AutoRerun;
   /** 同一上游连续失败就不再自动重跑到同一上游,报到画板等用户换上游(第 8.3 节) */
   readonly sameUpstreamStop: boolean;
-  /** 确定不会自愈:harness 一报就判失败,不等卡死阈值(第 8.3 节) */
   readonly failFast: boolean;
   /** 这一类自己的自动重跑上限(unknown 按 AC-36 低上限 1 次);null 表示用调用方给的上限 */
   readonly autoRerunCap: number | null;
@@ -155,7 +149,6 @@ export const FAILURE_RULES: readonly FailureRule[] = deepFreeze([
   ),
 ]);
 
-/** harness / 网关结构化错误 kind 中能直接定类的(只认这些;unknown 与没列出的 kind 不算依据) */
 const KIND: Readonly<Record<string, ReasonClass>> = deepFreeze({
   rate_limit: "rate_limited",
   rate_limited: "rate_limited",
@@ -187,13 +180,10 @@ const byStatus = (s: number): ReasonClass | null => {
   if (s === 408 || (s >= 500 && s <= 599)) return "upstream_unavailable";
   return null;
 };
-/** 结构化字段只给出笼统类时,原文命中这几类就改用具体类 */
 const REFINABLE: ReadonlySet<ReasonClass> = new Set<ReasonClass>(["invalid_request", "auth_or_quota"]);
 const SPECIFIC: ReadonlySet<ReasonClass> = new Set<ReasonClass>(["context_overflow", "platform_refused", "session_lost"]);
-/** 只按原文开头这么长匹配(原文照样整段保留) */
 const MATCH_CHARS = 8000;
 
-/** 一条原文规则是否命中(规则都不带 g/y 标志,test 不改 lastIndex) */
 function matches(p: RegExp, head: string): boolean {
   return p.test(head);
 }
@@ -208,32 +198,24 @@ function byText(text: string, only?: ReadonlySet<ReasonClass>): { reasonClass: R
 }
 
 export interface FailureInput {
-  /** 原始错误文本(harness 报错、退出说明、stderr 尾巴);认不出时原样保留 */
   readonly text: string;
   readonly httpStatus?: number | null;
-  /** harness / 网关给的结构化错误 kind */
   readonly kind?: string | null;
-  /** 用户点了停止(宿主自己的事实) */
   readonly userStopped?: boolean;
-  /** 宿主卡死判定给出的情形(第 8.3 节) */
   readonly stall?: "no_response" | "stalled" | "stream_dropped" | null;
 }
 export interface FailureClass {
   readonly reasonClass: ReasonClass;
   readonly retryClass: RetryClass;
   readonly autoRerun: AutoRerun;
-  /** 画板上写的人话 */
   readonly label: string;
-  /** 原文,认不出也保留 */
   readonly raw: string;
   readonly rulesVersion: string;
   readonly fix: string;
   readonly sameUpstreamStop: boolean;
   readonly failFast: boolean;
   readonly autoRerunCap: number | null;
-  /** 按哪一层判的(写进判定日志) */
   readonly via: "userStopped" | "stall" | "httpStatus" | "kind" | "text" | "none";
-  /** 原文规则命中的那条(via=text 或细化时) */
   readonly pattern: string | null;
 }
 

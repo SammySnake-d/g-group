@@ -1,6 +1,3 @@
-/* 连上后端时,分屏里「会话 / 过程」两页读真实记录:点开时(和它有新进展、停下、做完时)取一次
-   tasks.get + tasks.progress(全量)+ 运行台账里这件事最近一次的 Compute 会话(runs.get),拼成会话记录;
-   读到的全部进度并进这件 Compute 的过程(列表和推来的事件只带最近若干条)。没连上后端时不取,演示照旧。 */
 import { useEffect, useMemo, useState } from 'react'
 import type { HarnessTranscript } from '@g-group/ui-core'
 import { call } from '@/api/backend'
@@ -11,7 +8,6 @@ import { useApp, useAppStore } from '@/store'
 
 const LIMIT = 500
 
-/** 联系人交给 Compute 的那段话:它接活那句上的任务卡正文 */
 function useBrief(c: Compute) {
   return useApp((s) => {
     const conv = s.convs.find((x) => x.id === c.conv)
@@ -24,7 +20,6 @@ export function useLiveSession(c: Compute): { live: boolean; loading: boolean; t
   const live = useApp((s) => s.backend.mode === 'connected')
   const brief = useBrief(c)
   const [facts, setFacts] = useState<Omit<SessionFacts, 'brief' | 'owner'> | null>(null)
-  /* 有新进展、停下、做完时再取一次 */
   const key = `${c.id}|${c.status}|${c.stopping ? 1 : 0}|${c.activity.at(-1)?.id ?? ''}|${c.needsHuman?.qid ?? ''}`
   useEffect(() => {
     if (!live) return
@@ -36,7 +31,6 @@ export function useLiveSession(c: Compute): { live: boolean; loading: boolean; t
       const g = unit ? await call('runs.get', { runId: unit.id }) : null
       if (off) return
       setFacts({ task: t.value, progress: p.value.progress, hasEarlier: p.value.progress.length >= LIMIT, ...(g?.ok ? { session: g.value } : {}) })
-      /* 全部进度并进过程(同一事件 id 相同,不重复) */
       const s = useAppStore.getState(), cur = s.computes[c.id]
       if (cur) {
         const activity = mergeActs(cur.activity, p.value.progress.map(actOf))

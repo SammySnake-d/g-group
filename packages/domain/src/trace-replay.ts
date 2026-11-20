@@ -1,8 +1,6 @@
 // TLC 反例转回归用例(AC-10):把 packages/domain/tla/ 下规格被 TLC 找到的行为(-dumpTrace json 存进 tla/traces/)
 // 逐步回放到真实领域原语,记录模型这一步的结论和真实实现这一步的结论。规格里的提交点对应:
-//   Publish.tla → cas.ts commitIn(会话版本单元,基于读到的版本提交);
 //   Claim.tla   → task.ts apply(Claim) 推导新状态 + cas.ts commit(任务单元,基于读到的版本提交);
-//   Lease.tla   → lease.ts acquireLease / releaseLease(每个资源一个 CAS 单元 + 全序 + epoch)。
 // 模型里 conflict 动作在真实实现上就是一次「基于旧版本的提交」,真实实现应同样给出 version-conflict;
 // 去掉 CAS 的反例里模型接受、真实实现拒绝的那一步就是分歧点(divergence)。测试只读仓库里存的 JSON,不需要 java。
 import { type Store, type Versioned, cell, commit, commitIn } from "./cas.ts";
@@ -19,11 +17,8 @@ export interface StepVerdict {
   readonly index: number;
   readonly op: string;
   readonly who: string | null;
-  /** 规格这一步的结论 */
   readonly model: Verdict;
-  /** 真实实现这一步的结论 */
   readonly real: Verdict;
-  /** 真实实现拒绝时的原因 */
   readonly reason: string | null;
 }
 
@@ -69,10 +64,8 @@ export function divergence(steps: readonly StepVerdict[]): StepVerdict | null {
   return steps.find((s) => s.model !== s.real) ?? null;
 }
 
-// ---------- 发言发布 ----------
 export interface PublishReplay {
   readonly steps: readonly StepVerdict[];
-  /** 真实实现里提交成功的发布:base 是起草时读到的版本,over 是提交瞬间的版本 */
   readonly published: readonly { readonly who: string; readonly base: number; readonly over: number }[];
   readonly ver: number;
 }
@@ -108,10 +101,8 @@ export function replayPublish(dump: unknown): PublishReplay {
   return { steps, published, ver: verNow() };
 }
 
-// ---------- 排他认领 ----------
 export interface ClaimReplay {
   readonly steps: readonly StepVerdict[];
-  /** 真实实现里认领提交成功的联系人 */
   readonly winners: readonly string[];
   readonly owner: string | null;
   readonly state: Task["state"];
@@ -148,15 +139,12 @@ export function replayClaim(dump: unknown, taskId = "t1", requester = "u1"): Cla
   return { steps, winners, owner: cur.value.owner, state: cur.value.state, ver: cur.ver };
 }
 
-// ---------- 多资源租约 ----------
 export interface LeaseReplay {
   readonly steps: readonly StepVerdict[];
   readonly table: LeaseTable;
-  /** 真实实现里各持有者手上的资源与授予时的 epoch */
   readonly held: Readonly<Record<string, Readonly<Record<string, number>>>>;
 }
 const LEASE_OPS: ReadonlySet<string> = new Set(["read", "grant", "conflict", "release"]);
-/** order:资源全序(规格里的 ResSeq),下标就是 rank。 */
 export function replayLease(dump: unknown, order: readonly string[]): LeaseReplay {
   let table: LeaseTable = new Map();
   const seen = new Map<string, { res: string; ver: number }>();

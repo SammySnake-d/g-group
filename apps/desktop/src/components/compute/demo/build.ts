@@ -3,7 +3,6 @@ import type { AgentEvent, BackgroundJob, DeliverableEvent, FileChange, HarnessId
 /* 演示会话的写法：按时间顺序写「派活、说话、调用、子代理、提示、交付」，时间和序号自动往后走。
    只给演示用；以后换成后端按 computeId 分页取原始事件，类型不变。 */
 
-/** 演示里的「现在」：在跑的会话用时算到这一刻（和 data.ts 里各 Compute 的 elapsed 对得上） */
 export const DEMO_NOW = Date.parse('2026-11-09T02:16:00+08:00')
 
 const iso = (day: string, hms: string) => `${day}T${hms}+08:00`
@@ -28,7 +27,6 @@ export class Script {
     return { id: `${this.prefix}-${this.seq}`, seq: this.seq, at: new Date(this.clock).toISOString() }
   }
 
-  /** 时间往后走 sec 秒 */
   wait(sec: number) {
     this.clock += sec * 1000
     return this
@@ -44,7 +42,6 @@ export class Script {
     return this.wait(4)
   }
 
-  /** 返回这次调用的 id，重试时用作 retryOf */
   tool(name: string, summary: string, o: ToolOpts = {}): string {
     const b = this.base()
     const status = o.status ?? 'ok'

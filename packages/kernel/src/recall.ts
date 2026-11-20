@@ -1,27 +1,18 @@
 // 被引用消息的确定性 Page-in 规划(需求文档 D06.3 第 2–4 条;验收 AC-06、AC-37 ③)。
 // 纯函数:输入本轮要换入的引用清单、联系人可读的会话、被引用消息的最新投影和单轮回读预算,输出逐条召回状态清单。
 // 状态只有四种(D06.3 原名):
-//   Full               —— 原文全部换入;
-//   TruncatedSlice     —— 原文太长,只换入头部切片,带原长与续读游标 nextCursor(显式截断,不是静默);
-//   DeletedOrWithdrawn —— 已撤回/删除:只给占位,不带原文、不报原长;
-//   AccessDenied       —— 不在本会话(跨会话引用)、联系人不是该会话成员、或本会话里没有这条:机械拒绝,不带原文。
 // 预算(D06.3 第 4 条「多条引用的公平预算分配」):先给每条有效引用保底切片 minSliceBytes(原文更短就按原文),
 // 再优先补满主回复(primary),剩下的按引用顺序均分(水位法:短的拿够后余量继续分给还没拿够的)。
-// 保底切片都装不下时显式失败 over-budget,不悄悄丢掉任何一条。预算单位是 UTF-8 字节,数值待决(需求文档 v3.20 §8.1 待决 13)。
-// 输入先过统一的普通数据判定(plain.ts):getter 永不调用,Proxy、类实例、函数一律拒绝;之后只读冻结副本。
 import { pushOwn } from "./own.ts";
 import { plainData } from "./plain.ts";
 
 export type RecallState = "Full" | "TruncatedSlice" | "DeletedOrWithdrawn" | "AccessDenied";
-/** 一条引用:fromRoomId 是发出引用的那条消息所在会话,roomId/seq 是被引用的消息 */
 export interface RecallRef {
   readonly fromRoomId: string;
   readonly roomId: string;
   readonly seq: number;
-  /** 主回复 reply_to_seq:分预算时优先补满 */
   readonly primary?: boolean;
 }
-/** 被引用消息的最新投影(按最新编辑版本) */
 export interface RecallSource {
   readonly roomId: string;
   readonly seq: number;
@@ -30,15 +21,11 @@ export interface RecallSource {
 }
 export interface RecallPlanInput {
   readonly refs: readonly RecallRef[];
-  /** 联系人是成员、可以读的会话 */
   readonly readableRooms: readonly string[];
   readonly sources: readonly RecallSource[];
-  /** 单轮回读预算 max_recall(UTF-8 字节) */
   readonly budgetBytes: number;
-  /** 每条有效引用的保底切片 min_slice_per_quote(UTF-8 字节) */
   readonly minSliceBytes: number;
 }
-/** 续读游标:offset 是原文(JS 字符串下标)里还没换入部分的开头,remainingBytes 是剩下的字节数 */
 export interface RecallCursor {
   readonly offset: number;
   readonly remainingBytes: number;
@@ -48,11 +35,8 @@ export interface RecallItem {
   readonly seq: number;
   readonly primary: boolean;
   readonly state: RecallState;
-  /** Full 为全文,TruncatedSlice 为头部切片,其余为 "" */
   readonly text: string;
-  /** text 的 UTF-8 字节数 */
   readonly bytes: number;
-  /** 原文 UTF-8 字节数;DeletedOrWithdrawn / AccessDenied 为 null(不泄露原文长度) */
   readonly totalBytes: number | null;
   readonly nextCursor: RecallCursor | null;
 }
@@ -93,7 +77,6 @@ function checkInput(x: unknown): string | undefined {
   return undefined;
 }
 
-/** 按 UTF-8 字节上限取头部切片,只在字符(码点)边界上切,不切坏多字节字符 */
 function headSlice(text: string, maxBytes: number): { text: string; bytes: number } {
   let used = 0;
   let end = 0;
@@ -113,7 +96,6 @@ interface Candidate {
   alloc: number;
 }
 
-/** 引用召回规划:逐条判权限与撤回,在单轮回读预算内给每条有效引用保底切片,主回复优先补满,其余按序均分 */
 export function planRecall(input: RecallPlanInput): RecallPlanResult {
   const pl = plainData(input, "召回输入");
   if (!pl.ok) return invalid(`召回输入只接受普通数据对象:${pl.path} ${pl.why}`);
@@ -124,7 +106,6 @@ export function planRecall(input: RecallPlanInput): RecallPlanResult {
   const sources = new Map<string, RecallSource>();
   for (const s of x.sources) sources.set(keyOf(s.roomId, s.seq), s);
 
-  // 保序去重:同一 (发出会话, 被引用会话, seq) 只出一项,任一重复项是主回复就按主回复算
   const refs: { fromRoomId: string; roomId: string; seq: number; primary: boolean }[] = [];
   for (const r of x.refs) {
     const dup = refs.find((y) => y.fromRoomId === r.fromRoomId && y.roomId === r.roomId && y.seq === r.seq);
@@ -146,7 +127,6 @@ export function planRecall(input: RecallPlanInput): RecallPlanResult {
     }
   }
 
-  // 保底:每条有效引用先拿 min(原长, minSliceBytes);合计超过预算就显式失败,不丢任何一条
   let need = 0;
   for (const c of candidates) {
     c.alloc = Math.min(c.total, x.minSliceBytes);
@@ -159,7 +139,6 @@ export function planRecall(input: RecallPlanInput): RecallPlanResult {
     });
   }
   let left = x.budgetBytes - need;
-  // 主回复优先补满
   for (const c of candidates) {
     if (!c.primary || left === 0) continue;
     const more = Math.min(c.total - c.alloc, left);

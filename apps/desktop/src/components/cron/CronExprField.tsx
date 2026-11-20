@@ -1,5 +1,3 @@
-/* 按时间重复:预设芯片 + 自定义 cron 表达式。表达式区是主角——
-   大号等宽输入、右侧人话;下面一把逐段尺子,光标在哪段哪段亮,哪段错哪段红;再下面是接下来几次和时区。 */
 import { useRef, useState } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { CRON_FIELDS, CRON_PRESETS, CUSTOM_PRESET, cronPresetId, describeCron, formatRunAt, localZoneLabel, nextRuns, parseCron } from '@g-group/ui-core'
@@ -9,7 +7,6 @@ import { cn } from '@/lib/utils'
 import { EDITOR } from './constants'
 import { tokenAt } from './util'
 
-/** 预设芯片(照 mirasim 自动化编辑器的 preset):细边胶囊;选中 = 强调色细边 + 淡底 + 加粗 */
 export const pillCls = (on: boolean) => cn('h-[30px] px-3 text-[12.5px] font-normal shadow-none', on ? 'border-me/55 bg-me/10 font-semibold text-fg hover:bg-me/10' : 'bg-transparent text-fg-2')
 
 export function CronExprField({ expr, setExpr, custom, setCustom, now }: { expr: string; setExpr: (v: string) => void; custom: boolean; setCustom: (v: boolean) => void; now: Date }) {

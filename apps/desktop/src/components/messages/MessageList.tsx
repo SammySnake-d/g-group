@@ -1,4 +1,3 @@
-/* ============ 消息流:群聊、私聊、联系人资料共用 ============ */
 import type { Msg } from '@/data'
 import { useApp } from '@/ctx'
 import { Row } from './Row'
@@ -15,7 +14,6 @@ type Props = { msgs: Msg[]; compact?: boolean; highlight?: string | null; select
 export function MessageList({ msgs: all, compact = false, highlight, selecting, selected, onSelect, conv }: Props) {
   const { computes, pending } = useApp()
   const { list: msgs, trailOf } = foldComputeTrails(all, computes)
-  /** 一个回合的结尾:挂着要你回答的选项,或者下面挂着做完的过程 */
   const endsTurn = (x: Msg) => 'id' in x && (pending.some((p) => 'ask' in p && p.ask === x.id) || !!trailOf[x.id])
   /* 同一个人连着说、引用的是同一条:后面几句不重复画引用,相同引用不再拆开头像组。 */
   const sameQuote = msgs.map((m, i) => 'from' in m && m.k !== 'replying' && repeatsPrevQuote(msgs, i, m as Bodied))

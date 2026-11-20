@@ -1,7 +1,6 @@
 import { test } from "@playwright/test";
 import { shot } from "./shots";
 
-// 截图走查:主界面、悬浮工具条贴着消息。图存到交付目录。
 
 test("截图:主界面与悬浮工具条", async ({ page }) => {
   await page.goto("/?conv=g");

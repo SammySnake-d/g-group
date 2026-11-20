@@ -7,7 +7,6 @@ import { EmptyState } from '@/components/ui/section'
 import { ListItem } from '@/components/ui/list-row'
 import { Hint, PageScroll } from './kit/parts'
 
-/* ---------- 置顶消息:点一条跳回原消息;「移出」贴在这一行右侧,悬停或键盘聚焦时出现 ---------- */
 export function PinsPage({ id }: { id: string }) {
   const { convs, jump, closeAll, pinMsg } = useApp()
   const g = convs.find((c) => c.id === id)!

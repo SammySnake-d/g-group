@@ -4,7 +4,6 @@ import { INITIAL_MODEL_SETTINGS } from '@/modelConfig'
 import { uid } from '../boot'
 import { lens, type Slice } from '../state'
 
-/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 MODELS_CTX_KEYS */
 export interface ModelsCtx {
   /** 模型配置（D07.4）：全局默认与模型目录。全软件只在设置页「默认」和联系人工作台「设置」两处改 */
   modelSettings: import('@/modelConfig').ModelSettings

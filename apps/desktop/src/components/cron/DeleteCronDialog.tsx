@@ -1,4 +1,3 @@
-/* 删除定时要二次确认:写清删的是哪一个、连带删掉什么,并提示「只想停一阵子用暂停」。Esc 只关这张确认框,不收分屏 */
 import { people, type Cron } from '@/data'
 import { cronRule } from '@/cronView'
 import { Button } from '@/components/ui/button'

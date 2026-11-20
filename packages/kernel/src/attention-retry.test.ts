@@ -1,10 +1,8 @@
 // AC-36 注意循环的失败退避接缝:一轮抛错后按宿主失败策略给的延迟重跑(retryAfter),返回 null 就不再自动重跑,只等新的 now 通知;
-// 策略自身出错或给出非法延迟时按 retryMs 兜底。计时器可注入,测试用假计时器逐步推进。
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createAttentionLoop, type TimerApi } from "./attention.ts";
 
-/** 假计时器:advance(ms) 推进虚拟时间并触发到期回调。 */
 function fakeTimers() {
   let now = 0;
   let next = 1;

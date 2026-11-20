@@ -1,5 +1,4 @@
 // 多资源排他租约原语(第四台 4A/4C/4D 共同部分,AC-10 Lease.tla 的真实实现):
-// 按资源排他、以快照版本比较并提交、全序申请(逆序拒绝)、释放带 epoch(旧 epoch 迟到释放拒绝)。
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { type LeaseTable, acquireLease, readLease, releaseLease } from "./lease.ts";

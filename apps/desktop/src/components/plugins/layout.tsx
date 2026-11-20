@@ -14,12 +14,10 @@ export function PageHead({ title, desc, children }: { title: string; desc: strin
   )
 }
 
-/** 列表空了:说清这里会出现什么、下一步做什么 */
 export function EmptyBox({ children, testid, className }: { children: ReactNode; testid?: string; className?: string }) {
   return <div data-testid={testid} className={cn('mt-8 rounded-2xl border border-dashed border-line px-6 py-12 text-center text-[13px] text-fg-2', className)}>{children}</div>
 }
 
-/** 详情页的一节:h2 标题 + 旁注 */
 export function DetailSection({ title, sub, children, testid }: { title: string; sub?: string; children: ReactNode; testid?: string }) {
   return (
     <section data-testid={testid}>
@@ -29,7 +27,6 @@ export function DetailSection({ title, sub, children, testid }: { title: string;
   )
 }
 
-/** 详情页右栏的一张卡 */
 export function SideCard({ title, children, testid }: { title: string; children: ReactNode; testid?: string }) {
   return (
     <div data-testid={testid} className="rounded-2xl border border-line bg-elev p-4">

@@ -1,4 +1,3 @@
-// Native MCP progress channel; app-server exposes the structured result in item/completed.
 import { createInterface } from "node:readline";
 const tool = { name: "report_progress", description: "Report a milestone or blocker to the task owner.", inputSchema: { type: "object", properties: { kind: { enum: ["milestone", "blocked"] }, summary: { type: "string" }, stage: { type: "string" }, needs: { type: "string" } }, required: ["kind", "summary"], additionalProperties: false } };
 for await (const line of createInterface({ input: process.stdin })) {

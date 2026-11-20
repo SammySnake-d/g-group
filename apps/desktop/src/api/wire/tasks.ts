@@ -1,6 +1,3 @@
-// 任务接线:tasks.list 全量读 → Compute 切片;task.updated 整条换(按 stateVer 只进不退),compute.progress 追加一条过程。
-// 一件派给联系人的任务在界面上就是一个 Compute(id = 任务 id,聊天里的任务卡指向它)。
-// 合同里没有的不编:步骤计划、改动文件、检查、检查点、花费都留空(花费显示「—」);用时只在 Compute 跑完、有起止时间时才算。
 import { formatDuration } from '@g-group/ui-core'
 import type { ComputeProgress, TaskStateName, TaskView } from '@g-group/api-contract'
 import type { ActKind, Activity, CStatus, Compute } from '@/data'
@@ -18,7 +15,6 @@ const STATUS: Record<TaskStateName, CStatus> = {
   T9_StopRequested: 'running', T10_Cancelled: 'stopped', T11_Failed: 'error',
 }
 
-/** 一条进度事件的一句话:里程碑带上阶段名,其余就是宿主给的摘要 */
 const lineOf = (p: ComputeProgress) => (p.kind === 'milestone' && p.stage ? `${p.stage} · ${p.summary}` : p.summary)
 
 /** 进度事件 → 过程里的一条。id 以发生时刻开头,按 id 排序就是时间顺序;同一事件(列表里的和推来的)id 相同,不重复 */
@@ -55,8 +51,6 @@ function humanStep(t: TaskView, prev?: Compute): Compute['needsHuman'] {
   return { what: q.text || '这一步得你来', qid: q.qId, ...(prev?.needsHuman?.qid === q.qId && prev.needsHuman.taken ? { taken: true } : {}) }
 }
 
-/** 合同的任务 → 界面的 Compute。没派给联系人的任务(清单里待认领的)不是 Compute,返回 null。
- *  prev:界面里已有的这一件,推来的进度事件可能比任务里的「最近若干条」更全,合并不丢 */
 export function toCompute(t: TaskView, prev?: Compute): Compute | null {
   if (!t.ownerContactId) return null
   const runs = t.computeRuns
@@ -66,7 +60,6 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
   const done = [...progress].reverse().find((p) => p.kind === 'completed')
   const failed = [...progress].reverse().find((p) => p.kind === 'failed')
   const human = humanStep(t, prev)
-  /* 卡在要你来的那一步:Compute 还占着,那一行换成「要你来」(和原型一样仍算在跑) */
   const status = human ? 'running' : STATUS[t.state]
   const ended = first && last?.endedAt ? Date.parse(last.endedAt) - Date.parse(first.startedAt) : NaN
   const harness = last ? (HARNESS[last.harness] ?? last.harness) : '—'
@@ -83,9 +76,7 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
     model: last?.model ?? t.modelSnapshot?.model ?? '—',
     harness,
     steps: [], activity: mergeActs(prev?.activity ?? [], progress.map(actOf)), files: [], checks: [], checkpoints: [],
-    /* 做完了:那一行写「Claude Code 做完了，等你确认 · 18 秒」,Compute 的原话(done.summary)只在过程里 */
     ...(status === 'done' && done ? { result: elapsed === '—' ? phase : `${phase} · ${elapsed}` } : {}),
-    /* 失败了(出了原位失败卡、任务还在等你选,或已经没做成):那一行写失败原因 */
     ...((status === 'error' || latest?.kind === 'failed') && failed ? { error: failed.summary } : {}),
     ...(t.state === 'T9_StopRequested' ? { stopping: true } : {}),
     /* 借的是本群临时槽位(U09):群资料「临时算力」页按它列借出 */
@@ -93,7 +84,6 @@ export function toCompute(t: TaskView, prev?: Compute): Compute | null {
   }
 }
 
-/** 每件任务见过的最新文档版本(合同 stateVer):旧版本晚到也不覆盖新的 */
 const seen = new Map<string, number>()
 const fresh = (t: TaskView) => {
   const v = t.stateVer ?? 0

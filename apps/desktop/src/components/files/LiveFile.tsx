@@ -1,6 +1,3 @@
-/* 连上后端时文件的正文与缩略:附件和任务产出用 files.read 取,交付带回的工件快照用 artifacts.get 取。
-   文本照原样排(保留换行),图片直接显示,其余只写类型和大小——不编内容、不画占位图形。
-   同一份文件(按文件号 + 大小)只取一次,缩略和阅读页共用。 */
 import { useEffect, useState } from 'react'
 import { FileText } from 'lucide-react'
 import { call } from '@/api/backend'
@@ -40,7 +37,6 @@ function useContent(f: Live): Content | null {
   return c
 }
 
-/** 阅读页正文 */
 export function LiveFileBody({ file }: { file: Live }) {
   const c = useContent(file)
   if (!c) return <div className="min-h-40" aria-busy="true" />
@@ -55,7 +51,6 @@ export function LiveFileBody({ file }: { file: Live }) {
 
 const cover = 'h-52 border-b border-line bg-bg'
 
-/** 文件区缩略:正文开头几行 / 图片 / 类型 */
 export function LiveFileCover({ file }: { file: Live }) {
   const c = useContent(file)
   if (c?.kind === 'image') return <div className={cn(cover, 'overflow-hidden')}><img src={c.src} alt="" className="h-full w-full object-cover" /></div>

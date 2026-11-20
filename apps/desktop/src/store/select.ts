@@ -4,13 +4,11 @@ import { allCommands, pluginStates } from '@/commands'
 import { people, type Conversation, type Msg } from '@/data'
 import type { AppState } from './state'
 
-/** 当前会话;被删/退出后回落到第一个 */
 export const activeConv = (s: Pick<AppState, 'convs' | 'active'>): Conversation => s.convs.find((c) => c.id === s.active) ?? s.convs[0]
 
 /** 当前会话的草稿(坏实现 AC-24:切会话草稿丢了) */
 export const draftOf = (s: Pick<AppState, 'drafts' | 'active'>, broken24: boolean) => (broken24 ? '' : (s.drafts[s.active] ?? ''))
 
-/** 左侧导航的角标:等你处理 / 出错 / 在跑 */
 export const totals = (s: Pick<AppState, 'pending' | 'computes'>) => ({
   wait: s.pending.filter((p) => p.kind !== 'error').length,
   err: s.pending.filter((p) => p.kind === 'error').length,
@@ -18,7 +16,6 @@ export const totals = (s: Pick<AppState, 'pending' | 'computes'>) => ({
 })
 
 export type ConvTone = 'run' | 'warm' | 'err' | 'draft' | 'none'
-/** 会话列表第二行:正在输入 > 等你 > 出错 > 在做 > 草稿 > 最后一条 */
 export function convState(c: Conversation, s: Pick<AppState, 'pending' | 'computes' | 'typing' | 'drafts' | 'active'>): { tone: ConvTone; text: string; count: number } {
   const pend = s.pending.filter((p) => p.conv === c.id)
   const cs = Object.values(s.computes).filter((x) => x.conv === c.id)
@@ -43,7 +40,6 @@ export function convState(c: Conversation, s: Pick<AppState, 'pending' | 'comput
   return { tone: 'none', text: who + last.text, count: 0 }
 }
 
-/** 打开这个会话那一刻的第一条未读消息(连上后端时按 id 锚住,后来的新消息不把它往下推) */
 export function firstUnreadId(c: Conversation, n: number): string | null {
   if (!n) return null
   const idx: number[] = []
@@ -55,7 +51,6 @@ export function firstUnreadId(c: Conversation, n: number): string | null {
 
 /** 在「打开时的未读」那条别人的消息前插一条「以下是新消息」分隔线(#1240);给了 anchorId 就锚在那条上 */
 export function withUnreadDivider(c: Conversation, n?: number, anchorId?: string | null): Msg[] {
-  /* anchorId:undefined = 没锚过(演示数据,按条数算);null = 打开时没有未读;字符串 = 锚在这条上 */
   if (anchorId === null || (anchorId === undefined && !n)) return c.messages
   const idx: number[] = []
   c.messages.forEach((m, i) => { if (m.k === 'text' && m.from !== 'me') idx.push(i) })
@@ -64,7 +59,6 @@ export function withUnreadDivider(c: Conversation, n?: number, anchorId?: string
   return [...c.messages.slice(0, at), { k: 'sys', id: 'new-divider', text: '—— 以下是新消息 ——' } as Msg, ...c.messages.slice(at)]
 }
 
-/** 这个会话里的斜杠命令:内置 + 插件注册的 + 在场助手声明的;用不了的带灰显原因 */
 export function slashEntries(s: Pick<AppState, 'plugins' | 'pluginCatalog'>, conv: Conversation): SlashEntry[] {
   const where = { scope: conv.kind, plugins: pluginStates(s.pluginCatalog, s.plugins, conv.id), assistants: conv.members.filter((m) => m !== 'me' && !people[m]?.human) }
   return availableCommands(allCommands(s.pluginCatalog, s.plugins), where)

@@ -5,7 +5,6 @@ import { MessageList } from '@/components/Messages'
 import { Button } from '@/components/ui/button'
 import { PageFooter, PageScroll } from './kit/parts'
 
-/* ---------- 助手之间的一段对话:只读原话;底部回到群里看结论 ---------- */
 export function TalkPage({ id }: { id: string }) {
   const { convs, jump, closeAll } = useApp()
   const t = agentTalks.find((x) => x.id === id)!

@@ -127,7 +127,6 @@ test("越权引用机械拒绝(阳性埋雷:放行跨会话原文):别的会话�
   const retractedElsewhere = ok(planRecall(input({ refs: [ref(15, { fromRoomId: DM })] })));
   assert.equal(retractedElsewhere.items[0]!.state, "AccessDenied", "跨会话引用先判权限,不透露那边是否撤回");
 
-  // 阴性对照:同一会话内、联系人是成员 → 正常换入
   const own = ok(planRecall(input({ refs: [ref(99, { fromRoomId: DM, roomId: DM })] })));
   assert.deepEqual([own.items[0]!.state, own.items[0]!.text], ["Full", OTHER]);
 });
@@ -141,7 +140,6 @@ test("保底切片都装不下时显式失败 over-budget 并说明需要多少,
   assert.deepEqual([r.need, r.budget, r.quotes], [64 + b(S12) + b(S18), 100, 3]);
   assert.match(r.detail, /126/);
   assert.match(r.detail, /100/);
-  // 阴性对照:同样三条有效引用,预算刚好等于保底合计 → 成功
   const fits = ok(planRecall(input({ budgetBytes: 126 })));
   assert.deepEqual(fits.items.map((x) => [x.seq, x.state, x.bytes]), [[10, "TruncatedSlice", 64], [12, "Full", b(S12)], [15, "DeletedOrWithdrawn", 0], [18, "Full", b(S18)], [99, "AccessDenied", 0]]);
 });

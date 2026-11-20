@@ -5,21 +5,16 @@ import { cn } from '@/lib/utils'
 import { COPY, toolMix } from '../constants'
 import { Caret, DiffStat, KindIcon, Mono, rowTrigger, type IconTone } from '../parts'
 
-/* 连续的工具调用折成一组「N 个调用」(mirasim dxe)：默认收起，整行可点展开；
-   展开后每次调用一行(mirasim M7)：图标、摘要、结果一句、改动行数、第几次尝试、用时，再点开看输入与输出原文。
-   失败的调用红色并直接露出错误一句，不用再点；重试的调用标「第 N 次」。折叠动效用 Animate UI 的 Collapsible。 */
 
 type ToolsBlock = Extract<TranscriptBlock, { type: 'tools' }>
 
 const toneOf = (e: ToolEvent): IconTone => (e.status === 'failed' ? 'err' : e.status === 'running' ? 'active' : 'dim')
 
-/** 组的图标：有没救回的失败就用失败那次的类别，否则用最近一次调用的类别（mirasim 的行图标跟着最新动作走） */
 function groupKind(b: ToolsBlock) {
   const failed = b.calls.find((c) => c.event.status === 'failed' && !c.recovered)
   return (failed ?? b.calls[b.calls.length - 1]!).kind
 }
 
-/** 不到 1 秒的调用不标用时，免得满屏 0s */
 const MIN_SHOWN_MS = 1000
 
 export function ToolGroup({ block }: { block: ToolsBlock }) {

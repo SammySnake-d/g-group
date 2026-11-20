@@ -1,5 +1,4 @@
 // AC-36 失败轮次 A×B 双维容错的纯策略:F1/F2/F3/F7/F8/F9(重试裁决)、F10(共享上游熔断)、F11(休眠唤醒宽限门)、
-// F12(防毒丸崩溃循环)、A27-05(可恢复失败卡 CAS 领取与跳过范围)。时钟、随机数都由测试注入。
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -29,7 +28,6 @@ import {
 
 const zero = () => 0;
 
-// ---------------- 重试裁决 ----------------
 test("F1 首次 502:A1×B0 静默退避重试第 1 次,不出卡", () => {
   assert.deepEqual(decideRetry({ heal: "A1", effect: "B0", attempts: 0 }, undefined, zero), { kind: "retry", attempt: 1, limit: 3, delayMs: 1000 });
 });
@@ -149,7 +147,6 @@ test("副作用维度:分类器判不知道副作用做没做完(UnknownEffect)�
   assert.equal(effectOf("B9"), "B2", "认不出的 hint 保守按 B2");
 });
 
-// ---------------- 共享上游熔断(F10) ----------------
 const fail = (s: unknown, member: string, nowMs: number, heal = "A1", policy?: unknown) => {
   const r = breakerFailure(s, { nowMs, heal, member, reason: heal === "A2" ? "403 Insufficient user quota" : "502 EOF" }, policy);
   assert.ok(r.ok, JSON.stringify(r));
@@ -277,7 +274,6 @@ test("熔断参数可配;交互关键路径优先级只做接口(被校验、被
   assert.deepEqual([closed.admit, closed.probe, closed.priority], [true, false, "background"]);
 });
 
-// ---------------- 防毒丸崩溃循环(F12) ----------------
 test("F12 同一失败输入:第 1 次崩溃恢复允许自动续跑,第 2 次熔断 CrashLoopBlocked", () => {
   const first = crashRecover(CRASH_CLEAN, { key: "c1@room:3", effect: "B0" });
   assert.ok(first.ok);
@@ -319,7 +315,6 @@ test("F12 回收上限是参数,默认 1", () => {
   assert.equal(crashRecover(CRASH_CLEAN, { key: "k" }, -1).ok, false);
 });
 
-// ---------------- 休眠唤醒宽限门(F11) ----------------
 const MIN = 60000;
 test("F11 时钟跳变 +10 分钟:awakeSince 宽限期内不判 stopped-beating", () => {
   let w = wakeTick(WAKE_INITIAL, 0);
@@ -362,7 +357,6 @@ test("存活判定:进程没了是 pid-dead,启动编号对不上是 pid-reused(
   assert.equal(judgeRunner({ pidAlive: true, bootMatches: false, lastBeatMs: 0, nowMs: 10 * MIN, staleAfterMs: MIN }, w), "pid-reused");
 });
 
-// ---------------- 可恢复失败卡(A27-05) ----------------
 const CARD = { status: "open", ownerUserId: "me", contactId: "c1", attemptSeq: 2, allowedModels: ["gpt-5", "gemini-3"] } as const;
 const me = { kind: "user", id: "me" } as const;
 

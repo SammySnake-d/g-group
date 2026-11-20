@@ -7,7 +7,6 @@ import { draftOf } from '@/store/select'
 
 const NONE: QuoteRef[] = []
 
-/** 阅读栏底部的输入框:和消息栏同宽、居中 */
 export function ComposerSlot({ conv }: { conv: Conversation }) {
   const { draft, quotes, setDraft, send, removeQuote } = useApp((s) => ({ draft: draftOf(s, broken('AC-24')), quotes: s.quotes[s.active] ?? NONE, setDraft: s.setDraft, send: s.send, removeQuote: s.removeQuote }))
   return (

@@ -2,7 +2,6 @@
 # 跑全部 TLC 配置(AC-10)。需要 java 与 tla2tools.jar(TLA2TOOLS 指向它)。CI 不跑本脚本:测试只读仓库里存下的反例。
 # 每个配置的原始输出(含命令行、TLC 版本、状态数、结果、退出码)写到 ../proof/tlc-<配置>.txt,
 # 有反例(或见证配置的探针被违反)时 JSON trace 写到 traces/<配置>.json(供 src/trace-replay.ts 的回归测试回放)。
-# 用法: TLA2TOOLS=/path/to/tla2tools.jar sh packages/domain/tla/run-tlc.sh
 set -u
 cd "$(dirname "$0")"
 JAR="${TLA2TOOLS:?TLA2TOOLS 未设置}"

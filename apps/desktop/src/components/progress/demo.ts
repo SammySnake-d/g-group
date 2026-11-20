@@ -7,10 +7,8 @@ import type { ReasonClass, SubKind, Threshold, UnitState } from '@g-group/ui-cor
   在这里按 compute id 关联补上。时间写成「距演示时钟几分钟前」,演示时钟对齐 data.ts 里聊天的 02:16。
 */
 
-/** 演示时钟:data.ts 的聊天停在 02:1x,看板的「现在」取当天 02:16 */
 export const DEMO_CLOCK = { h: 2, m: 16 } as const
 
-/** data.ts 里已有 Compute 缺的台账字段。askPending:这条待你处理还在,就算「等你处理」,问题和落点取自它 */
 export interface Ledger { upstream: string; turns: number; reason?: ReasonClass; threshold?: Threshold; askPending?: string }
 export const LEDGER: Record<string, Ledger> = {
   login: { upstream: 'Anthropic 官方', turns: 6 },
@@ -25,7 +23,6 @@ export const LEDGER: Record<string, Ledger> = {
   weather: { upstream: 'xAI 官方', turns: 1 },
 }
 
-/** 补充的 Compute。started / last / ended 是距演示时钟的分钟数;askPending 同上,待你处理答完后回到 state */
 export interface DemoCompute {
   id: string; conv: string; owner: string; title: string; model: string; upstream: string; state: UnitState
   reason?: ReasonClass; reasonRaw?: string; started: number; last?: number; ended?: number; turns: number; seq: number
@@ -44,7 +41,6 @@ export const DEMO_COMPUTES: DemoCompute[] = [
   D({ id: 'd-digest', conv: 'g-design', owner: 'grok', title: '总结 8 篇设计文章', model: 'Grok 5', upstream: 'xAI 官方', state: 'failed', reason: 'context_overflow', reasonRaw: 'Prompt is too long · automatic compaction failed: no assistant message in summarization response', started: 366, last: 335, ended: 335, turns: 11, seq: 412 }),
   D({ id: 'd-v2', conv: 'g-design', owner: 'claude', title: '设计稿 v2 和 GrokBot 逐屏对比', state: 'done', started: 431, last: 398, ended: 398, turns: 8, seq: 405 }),
   D({ id: 'd-palette', conv: 'g-design', owner: 'argon', title: '整理配色参考链接', model: 'Gemini 4', upstream: 'Google 官方', state: 'done', started: 1994, last: 1976, ended: 1976, turns: 2, seq: 377 }),
-  // 私聊:Claude Code 一条带 12 个子任务的返修(子任务超过 6 个折叠);Codex 两条在跑、一条排队
   D({ id: 'd-pr1', conv: 'dm-claude', owner: 'claude', title: 'PR #1 第十一轮返修', state: 'running', started: 140, last: 1, turns: 14, seq: 87 }),
   D({ id: 'd-manual', conv: 'dm-claude', owner: 'claude', title: '整理开发手册原则 69', state: 'done', started: 2036, last: 2011, ended: 2011, turns: 5, seq: 71 }),
   D({ id: 'd-mut', conv: 'dm-codex', owner: 'codex', title: 'PR #7 跑 112 个变异', model: 'GPT-6.1', upstream: 'OpenAI 官方', state: 'running', started: 58, last: 2, turns: 3, seq: 61 }),
@@ -53,7 +49,6 @@ export const DEMO_COMPUTES: DemoCompute[] = [
   D({ id: 'd-tz', conv: 'dm-gemini', owner: 'gemini', title: '时区换算：东京下午 3 点是北京几点', model: 'Gemini Flash', upstream: 'Google 官方', state: 'done', started: 3500, last: 3499, ended: 3499, turns: 1, seq: 12 }),
 ]
 
-/** 子代理 / 子对话 / 后台任务,parent 是 Compute id(data.ts 里的或上面补的) */
 export interface DemoSub { id: string; parent: string; kind: SubKind; title: string; state: UnitState; reason?: ReasonClass; reasonRaw?: string; started: number; last?: number; ended?: number }
 const S = (s: DemoSub) => s
 
@@ -72,7 +67,6 @@ export const DEMO_SUBS: DemoSub[] = [
   S({ id: 'sd2', parent: 'd-digest', kind: 'subagent', title: '抽取配色与字号', state: 'done', started: 361, ended: 350 }),
   S({ id: 'sd3', parent: 'd-digest', kind: 'subagent', title: '先总结前 4 篇', state: 'done', started: 364, ended: 346 }),
   S({ id: 'sm1', parent: 'd-mut', kind: 'job', title: 'mutation run · 并发 2', state: 'running', started: 58, last: 2 }),
-  // d-pr1:12 个子任务,超过 6 个折叠成「还有 N 个」
   S({ id: 'sr1', parent: 'd-pr1', kind: 'subagent', title: '复现 R10-03 并写失败用例', state: 'running', started: 35, last: 2 }),
   S({ id: 'sr2', parent: 'd-pr1', kind: 'job', title: 'run-all --hash', state: 'running', started: 5, last: 1 }),
   S({ id: 'sr3', parent: 'd-pr1', kind: 'job', title: '变异测试 105 个', state: 'running', started: 40, last: 1 }),

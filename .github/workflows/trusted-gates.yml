@@ -41,8 +41,10 @@ jobs:
           rsync -a --exclude node_modules --exclude .git pr/ lintcopy/
           ln -s "$PWD/pr/node_modules" lintcopy/node_modules
           cp trusted/tsconfig.json trusted/biome.json lintcopy/
+          mkdir -p lintcopy/scripts
+          cp trusted/scripts/check-comments.mjs trusted/scripts/comment-policy.json trusted/scripts/comments-baseline.json lintcopy/scripts/
           trusted/node_modules/.bin/tsc -p lintcopy/tsconfig.json
-          cd lintcopy && ../trusted/node_modules/.bin/biome lint --error-on-warnings
+          cd lintcopy && node scripts/check-comments.mjs && ../trusted/node_modules/.bin/biome lint --error-on-warnings
       - name: 测试(沙箱内)
         run: |
           docker run --rm --network none -v "$PWD/pr:/w" -w /w "$GATE_SANDBOX_IMAGE" \

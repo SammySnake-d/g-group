@@ -7,10 +7,8 @@ import { EmptyState } from '@/components/ui/section'
 import { GroupAvatar } from '../Avatar'
 import { MessageList } from '../Messages'
 
-/* 联系人的完整过程:和聊天同一套模板,只有它一个人说话。从某个群打开时先只看这个群,可以「看全部」 */
 type Log = (typeof innerLog)[string]
 
-/** 连续同一会话的记录归成一段 */
 function segments(log: Log) {
   const segs: { conv: string; items: Log }[] = []
   for (const l of log) {
@@ -21,7 +19,6 @@ function segments(log: Log) {
   return segs
 }
 
-/** 一段过程记录 → 消息列表(换了时间插一行日期,带 Compute 的跟一张 Compute 卡) */
 function toMsgs(id: PersonId, items: Log, seg: number): Msg[] {
   const out: Msg[] = []
   let at = ''

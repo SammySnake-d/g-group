@@ -10,7 +10,6 @@ import { ListGroup, ListRow } from '@/components/ui/list-row'
 import { Hint, PageScroll } from './kit/parts'
 import { LIVE } from './constants'
 
-/* ---------- 联系人资料:头像 + 名字 + 三个最常用的动作贴在名字下面;再往下是手上的事、设置、所在的群、花费 ---------- */
 export function PersonPage({ id }: { id: PersonId }) {
   const { computes, convs, openDm, mention, push, active, openWorkbench, modelSettings } = useApp()
   const p = people[id]

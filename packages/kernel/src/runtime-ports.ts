@@ -1,7 +1,5 @@
-// 联系人运行时的接缝(ports)。内核只定义形状,不做 I/O:
 //   - Inbound:进入某位联系人注意循环的一切输入(群/私聊消息、所属 Compute 语义事件、定时触发),D15.1「唯一消息入口」;
 //   - RoundRequest:每轮发给联系人模型的五块重拼结果(需求文档 D06 第 2 小节:固定前缀 / 承诺账本 / 状态笔记 / 新消息 / 指针与按需换入);
-//   - ContactMind:联系人「脑子」——吃一轮输入,吐动作。真实实现在 adapter 层(pi-agent-core),测试用确定性假实现;
 //   - MindAction:模型能提出的动作。动作由宿主校验、分配 action_id、落盘后才执行,模型不能直接发消息或起进程。
 // 分工(D06 §2「代码与模型的分工」):代码负责拼装、校验、按 seq 幂等落盘、推进游标;模型只负责判断、提出承诺与写状态笔记。
 
@@ -22,7 +20,6 @@ export interface InboundMessage {
   readonly text: string;
   readonly replyToSeq: number | null;
   readonly quotedSeqs: readonly number[];
-  /** 正文与回复里 @ 到的成员 id(联系人或用户)。 */
   readonly mentions: readonly string[];
   readonly command: { readonly name: string; readonly args: unknown } | null;
   readonly at: string;
@@ -64,7 +61,6 @@ export interface RoundBlock {
 }
 export interface RoundRequest {
   readonly blocks: readonly RoundBlock[];
-  /** 这一轮装进第 4 块的最大 seq(各会话分开记),即本轮处理到哪里。 */
   readonly basedOnSeq: Readonly<Record<string, number>>;
 }
 
@@ -72,14 +68,12 @@ export interface ContactProfile {
   readonly id: string;
   readonly name: string;
   readonly speakingModel: string;
-  /** SOUL.md / 人设原文,进第 1 块。 */
   readonly persona: string;
 }
 
 export interface RoundInput {
   readonly contact: ContactProfile;
   readonly request: RoundRequest;
-  /** 与 request 第 4 块对应的结构化新输入,便于 mind 引用 seq / taskId。 */
   readonly fresh: readonly Inbound[];
 }
 
@@ -126,13 +120,10 @@ export interface RoundOutput {
   readonly stateNote: string | null;
 }
 
-/** query_history 的两种用法:检索(roomId 给了只搜其中一个会话,limit 不给用默认)与分页回读(before/after 不给用默认) */
 export type HistoryQuery =
   | { readonly kind: "search"; readonly query: string; readonly roomId: string | null; readonly limit: number | null }
   | { readonly kind: "read"; readonly roomId: string; readonly seq: number; readonly before: number | null; readonly after: number | null };
 
-/** 本轮内可用的只读查询口(宿主提供):联系人在同一轮的工具往返里按 id 取全文,不是动作、不落盘 */
-/** read_linked 的参数:query 按词过滤(全部命中才算),beforeSeq 往前翻页,limit 条数(宿主收紧到 1–50,不给用默认)。 */
 export interface LinkedQuery {
   readonly roomId: string;
   readonly linkedRoomId: string | null;
@@ -148,13 +139,11 @@ export interface RoundTools {
   /** 引用链往上读一级(D24 read_quote_parent):这条消息直接引用的那几条;会话不可读返回 null */
   readQuoteParent?(roomId: string, seq: number): Promise<string | null>;
   /** 运行台账查一个单元(D26 第 4 节 progress_get):状态、原因类别、子单元与最近事件(条数有界);roomId 是在哪个会话里查,决定可见范围;看不到或没有返回 null */
-  /** 本轮会话中的只读旧消息检索与分页回读。 */
   queryHistory?(q: HistoryQuery): Promise<string | null>;
   progressGet?(id: string, roomId: string): Promise<string | null>;
 }
 
 export interface ContactMind {
-  /** 跑一轮。signal 触发时应尽快放弃(宿主发现发送前出现更新的用户消息,会中止重跑)。tools 是本轮内的只读查询口,可不给。 */
   round(input: RoundInput, signal: AbortSignal, tools?: RoundTools, usage?: UsageSink): Promise<RoundOutput>;
 }
 
@@ -172,7 +161,6 @@ export const STATE_NOTE_GUIDE: string = [
   "被后来的消息改掉的条件只留新的,写明「#x 改了 #y」。",
 ].join("\n");
 
-/** 压缩的种类:round-note 联系人本轮没写笔记,由宿主据本轮材料补写;shrink 笔记超过上限,缩写 */
 export type CompactKind = "round-note" | "shrink";
 /**
  * 一次状态笔记压缩(D06 第 2 小节、D25 第 8 节;AC-32 ③)。
@@ -184,9 +172,7 @@ export interface CompactRequest {
   readonly kind: CompactKind;
   /** 旧状态笔记;没有为 null */
   readonly previous: string | null;
-  /** round-note:本轮新输入原文与联系人本轮动作(compactMaterial 生成);shrink:"" */
   readonly material: string;
-  /** 新笔记的 UTF-8 字节上限;null 不设 */
   readonly maxBytes: number | null;
 }
 /** 压缩时顺手检查出的一条记忆点(按该联系人的职责写它自己的),由宿主按 D25 写入判关系落地 */
@@ -207,7 +193,6 @@ export interface CompactMemory {
  */
 export interface ReflectRequest extends CompactRequest {
   readonly sources?: readonly ReflectSource[];
-  /** 邻域记忆(本轮锚点相交的生效条目),供判断复述、改变、细化、冲突 */
   readonly neighbors: readonly { readonly id: string; readonly title: string; readonly body: string }[];
   /** 模型本轮自己写的状态笔记;不为 null 时检查不得覆盖它 */
   readonly noteWritten: string | null;
@@ -220,7 +205,6 @@ export interface ReflectResult {
 export interface ContactCompactor {
   readonly model?: string;
   compact(req: CompactRequest, signal: AbortSignal, usage?: UsageSink): Promise<string>;
-  /** 有就每轮调用(取代只在缺笔记时调的 compact);没有就退回 compact */
   reflect?(req: ReflectRequest, signal: AbortSignal, usage?: UsageSink): Promise<ReflectResult>;
 }
 

@@ -3,8 +3,6 @@ import type { DeliverableEvent, FileChange } from '@g-group/ui-core'
 import { COPY } from '../constants'
 import { DiffStat } from '../parts'
 
-/* 本轮交付(mirasim Sjt / Vdt)：细线隔开，小标签，下面一排文件卡——细边、极淡底、文件名 13px、大小 11px。
-   再下面是改动文件清单（路径 + 增删行数）。演示阶段交付还打不开，卡片不做成可点的样子。 */
 
 const ICON: Record<DeliverableEvent['type'], LucideIcon> = { file: FileText, diff: FileDiff, link: Link2, text: Quote }
 

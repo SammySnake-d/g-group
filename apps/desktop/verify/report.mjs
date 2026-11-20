@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 // 逐条对照表:跑全部 e2e(renderer + electron),按 feature-map.json 把每个功能对到需求条目、测试结果、截图。
-// 用法:node verify/report.mjs [输出目录]   默认输出到交付目录的 对照表.md
-// 结论只看真实运行:某功能的测试有一条没过或没跑到,这一行就记「失败」或「未测」,不手填。
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";

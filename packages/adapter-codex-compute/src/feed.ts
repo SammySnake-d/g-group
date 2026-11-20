@@ -1,4 +1,3 @@
-/** One live subscriber queue per stream; consumers release their waiter on return. */
 export class Feed<T> {
   private queue: T[] = [];
   private wake: (() => void) | undefined;

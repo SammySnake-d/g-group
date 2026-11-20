@@ -92,7 +92,6 @@ test("read_linked 经宿主的本轮查询口读关联记录,结果作为工具�
   assert.match(JSON.stringify(results[0]!.content), /12 月 3 日交付/);
   assert.deepEqual(results.map((b) => b.is_error === true), [false, true]);
   assert.match(JSON.stringify(results[1]!.content), /读不到/);
-  // 工具登记出来的查询与宿主查询口收到的逐字一致(登记口到查询口没有走形)
   assert.deepEqual(parseToolCall("read_linked", { roomId: "g1", linkedRoomId: "dm-c1", query: "日期" }), { ok: true, value: { kind: "read-linked", query: asked[0] } });
 });
 

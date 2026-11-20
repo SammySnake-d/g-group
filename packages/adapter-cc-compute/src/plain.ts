@@ -1,9 +1,7 @@
 // 纯数据输入合同(R4-01,与内核 plain.ts 同一判定顺序;g-group#2662:只保证内置原型未被改的环境):
 // 先 types.isProxy → 原型必须是 Object.prototype / null(数组为 Array.prototype)→ 逐个看自有属性描述符,
 // 所有自有属性(含数组元素)必须是可枚举的数据属性;getter/setter(含不可枚举的)、Symbol 键、函数、非有限数字一律拒绝。
-// 判定过程只读描述符,从不读属性值本身:访问器与 Proxy 陷阱调用次数为 0。通过后返回递归冻结的副本,之后只读副本。
 // 对象属性值为 undefined 时照样作为自有键保留在副本里(R5-01):字段存在与否以自有描述符为准,值为 undefined 不能绕过
-// 调用方的字段白名单;声明过的可选字段为 undefined 怎么处理由各入口自己决定(本包一律按没给处理)。
 // 数组不能稀疏、不能有下标以外的键、元素不能是 undefined。
 // 本文件只依赖 node 内置模块:report_progress MCP 服务器进程经 report-schema.ts 直接 import。
 import { types } from "node:util";
@@ -13,10 +11,8 @@ export type PlainResult = { readonly ok: true; readonly value: unknown } | { rea
 const MAX_DEPTH = 32;
 const INDEX = /^(0|[1-9]\d*)$/;
 const bad = (path: string, why: string): PlainResult => ({ ok: false, path, why });
-/** 是不是访问器:只看描述符自己的 get/set 字段 */
 const isAccessor = (d: PropertyDescriptor): boolean => Object.hasOwn(d, "get") || Object.hasOwn(d, "set");
 
-/** 判定并克隆。自身不抛错:任何意外都按拒绝返回 */
 export function plainData(x: unknown, at: string): PlainResult {
   try {
     return walk(x, at, 0);
@@ -63,10 +59,8 @@ function walk(x: unknown, at: string, depth: number): PlainResult {
   return { ok: true, value: Object.freeze(out) };
 }
 
-/** 纯数据副本是不是普通对象(不是数组) */
 export const isPlainRecord = (x: unknown): x is Readonly<Record<string, unknown>> => typeof x === "object" && x !== null && !Array.isArray(x);
 
-/** 递归冻结本包自己构造的值(对外事件、返回值),原地冻结后返回同一个对象。只用于本包新建的纯数据,不用于外部输入 */
 export function freezeDeep<T>(x: T): T {
   if (typeof x === "object" && x !== null) {
     for (const v of Object.values(x)) freezeDeep(v);

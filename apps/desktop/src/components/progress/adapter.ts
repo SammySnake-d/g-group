@@ -2,21 +2,15 @@ import type { BoardConv, BoardWorld, ComputeUnit, SubUnit, UnitState } from '@g-
 import type { Compute, Conversation, Pending, Person, PersonId } from '@/data'
 import { DEMO_CLOCK, DEMO_COMPUTES, DEMO_SUBS, LEDGER, type DemoCompute } from './demo'
 
-/*
-  把 app 现有的会话、联系人、Compute、待你处理映射成看板的台账(@g-group/ui-core 的 BoardWorld)。
-  data.ts 的时间是「HH:MM」和「4 分钟」这样的字符串,这里按演示时钟换成时刻;缺的台账字段从 demo.ts 按 compute id 取。
-*/
 
 const MIN = 60_000
 
-/** 演示时钟:当天 DEMO_CLOCK(对齐 data.ts 聊天里的时刻) */
 export function demoNow(base = new Date()): number {
   const d = new Date(base)
   d.setHours(DEMO_CLOCK.h, DEMO_CLOCK.m, 0, 0)
   return d.getTime()
 }
 
-/** 「02:12」→ 不晚于 now 的最近一次该时刻;「刚刚」→ now;认不出 → null */
 export function clockAt(s: string | undefined, now: number): number | null {
   if (!s) return null
   if (s === '刚刚') return now
@@ -28,7 +22,6 @@ export function clockAt(s: string | undefined, now: number): number | null {
   return d.getTime()
 }
 
-/** 「4 分钟」「20 秒」「1 小时 5 分钟」→ 毫秒;认不出按 0 */
 export function elapsedMs(s: string): number {
   const h = /(\d+)\s*小时/.exec(s), m = /(\d+)\s*分/.exec(s), sec = /(\d+)\s*秒/.exec(s)
   return (Number(h?.[1] ?? 0) * 60 + Number(m?.[1] ?? 0)) * MIN + Number(sec?.[1] ?? 0) * 1000

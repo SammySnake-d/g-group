@@ -57,7 +57,6 @@ export function createCodexComputeAdapter(options: CodexAdapterOptions = {}): Co
   }
   function pump(slot: Slot) {
     const client = slot.client;
-    // Host binds task/ledger routes before any first-turn events become observable.
     setImmediate(() => {
       void (async () => {
         for await (const event of client.events()) {
@@ -104,7 +103,6 @@ export function createCodexComputeAdapter(options: CodexAdapterOptions = {}): Co
       const sandbox = scope(tools); if (sandbox !== "read-only" && sandbox !== "workspace-write") return refuse(sandbox);
       const last = slot.history.at(-1);
       if (!slot.closed && (!last || !["completed", "failed", "stopped"].includes(last.kind))) return refuse("native turn still active");
-      // Native model and effort override is sent on turn/start. A closed process resumes its original native thread.
       if (slot.closed || JSON.stringify(tools) !== JSON.stringify(slot.brief.tools)) {
         if (!slot.closed) { const q = await slot.client.quiesce(); if (!q.ok) return q; }
         slot.brief = { ...slot.brief, tools };
@@ -115,7 +113,6 @@ export function createCodexComputeAdapter(options: CodexAdapterOptions = {}): Co
       }
       const previousHistory = slot.history;
       const previousStopped = slot.turnStopped;
-      // Native notifications can arrive before startTurn returns.
       slot.history = [];
       slot.turnStopped = false;
       const r = await slot.client.startTurn(slot.threadId, text, current);
@@ -139,8 +136,6 @@ export function createCodexComputeAdapter(options: CodexAdapterOptions = {}): Co
       const q = await slot.client.quiesce();
       slot.closed = q.ok;
       if (!q.ok) return q;
-      // A completed resident session still needs a stop acknowledgement for Host's stop lifecycle.
-      // Let the native terminal event reach the pump before supplying a fallback acknowledgement.
       await new Promise<void>(resolve => setImmediate(resolve));
       publish(slot, { computeId: id, kind: "stopped", code: null, signal: null, scope: "main-then-group", violations: [] });
       return { ok: true };

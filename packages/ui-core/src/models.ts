@@ -1,13 +1,9 @@
 // 模型配置(需求 D07.4 规则 1、2、5、6,U68、U70、U92、U93;验收 R-17、AC-32、AC-51)。
 // 纯函数。输入是和 @g-group/api-contract 同形的普通对象:联系人取 ContactView 里的 speakingModel / harness / computeModel,
 // 全局取 SettingsView 的 defaultHarness / defaultSpeakingModel / defaultComputeModel / defaultEffort / models。不依赖合同包。
-//
-// 几条硬规矩:
 // - 只在联系人和全局两处配具体模型;Compute 模型槽位三态:继承全局 / 跟随说话模型 / 单独指定。effort 跟着槽位走,没单独设就用全局默认。
 // - Harness 支不支持某个模型,只看模型目录里这个模型声明的 harnesses,不按厂商名猜。
 // - 不兼容就阻断,给两条修复路径(单独指定一个兼容模型 / 换成支持该模型的 Harness)。任何函数都不返回「自动替换后的模型」。
-// - 保存、改上游、启动前三个时机用同一个判定(gateCompute)。
-// - 批量替换先出预览,确认后才给变更列表;变更只落在全局默认和联系人配置上,在途任务的启动快照和历史一概不动。
 
 export type SlotMode = "inherit" | "follow-speaking" | "explicit";
 export interface ModelSlot { readonly mode: SlotMode; readonly model?: string; readonly effort?: string }
@@ -27,16 +23,9 @@ export interface ContactModels {
   readonly computeModel: ModelSlot;
 }
 
-// ---------------------------------------------------------------- 规则 1:生效值与继承链
 
-/** 继承链上的一层。 */
 export type Layer = "task" | "contact" | "global";
-/**
- * 继承链上的一跳:哪一层的哪个设置,取值是什么。槽位模式这一跳的取值是模式名(inherit / follow-speaking / explicit),
- * effort 没单独设时取值写 inherit;其余是具体值。setting 用合同里的字段名,界面自己翻成人话。
- */
 export interface Hop { readonly layer: Layer; readonly setting: string; readonly value: string }
-/** 生效值 + 从最具体一层往上找到它的完整路径;最后一跳的取值就是生效值。 */
 export interface Resolved { readonly value: string; readonly chain: readonly Hop[] }
 export interface ComputeResolution { readonly mode: SlotMode; readonly harness: Resolved; readonly model: Resolved; readonly effort: Resolved }
 /** 派活时对单个任务的临时覆盖(继承顺序 全局默认 → 联系人 → 单个任务 的最后一层)。 */
@@ -114,7 +103,6 @@ export interface Gate {
   readonly speaking: Resolved;
 }
 
-/** 三个时机共用的唯一判定。moment 只标记是哪个时机,判定逻辑完全相同。 */
 export function gateCompute(moment: Moment, c: ContactModels, d: ModelDefaults, task?: TaskOverride): Gate {
   const compute = resolveCompute(c, d, task);
   const mismatch = checkCompat(compute.harness.value, compute.model.value, d.models);
@@ -126,7 +114,6 @@ export function checkDefaults(d: ModelDefaults): Mismatch | null {
   return checkCompat(d.defaultHarness, d.defaultComputeModel, d.models);
 }
 
-/** 任务启动时写下的不可变快照(规则 5:initial_model_snapshot)。拿不到厂商的记 unknown。 */
 export interface ModelSnapshot { readonly harness: string; readonly model: string; readonly effort: string; readonly vendor: string }
 export type LaunchResult = { readonly ok: true; readonly snapshot: ModelSnapshot } | { readonly ok: false; readonly gate: Gate };
 
@@ -154,14 +141,12 @@ export function taskModels(snapshot: ModelSnapshot | null, c: ContactModels, d: 
   return { shown: "snapshot", actual: snapshot, planned, drift: diffFields(snapshot, valuesOf(planned)) };
 }
 
-// ---------------------------------------------------------------- 修复路径与改全局默认的影响
 
 /** 用户点的修复:路径一「单独指定兼容模型」= pin-model;路径二「换 Harness」= switch-harness。 */
 export type Fix =
   | { readonly kind: "pin-model"; readonly contactId: string; readonly model: string }
   | { readonly kind: "switch-harness"; readonly contactId: string; readonly harness: string };
 
-/** 把用户选的修复落到联系人配置上(不改入参)。pin-model 保留原来的 effort。id 对不上的修复不生效。 */
 export function applyFix(c: ContactModels, fix: Fix): ContactModels {
   if (fix.contactId !== c.id) return c;
   if (fix.kind === "switch-harness") return { ...c, harness: fix.harness };
@@ -185,7 +170,6 @@ export function suggestFixes(contactId: string, m: Mismatch, previousModel?: str
 export interface Impact {
   readonly contactId: string;
   readonly name: string;
-  /** 下一轮生效值变了的字段。 */
   readonly changed: readonly Field[];
   readonly before: ComputeResolution;
   readonly after: ComputeResolution;
@@ -194,7 +178,6 @@ export interface Impact {
   readonly fixes: readonly Fix[];
 }
 export interface DefaultsPlan {
-  /** 改完之后下一轮生效值会变的联系人(继承全局的那些,加上被修复改过的)。 */
   readonly affected: readonly Impact[];
   /** 其中会变成不兼容的。 */
   readonly mismatched: readonly Impact[];
@@ -202,7 +185,6 @@ export interface DefaultsPlan {
   readonly defaultsMismatch: Mismatch | null;
   /** 改了但已有联系人都不读的全局项(每个联系人都存了自己的说话模型和 Harness),只影响之后新建的联系人。 */
   readonly newContactsOnly: readonly ("defaultHarness" | "defaultSpeakingModel")[];
-  /** 应用了修复之后的联系人配置(只列被修复改过的),保存时一起写。 */
   readonly patched: readonly ContactModels[];
   readonly canSave: boolean;
 }
@@ -237,7 +219,6 @@ export interface NextTurn {
   /** 正在跑、不被打断的轮次数(按启动时的模型跑完)。 */
   readonly running: number;
 }
-/** 联系人配置改了以后,下一轮会有什么不同。生效值都没变就返回 null(不需要提示)。 */
 export function nextTurn(before: ContactModels, after: ContactModels, d: ModelDefaults, running: number): NextTurn | null {
   const speaking = resolveSpeaking(before).value !== resolveSpeaking(after).value;
   const compute = diffFields(valuesOf(resolveCompute(before, d)), valuesOf(resolveCompute(after, d)));
@@ -248,9 +229,7 @@ export function nextTurn(before: ContactModels, after: ContactModels, d: ModelDe
 // ---------------------------------------------------------------- 规则 6:把模型 X 批量换成 Y
 
 export type RefField = "defaultSpeakingModel" | "defaultComputeModel" | "speakingModel" | "computeModel.model";
-/** 直接写了 X 的地方。contactId 为 null 表示全局默认。 */
 export interface ModelRef { readonly contactId: string | null; readonly field: RefField }
-/** 自己没写 X、通过继承用到 X 的联系人。 */
 export interface Inheritor { readonly contactId: string; readonly via: "inherit" | "follow-speaking" }
 /** 一处兼容冲突。fixes 是推荐的两条修复(全局默认那一处的 contactId 用 DEFAULTS_KEY),界面按它生成 Resolution。 */
 export interface ReplaceConflict { readonly contactId: string | null; readonly mismatch: Mismatch; readonly fixes: readonly Fix[] }
@@ -259,14 +238,12 @@ export interface ReplaceConflict { readonly contactId: string | null; readonly m
  * harness:换成支持 Y 的 Harness。
  */
 export type Resolution = { readonly kind: "keep"; readonly model: string } | { readonly kind: "harness"; readonly harness: string };
-/** 全局默认在 resolutions 里的键。 */
 export const DEFAULTS_KEY = "@defaults";
 export interface ReplaceInput {
   readonly contacts: readonly ContactModels[];
   readonly defaults: ModelDefaults;
   readonly from: string;
   readonly to: string;
-  /** 在途任务:只读它们的启动快照用来提示「不改」。 */
   readonly tasks?: readonly { readonly id: string; readonly model: string }[];
   readonly resolutions?: Readonly<Record<string, Resolution>>;
 }
@@ -279,15 +256,12 @@ export interface ReplacePlan {
   readonly inheritors: readonly Inheritor[];
   /** 还没处理的兼容冲突;有就不能确认。 */
   readonly conflicts: readonly ReplaceConflict[];
-  /** 已按用户选择处理掉的冲突(联系人 id,全局默认为 DEFAULTS_KEY)。 */
   readonly resolved: readonly string[];
   /** 单独指定成别的模型的联系人:不会被误改。 */
   readonly pinnedElsewhere: readonly string[];
-  /** 启动快照里是 X 的在途任务:快照和历史都不改。 */
   readonly inFlight: readonly string[];
   readonly canConfirm: boolean;
 }
-/** 确认后给出的一条变更。contactId 为 null 表示全局默认;只会落在全局默认和联系人配置上。 */
 export interface Change { readonly contactId: string | null; readonly field: string; readonly from: string; readonly to: string }
 
 interface Simulated {
@@ -305,7 +279,6 @@ function simulateReplace(input: ReplaceInput): Simulated {
   if (d.defaultSpeakingModel === from) explicit.push({ contactId: null, field: "defaultSpeakingModel" });
   if (d.defaultComputeModel === from) explicit.push({ contactId: null, field: "defaultComputeModel" });
 
-  // 全局默认:先按原样替换,再看用户对全局默认冲突的处理
   let defaultsAfter: ModelDefaults = { ...d, defaultSpeakingModel: swap(d.defaultSpeakingModel), defaultComputeModel: swap(d.defaultComputeModel) };
   const conflicts: ReplaceConflict[] = [];
   const resolved: string[] = [];
@@ -357,7 +330,6 @@ export function planReplace(input: ReplaceInput): ReplacePlan {
 
 const slotFields = (s: ModelSlot): Record<string, string> => ({ "computeModel.mode": s.mode, "computeModel.model": s.model ?? "", "computeModel.effort": s.effort ?? "" });
 
-/** 确认:预览成立(没有未处理的冲突)才生成变更列表;否则拒绝并把冲突带回去。 */
 export function confirmReplace(input: ReplaceInput): { readonly ok: true; readonly changes: readonly Change[] } | { readonly ok: false; readonly reason: string; readonly conflicts: readonly ReplaceConflict[] } {
   const { plan, defaultsAfter, contactsAfter } = simulateReplace(input);
   if (!plan.canConfirm) {
@@ -384,14 +356,12 @@ export function confirmReplace(input: ReplaceInput): { readonly ok: true; readon
 
 /** 默认:一轮 15 分钟无进展判失败;模型调用发出后等首字节 120 秒。 */
 export const STALL_DEFAULTS: Readonly<{ turnMinutes: number; firstByteSeconds: number }> = Object.freeze({ turnMinutes: 15, firstByteSeconds: 120 });
-/** 按联系人单独设的值;没设的项用默认。 */
 export interface StallOverride { readonly turnMinutes?: number; readonly firstByteSeconds?: number }
 export interface StallValue { readonly value: number; readonly source: "default" | "contact" }
 export function resolveStall(o?: StallOverride): { readonly turnMinutes: StallValue; readonly firstByteSeconds: StallValue } {
   const pick = (v: number | undefined, dflt: number): StallValue => (v === undefined ? { value: dflt, source: "default" } : { value: v, source: "contact" });
   return { turnMinutes: pick(o?.turnMinutes, STALL_DEFAULTS.turnMinutes), firstByteSeconds: pick(o?.firstByteSeconds, STALL_DEFAULTS.firstByteSeconds) };
 }
-/** 单独设的阈值是否成立:正整数,整轮不超过一天,首字节窗口要短于整轮阈值。成立返回 null,否则返回原因。 */
 export function checkStall(o: StallOverride): string | null {
   const r = resolveStall(o);
   const t = r.turnMinutes.value;

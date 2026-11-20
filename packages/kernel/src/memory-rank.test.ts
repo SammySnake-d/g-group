@@ -1,5 +1,4 @@
 // T-177 G3-a / G3-01:记忆读取的全文分量换成检索接缝(上游 acp-kernel hybrid)后的合成规则。
-//   全文分量只取名次,映射到旧「字面重合个数」所在的整数区间;同分按 id;硬筛在检索之前;
 //   AC-42 现有夹具(审查人从 Astra 改为 Codex,g-group#1531)换分量前后展开结果相同。
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -39,7 +38,6 @@ const REVIEW = [
   entry({ id: "x1", title: "午饭", anchors: ["room:g-group"], body: "周五一起吃饭" }),
   entry({ id: "x2", title: "天气", anchors: ["room:g-group"], body: "最近下雨" }),
 ];
-// 一个稀有词(部署)只出现在一条里,常见词(审查)出现在三条里;旧的二字计数对「部署审查」给四条都记 1 分
 const RARE = [
   entry({ id: "e1", title: "审查流程", anchors: ["room:g"], body: "审查前先看 PR 描述" }),
   entry({ id: "e2", title: "部署", anchors: ["room:g"], body: "部署前先跑测试" }),
@@ -57,9 +55,7 @@ test("G3-a1 全文分量只用名次:命中按检索分数分档,是 0 起、步
 });
 
 test("G3-a2 名次封顶在旧字面重合个数的上界内:档数多于本轮文字的字面单位时,最高档也不超过上界", () => {
-  // 「部署审查」只有 3 个字面单位(部署、署审、审查),四条命中分四档:最高档记 3,往下 2、1,再往下压在 1
   assert.deepEqual(Object.fromEntries(memoryTextRanks(RARE, "部署审查")), { e2: 3, e3: 2, e1: 1, e4: 1 });
-  // 「审查」只有 1 个字面单位:命中的不论分几档都记 1
   const one = memoryTextRanks(RARE, "审查");
   assert.deepEqual(Object.fromEntries(one), { e1: 1, e2: 0, e3: 1, e4: 1 });
   assert.equal(Math.max(...one.values()) <= 1, true);

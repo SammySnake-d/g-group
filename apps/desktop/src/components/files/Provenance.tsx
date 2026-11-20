@@ -9,8 +9,6 @@ import { useApp } from '@/store'
 import { Avatar } from '../Avatar'
 import { hopQuote, hopWho, provenance, sourceLabel, type Hop } from './context'
 
-/* 文件的来处:这份文件在对话里经过的人、各自做了什么、说了什么。放在正文右侧,随阅读位置固定,
-   文档再长、翻到哪里都看得见。点一站回到那条消息,聊天顶上留一枚回到文件的入口。 */
 function useProvenance(a: Artifact) {
   const { convs, jump: jumpTo, openConv: open, setFileReturn } = useApp((s) => ({ convs: s.convs, jump: s.jump, openConv: s.openConv, setFileReturn: s.setFileReturn }))
   const { conv, hops } = provenance(a, convs)
@@ -28,7 +26,6 @@ function Who({ h }: { h: Hop }) {
   </span>
 }
 
-/** 右侧来往:对话名 + 每站「人 动作」和原话头两行(交付那站三行)。站多时先列 5 站,其余点开 */
 export function ProvenanceThread({ artifact: a }: { artifact: Artifact }) {
   const { conv, hops, jump, openConv } = useProvenance(a)
   const [open, setOpen] = useState(false)
@@ -52,7 +49,6 @@ export function ProvenanceThread({ artifact: a }: { artifact: Artifact }) {
   </nav>
 }
 
-/** 窗口很窄时右侧只留一列头像:悬停或聚焦看原话,点了回到原消息 */
 export function ProvenanceRail({ artifact: a }: { artifact: Artifact }) {
   const { conv, hops, jump, openConv } = useProvenance(a)
   return <nav aria-label="来处" data-testid="file-source" data-place="rail" className="flex flex-col items-center gap-1">

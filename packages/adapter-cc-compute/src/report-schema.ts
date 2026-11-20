@@ -1,8 +1,6 @@
-// report_progress 汇报的 schema 规则,只此一份:MCP 服务器(mcp/report-mcp.mjs)拒收、工具清单与适配器解析都用它。
 // 只依赖 ./plain.ts 与 node 内置模块,MCP 服务器进程可以直接 import(Node 22.18+ 原生剥离类型)。
 import { isPlainRecord, plainData } from "./plain.ts";
 
-/** 冻结数组,导出后不可改 */
 export const REPORT_KINDS: readonly string[] = Object.freeze(["started", "milestone", "blocked", "completed", "failed"]);
 const REPORT_KEYS: readonly string[] = Object.freeze(["kind", "summary", "stage", "needs", "constraintVer", "openQuestions", "doneSideEffects", "attachments"]);
 
@@ -34,7 +32,6 @@ const TOOL = deepFreeze({
   },
 });
 
-/** tools/list 里 report_progress 的定义(递归冻结);MCP 服务器原样返回它 */
 export function reportToolDefinition(): typeof TOOL {
   return TOOL;
 }
@@ -42,9 +39,6 @@ export function reportToolDefinition(): typeof TOOL {
 const nonEmpty = (x: unknown): boolean => typeof x === "string" && x.trim() !== "";
 const strArr = (x: unknown): boolean => Array.isArray(x) && x.every((s) => typeof s === "string");
 
-/** 返回违反项;空数组表示合规。先按纯数据合同判定(getter/setter/Proxy 不调用即拒收,R4-01),
- *  再查字段类型、枚举、条件必填、constraintVer 非负整数、未知字段。未知字段值为 undefined 也算未知;
- *  可选字段(stage/needs/constraintVer/openQuestions/doneSideEffects/attachments)为 undefined 按没给处理(R5-01) */
 export function reportErrors(input: unknown): string[] {
   const p = plainData(input, "汇报");
   if (!p.ok) return [`汇报必须是纯数据:${p.path} ${p.why}`];

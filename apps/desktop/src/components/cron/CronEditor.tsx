@@ -10,11 +10,8 @@ export type { CronDraft }
 
 export function CronEditor({ open, init, seed, conv, owner, onClose, onSave }: {
   open: boolean
-  /** 有 = 修改这个定时 */
   init?: Cron
-  /** 新建时从别处带来的预填(如 /schedule <何时> <做什么>):做什么、cron 表达式 */
   seed?: { text?: string; expr?: string }
-  /** 新建时预填的会话 / 助手 */
   conv?: string
   owner?: PersonId
   onClose: () => void
@@ -22,7 +19,6 @@ export function CronEditor({ open, init, seed, conv, owner, onClose, onSave }: {
 }) {
   return (
     <Modal open={open} onClose={onClose} testid="cron-editor" width={640} title={init ? EDITOR.titleEdit : EDITOR.titleNew} description={EDITOR.desc}
-      /* Esc 只关这张卡，不让外层顺带收起分屏 */
       onEscapeKeyDown={(e) => e.stopPropagation()}>
       <EditorBody init={init} seed={seed} conv={conv} owner={owner} onClose={onClose} onSave={onSave} />
     </Modal>

@@ -7,7 +7,6 @@ import { appear } from '@/components/pages/kit/motion'
 import { ConfirmCard } from './parts'
 import type { Draft, Grant } from './types'
 
-/* 全局 Helper 的两张卡:读之前先问(授权卡,等你处理时用 warm),发之前先给草稿 */
 
 export function GrantCard({ grant, onAnswer }: { grant: Grant; onAnswer: (yes: boolean) => void }) {
   const reduced = useReducedMotion()

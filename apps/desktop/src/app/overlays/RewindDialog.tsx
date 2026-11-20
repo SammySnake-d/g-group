@@ -6,7 +6,6 @@ import { live, liveCtx } from '@/api/wire/live'
 import { Button } from '@/components/ui/button'
 import { useApp, useAppStore } from '@/store'
 
-/** 连上后端:打开时向宿主要回退预览(只读),写明真实会撤下几条、取消哪些在途任务、作废几条承诺、哪些已经发生撤不回 */
 function useLivePreview(ask: string | null, active: string, on: boolean): RewindPreview | string | null {
   const [p, setP] = useState<RewindPreview | string | null>(null)
   useEffect(() => {
@@ -20,7 +19,6 @@ function useLivePreview(ask: string | null, active: string, on: boolean): Rewind
   return p
 }
 
-/** 预览 → 对话框里那段话:只说会发生什么,撤不回的如实说 */
 function liveText(p: RewindPreview): string {
   const parts = [`之后的 ${p.messages.length} 条会撤下，对方从这里接着聊，撤下的不再算数`]
   if (p.tasks.length) parts.push(`由它们派出的 ${p.tasks.length} 件事会停下（${p.tasks.map((t) => `「${t.title}」`).join('')}）`)

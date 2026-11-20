@@ -5,7 +5,6 @@ import os from "node:os";
 import path from "node:path";
 import test, { after } from "node:test";
 import { createCodexComputeProtocol } from "./protocol.ts";
-// Independent OS observation: macOS seatbelt may deny setuid ps; pgrep is still a real pid listing.
 function live(pid: number): boolean {
   try {
     const rows = execFileSync("ps", ["-A", "-o", "pid=,stat="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });

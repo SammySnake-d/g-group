@@ -1,6 +1,4 @@
 // 插件切片:本机安装状态(ui-core 的 pluginReducer 推进生命周期)、凭据与外发预授权,以及每个会话后端给的命令清单。
-// 安装 / 卸载 / 启停 / 更新经合同写到后端(plugins.install / uninstall / setEnabled / update),后端不收就撤回本地改动;
-// 挂到聊天、调用者白名单、凭据失效与重新授权、外发预授权是合同缺口,只在本地。
 import { notInstalled, pluginName, pluginReducer, type PluginAction, type PluginManifest, type PluginResult } from '@g-group/ui-core'
 import { call } from '@/api/backend'
 import type { PersonId, PluginState } from '@/data'
@@ -12,11 +10,9 @@ import { lens, type Slice } from '../state'
 /** 后端给的某个会话可用命令名;连同请求时的插件状态和成员一起记,本地状态变了就先按本地判断,等新清单 */
 export type RoomCommands = { names: string[]; plugins: PluginState[]; members: PersonId[] }
 
-/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 PLUGINS_CTX_KEYS */
 export interface PluginsCtx {
   /** 本机插件安装状态（ui-core 的 PluginInstall + 凭据说明 + 外发预授权） */
   plugins: PluginState[]
-  /** 插件市场目录：各插件最新版本的清单 */
   pluginCatalog: PluginManifest[]
   /** 只改凭据说明、预授权这些附加信息；安装状态走 pluginAct */
   updatePlugin: (id: string, patch: Partial<Pick<PluginState, 'cred' | 'grant'>>) => void
@@ -29,9 +25,7 @@ export const PLUGINS_CTX_KEYS = ['plugins', 'pluginCatalog', 'updatePlugin', 'pl
 
 export type PluginsSlice = PluginsCtx & {
   roomCommands: Record<string, RoomCommands>
-  /** commands.list:拉这个会话后端认的命令(插件启停、挂摘、成员变了都要重拉) */
   loadCommands: (roomId: string) => void
-  /** 插件整表换掉 / 换一个(连上后端时由 api/wire/plugins 按 plugins.list 与事件写) */
   setPlugins: (list: PluginState[]) => void
   putPlugin: (p: PluginState) => void
 }
@@ -43,7 +37,6 @@ export const createPluginsSlice: Slice<PluginsSlice> = (set, get) => {
   const step = (id: string, b: PluginAction) => mapPlugin(id, (x) => { const n = pluginReducer(x, b); return n.ok ? n.state : x })
   /** 后端不收:安装状态回到动作之前(卸载、启停、更新没有「失败」这一步,直接撤回);挂在哪些聊天、谁能调用这些本地设置不动 */
   const restore = (cur: PluginState) => mapPlugin(cur.id, (x) => ({ ...x, phase: cur.phase, manifest: cur.manifest, pending: cur.pending, granted: cur.granted }))
-  /** 写到后端:安装 / 卸载等回执(演示服务立即回包时至少留一会儿「安装中 / 卸载中」),启停 / 更新失败就撤回 */
   const remote = (cur: PluginState, a: PluginAction) => {
     const id = cur.id
     if (a.type === 'install') {
@@ -56,7 +49,6 @@ export const createPluginsSlice: Slice<PluginsSlice> = (set, get) => {
   }
 
   return {
-    /* 初值空:演示数据由 api/demo-state.ts 装 */
     plugins: [],
     pluginCatalog: [],
     roomCommands: {},
@@ -66,7 +58,6 @@ export const createPluginsSlice: Slice<PluginsSlice> = (set, get) => {
       const conv = s.convs.find((c) => c.id === roomId)
       if (!conv) return
       const stamp = { plugins: s.plugins, members: conv.members }
-      /* 拿不到清单就按本地判断,不打扰你 */
       void call('commands.list', { roomId }).then((r) => { if (r.ok) set((st) => ({ roomCommands: { ...st.roomCommands, [roomId]: { names: r.value.commands.map((c) => c.name), ...stamp } } })) })
     },
 

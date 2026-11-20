@@ -1,5 +1,4 @@
 // 引用链投递(需求文档 D24;验收 AC-41 ①–⑨)。纯函数:按层广度优先走引用 DAG,默认带前 K=3 级,每级标明还有没有上一级;
-// 会话上文已有的只标编号;撤回或看不见的停在那一级;超预算从最远一级降成只给编号;read_quote_parent 只走一级。
 // 夹具:g-group #2071 向上的真实引用链(fixtures/quote-chain-2071.json,从群聊原始日志按 seq 固化,共 14 级)。
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

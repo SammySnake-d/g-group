@@ -13,7 +13,6 @@ export function usePluginFlow() {
   const [removing, setRemoving] = useState<string | null>(null)
   const [justInstalled, setJustInstalled] = useState<string | null>(null)
   const [attachFor, setAttachFor] = useState<string | null>(null)
-  /* 装好的那一刻（安装中 → 已启用）接着问挂到哪个聊天 */
   useEffect(() => {
     if (justInstalled && plugins.find((p) => p.id === justInstalled)?.phase === 'enabled') { setAttachFor(justInstalled); setJustInstalled(null) }
   }, [plugins, justInstalled])

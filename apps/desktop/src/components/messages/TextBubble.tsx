@@ -7,7 +7,6 @@ import { renderText } from './mentions'
 import { SHOT_PLACEHOLDER } from './copy'
 import type { TextMsg } from './types'
 
-/** 文字气泡:你的是墨色实底,别人的是白纸细边;超过 4 行 / 160 字先收成 3 行 */
 export function TextBubble({ m }: { m: TextMsg }) {
   const { computes, openSplit } = useApp()
   const mine = m.from === 'me'

@@ -7,9 +7,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { appear } from '@/components/pages/kit/motion'
 import { Bot } from '../Avatar'
 
-/* Helper 面板与全局 Helper 共用的零件:标识、气泡、输入框、确认卡外壳 */
 
-/** Helper 的标识:灯泡形状 + 品牌色,和联系人头像同一套 */
 export const Bulb = ({ size = 22 }: { size?: number }) => <Bot shape={HELPER_MARK.shape} color={HELPER_MARK.color} size={size} />
 
 export function Bubble({ from, children }: { from: 'me' | 'helper'; children: ReactNode }) {
@@ -22,7 +20,6 @@ export function Bubble({ from, children }: { from: 'me' | 'helper'; children: Re
   )
 }
 
-/** 输入框:Enter 发送、Shift+Enter 换行、输入法组字时不发 */
 export function AskBox({ value, onChange, onSend, placeholder, testid, sendTestid }: { value: string; onChange: (v: string) => void; onSend: () => void; placeholder: string; testid: string; sendTestid: string }) {
   const can = !!value.trim()
   return (
@@ -43,7 +40,6 @@ export function AskBox({ value, onChange, onSend, placeholder, testid, sendTesti
   )
 }
 
-/** 确认卡:标题 / 内容 / 操作三段,完成后底部一行灰字说明结果 */
 export function ConfirmCard({ title, children, done, className }: { title: ReactNode; children: ReactNode; done?: ReactNode; className?: string }) {
   const reduced = useReducedMotion()
   return (
@@ -55,7 +51,6 @@ export function ConfirmCard({ title, children, done, className }: { title: React
   )
 }
 
-/** 卡片里的小标题(「拉谁」「带哪几条当背景」) */
 export const CardLabel = ({ children, className }: { children: ReactNode; className?: string }) => (
   <div className={cn('mt-3 text-[12px] text-fg-3 first:mt-0', className)}>{children}</div>
 )

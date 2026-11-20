@@ -5,10 +5,8 @@
 import type { Msg } from '@/data'
 import type { Bodied } from './types'
 
-/** 一条消息的引用签名;没有引用是空串,不是说的话(Compute 行等)是 null */
 const sig = (m: Msg): string | null => (m.k === 'text' ? (m.quotes ?? []).map((q) => `${q.msgId}${q.reply ? '!' : ''}`).join('|') : null)
 
-/** 这一条的引用,同一个人这一串里前面已经画过了 */
 export function repeatsPrevQuote(msgs: readonly Msg[], i: number, m: Bodied): boolean {
   const mine = sig(m)
   if (!mine) return false

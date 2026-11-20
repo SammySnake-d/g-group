@@ -5,9 +5,7 @@ import { startWiring } from '@/api/wire'
 import { useAppStore } from '@/store'
 import { startLiveDemo } from '@/store/live'
 
-/** 壳的副作用:探测后端、演示推进、全局快捷键(Esc 逐层退、⌘K 叫 Helper)、走查钩子 */
 export function useShell() {
-  /* 探测后端:连上了就启动接线(全量读 + 订阅事件流),界面只显示后端数据;没连上才装演示数据、跑演示推进。卸载时都停掉 */
   useEffect(() => {
     let stop: (() => void) | null = null
     let gone = false

@@ -4,14 +4,8 @@ import path from "node:path";
 import { _electron as electron, expect, test, type Page } from "@playwright/test";
 import { shot } from "./shots";
 
-// 最小闭环(真实路径,只经界面):Electron 主进程里起宿主服务(GG_BACKEND=server,规则替身脑子 + 剧本 Compute),
-// 全程只点界面、只读界面,不调 window.gg——
-//   建联系人 → 私聊发「帮我写 hello.txt」→ 联系人回复 → Compute 从开始到完成 → 交付消息;
-//   再建群、把联系人拉进群,群里 @ 它派活 → 同样的推进。
-// 连上后端时界面只显示后端数据:演示联系人、演示群一个都不能出现。
 const appDir = path.resolve(import.meta.dirname, "..");
 const env = Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => e[0] !== "ELECTRON_RUN_AS_NODE" && typeof e[1] === "string"));
-/** 演示数据里才有的名字(data.ts 的演示联系人与演示群);真实闭环里永远不会出现 */
 const DEMO_NAMES = ["模型助手群聊", "Argon", "Astra", "Grok", "王一"];
 const LONG = { timeout: 30_000 };
 
@@ -19,7 +13,6 @@ async function noDemoData(win: Page) {
   for (const name of DEMO_NAMES) await expect(win.getByText(name, { exact: false }), `不该出现演示数据「${name}」`).toHaveCount(0);
 }
 
-/** 通讯录 → 添加联系人 → 填名字 → 添加;连上后端时建好就进它的私聊 */
 async function addContact(win: Page, name: string) {
   await win.getByTestId("nav-contacts").click();
   await win.getByTestId("list").getByText("添加联系人", { exact: true }).click();
@@ -31,7 +24,6 @@ async function addContact(win: Page, name: string) {
 const rows = (win: Page) => win.getByTestId("chat-column").locator("[data-msg]");
 
 test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派活,看到回复、Compute 推进与交付", async () => {
-  // 两轮派活各要等剧本 Compute 走完(每步 300ms)和联系人两三轮回话;云电脑 2 核,给足整体时间,单步等待仍各自 30 秒封顶
   test.setTimeout(240_000);
   const dataDir = mkdtempSync(path.join(tmpdir(), "gg-loop-"));
   const app = await electron.launch({ args: [appDir], cwd: appDir, env: { ...env, GG_BACKEND: "server", GG_DATA_DIR: dataDir, GG_MIND: "fake", GG_COMPUTE: "fake" } });
@@ -78,25 +70,17 @@ test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派�
       const line = win.getByTestId("chat-column").locator('[data-testid^="compute-line-"]').filter({ hasText: "写 hello.txt" });
       await expect(line).toHaveCount(1, LONG);
       await expect(line).toHaveAttribute("data-state", "done", LONG);
-      // 照设计:Compute 是联系人派出去的执行者——挂在联系人「接了任务」那句下面;这一行只写标题、谁在干(harness)、阶段,
-      // 不搬 Compute 自己的原话(它不在聊天里说话,原话在点开后的过程里)
       await expect(rows(win).filter({ hasText: "接了任务:写 hello.txt" }).and(win.locator('[data-msg]:not([data-from="me"])'))).toHaveCount(1);
       await expect(line).toContainText("做完了");
       await expect(line).not.toContainText("完成:写");
-      // 做完、交付之后(#1790 消息优先):Compute 那一行挂在联系人的交付消息下面,不再单独占一行
-      // (在跑时挂在「接了任务」那句下面、不另起头像,见 parity-compute 的停止用例)
       await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" }).locator('[data-testid^="trail-"] [data-testid^="compute-line-"]')).toHaveCount(1, LONG);
       await expect(win.locator('[data-msg$="~c"]').filter({ hasText: "写 hello.txt" })).toHaveCount(0);
-      // 替身 Compute 按派的活说话:联系人转述的进度是这件事本身
       await expect(rows(win).filter({ hasText: "进度:正在写 hello.txt" })).toHaveCount(1, LONG);
       await expect(rows(win).filter({ hasText: "做完了:完成:写 hello.txt" })).toHaveCount(1, LONG);
-      // 自己发的那条:乐观显示的和事件推来的是同一条,不重复
       const mine = rows(win).filter({ hasText: "帮我写 hello.txt" }).and(win.locator('[data-from="me"]'));
       await expect(mine).toHaveCount(1);
-      // 联系人接走即已读(宿主推的 receipt.updated):回执显示它读了,后面的会话更新不把它冲掉
       await expect(mine.locator("[data-read]")).toHaveAttribute("data-unread", "0");
       await shot(win, "dm-compute-done");
-      // 点开看过程:开始 → 进展 → 完成,都来自后端的进度事件
       await line.click();
       await win.getByTestId("cview-activity").click();
       const acts = win.getByTestId("activity");
@@ -131,7 +115,7 @@ test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派�
     await test.step("群里 @小克 派活:回复、Compute 推进到完成、交付", async () => {
       const box = win.getByTestId("composer");
       await box.fill("帮我写 group.txt @小克");
-      await box.press("Enter"); // 选人菜单开着:回车选中小克
+      await box.press("Enter");
       await expect(box).toHaveValue("帮我写 group.txt @小克 ");
       await box.press("Enter");
       await expect(rows(win).filter({ hasText: "好的,我安排 Compute 去写 group.txt" })).toHaveCount(1, LONG);
@@ -140,7 +124,6 @@ test("闭环:只经界面建联系人、私聊派活、建群拉人后群里派�
       await expect(line).toHaveAttribute("data-state", "done", LONG);
       await expect(rows(win).filter({ hasText: "进度:正在写 group.txt" })).toHaveCount(1, LONG);
       await expect(rows(win).filter({ hasText: "做完了:完成:写 group.txt" })).toHaveCount(1, LONG);
-      // 没被 @ 的小林、小美不接这件事
       await expect(win.getByTestId("chat-column").locator('[data-testid^="compute-line-"]')).toHaveCount(1);
       await shot(win, "group-compute-done");
     });

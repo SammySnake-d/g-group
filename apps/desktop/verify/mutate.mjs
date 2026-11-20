@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 // 埋雷校验(开发手册原则 40「没见过它失败的检查不算数」):把实现故意改坏,对应的 e2e 必须变红。
-// 用法:node verify/mutate.mjs [雷的 id 前缀…]   结果写到 verify/mutation-report.json
 // 每颗雷:改一个源文件里的一段文字 → 重建渲染层 → 跑指定测试 → 必须失败 → 还原。
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -31,7 +30,6 @@ for (const m of mines.filter((x) => only.length === 0 || only.some((o) => x.id.s
     const r = spawnSync("npx", ["playwright", "test", "--project=renderer", m.spec, ...(m.grep ? ["--grep", m.grep] : [])], {
       cwd: root,
       encoding: "utf8",
-      // 埋雷时界面是故意改坏的,不存截图,免得坏图覆盖交付截图
       env: { ...process.env, GG_PW_PORT: port, GG_SHOTS: "" },
     });
     const failed = r.status !== 0 && /\d+ failed/.test(r.stdout);

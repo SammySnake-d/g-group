@@ -10,7 +10,6 @@ const STATUS: Record<TaskStateName, TaskStatus | null> = {
   T5_InReview: '待验收', T7_Delivering: '待验收', T8a_Delivered: '待验收', T8_Accepted: '已完成', T10_Cancelled: null,
 }
 
-/** 合同的任务 → 清单的一项;取消的任务返回 null */
 export function toListItem(t: TaskView): ListItem | null {
   const status = t.state === 'T1_Open' && t.ownerContactId ? '进行中' : STATUS[t.state]
   if (!status) return null
@@ -18,12 +17,10 @@ export function toListItem(t: TaskView): ListItem | null {
     id: t.id, conv: t.roomId, text: t.title, status,
     ...(t.description ? { desc: t.description } : {}),
     ...(t.ownerContactId ? { who: t.ownerContactId } : {}),
-    /* 在界面上一件任务的 Compute 就用任务 id(见 api/wire/tasks) */
     attempts: t.ownerContactId ? [t.id] : [],
   }
 }
 
-/** 每件任务见过的最新版本(stateVer):旧版本晚到不覆盖 */
 const seen = new Map<string, number>()
 const fresh = (t: TaskView) => {
   const v = t.stateVer ?? 0
@@ -52,19 +49,16 @@ export const checklistWiring = defineWiring({
 
 const why = (e: { message: string }) => e.message
 
-/** 新建一项:标题、描述分开;指了人就由它认领并起 Compute,没指就待认领 */
 export async function createTaskLive(w: WireCtx, t: { conv: string; text: string; desc?: string; who?: PersonId }) {
   const r = await w.call('tasks.create', { clientActionId: actionId(), roomId: t.conv, title: t.text, ...(t.desc ? { description: t.desc } : {}), ...(t.who ? { ownerContactId: t.who } : {}) })
   if (!r.ok) { w.get().toast(`没建成：${why(r.error)}`); return }
   if (fresh(r.value)) { const it = toListItem(r.value); if (it) w.get().putListItem(it) }
 }
 
-/** 一次加几项(Helper 把 CSV 转成清单时逐行调用),都待认领 */
 export async function createTasksLive(w: WireCtx, conv: string, texts: string[]) {
   for (const text of texts) await createTaskLive(w, { conv, text })
 }
 
-/** 交给某位联系人:以你的一条消息 @ 它,由它认领并起 Compute */
 export async function assignTaskLive(w: WireCtx, taskId: string, who: PersonId) {
   const r = await w.call('tasks.assign', { taskId, contactId: who, clientActionId: actionId() })
   if (!r.ok) { w.get().toast(`没交出去：${why(r.error)}`); return }

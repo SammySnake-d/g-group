@@ -14,7 +14,6 @@ const pressable =
 
 export function ListGroup({ title, action, children, className, testid }: {
   title?: React.ReactNode
-  /** 小标题右侧的操作(「全部」「编辑」) */
   action?: React.ReactNode
   children: React.ReactNode
   className?: string
@@ -36,13 +35,10 @@ export function ListGroup({ title, action, children, className, testid }: {
 export interface ListRowProps {
   label: React.ReactNode
   value?: React.ReactNode
-  /** 有 onClick 时整行是按钮,右侧带箭头 */
   onClick?: () => void
-  /** 行尾的控件(开关、图标);和 onClick 二选一 */
   children?: React.ReactNode
   testid?: string
   tone?: "default" | "danger"
-  /** 只要箭头不要值时也可以关掉箭头 */
   chevron?: boolean
   className?: string
 }
@@ -75,12 +71,9 @@ export interface ListItemProps extends Omit<React.ButtonHTMLAttributes<HTMLButto
   media?: React.ReactNode
   title: React.ReactNode
   subtitle?: React.ReactNode
-  /** 副标题最多两行(搜索结果、消息摘录);默认一行省略 */
   clamp?: 1 | 2
-  /** 行尾:箭头、时间、操作提示 */
   trailing?: React.ReactNode
   selected?: boolean
-  /** 把副标题放在标题上面(搜索结果:先「谁 · #序号」再原文) */
   subtitleFirst?: boolean
 }
 

@@ -3,7 +3,6 @@ import { CronEditor } from '@/components/CronEditor'
 import { people, type Conversation } from '@/data'
 import { useApp } from '@/store'
 
-/** /schedule 打开的定时编辑:用定时模块的编辑器,按「何时 / 做什么」预填(cron 原样带入,中文钟点翻成表达式) */
 export function ScheduleDialog({ conv }: { conv: Conversation }) {
   const { d, openSchedule, addCron } = useApp((s) => ({ d: s.scheduleDraft, openSchedule: s.openSchedule, addCron: s.addCron }))
   if (!d || d.conv !== conv.id) return null

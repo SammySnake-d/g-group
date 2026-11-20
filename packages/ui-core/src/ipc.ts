@@ -20,7 +20,6 @@ export function isTrustedOrigin(url: string, devOrigin?: string): boolean {
   return false;
 }
 
-/** 判断一个值是不是纯 JSON 数据,返回问题说明;没问题返回 undefined。 */
 export function jsonProblem(value: unknown): string | undefined {
   let keys = 0;
   const seen = new Set<object>();
@@ -53,7 +52,6 @@ export function jsonProblem(value: unknown): string | undefined {
   return walk(value, 0);
 }
 
-/** 校验一次渲染层调用:{ method, params }。 */
 export function checkIpcRequest(req: unknown, senderUrl: string, opts: IpcOptions): IpcCheck {
   if (!isTrustedOrigin(senderUrl, opts.devOrigin)) return { ok: false, error: "来源不是本应用页面" };
   if (req === null || typeof req !== "object" || Array.isArray(req)) return { ok: false, error: "请求必须是对象" };
@@ -62,7 +60,6 @@ export function checkIpcRequest(req: unknown, senderUrl: string, opts: IpcOption
   const r = req as { method?: unknown; params?: unknown };
   if (typeof r.method !== "string" || !opts.isMethod(r.method)) return { ok: false, error: `不认识的方法 ${String(r.method)}` };
   const size = JSON.stringify(r.params ?? null).length;
-  // 大文件方法由宿主按合同显式给限额;普通方法仍保留默认上限,不由请求参数决定。
   const limit = opts.methodByteLimits && Object.hasOwn(opts.methodByteLimits, r.method) ? opts.methodByteLimits[r.method]! : IPC_LIMITS.maxBytes;
   if (!Number.isSafeInteger(limit) || limit <= 0 || size > limit) return { ok: false, error: `参数 ${size} 字节,超过上限 ${limit}` };
   return { ok: true, method: r.method, params: r.params ?? null };

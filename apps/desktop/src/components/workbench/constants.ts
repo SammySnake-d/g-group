@@ -1,7 +1,6 @@
 import type { WbTab } from '@/ctx'
 import type { Pending } from '@/data'
 
-/* 联系人工作台的页签、层级说明和「等你」文案:模块自己的常量,不写在组件里 */
 
 export const WB_TABS: readonly { value: WbTab; label: string }[] = [
   { value: 'overview', label: '概览' },
@@ -14,7 +13,6 @@ export const WB_TABS: readonly { value: WbTab; label: string }[] = [
 
 export type PaneTab = 'here' | 'talks' | 'process' | 'duty' | 'memory'
 
-/** 右侧分栏里的联系人页签;「在本群」只在群里打开时这么叫 */
 export const paneTabs = (inGroup: boolean): readonly { value: PaneTab; label: string }[] => [
   { value: 'here', label: inGroup ? '在本群' : '概览' },
   { value: 'talks', label: '对话' },
@@ -23,7 +21,6 @@ export const paneTabs = (inGroup: boolean): readonly { value: PaneTab; label: st
   { value: 'memory', label: '记忆' },
 ]
 
-/** 四层设定各自由谁写、多久变一次(职责与预设页的标题旁) */
 export const LAYERS: readonly { k: string; who: string }[] = [
   { k: '职责', who: '你写 · 换群或换活时改' },
   { k: '预设', who: '你写 · 偶尔调' },
@@ -31,7 +28,6 @@ export const LAYERS: readonly { k: string; who: string }[] = [
   { k: '红线', who: '只有你能改 · 基本不变' },
 ]
 
-/** 「等你」一行的第二行:要你做什么 */
 export const PENDING_VERB: Record<Pending['kind'], string> = {
   choice: '等你回答',
   proposal: '等你同意',
@@ -39,7 +35,6 @@ export const PENDING_VERB: Record<Pending['kind'], string> = {
   error: '出错了，等你决定',
 }
 
-/** 「等你」一行的按钮 */
 export const PENDING_CTA: Record<Pending['kind'], string> = {
   choice: '去回答',
   proposal: '去回答',

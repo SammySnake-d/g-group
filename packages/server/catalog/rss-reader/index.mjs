@@ -1,6 +1,4 @@
 // RSS 订阅(示例数据源插件)。宿主在隔离子进程里运行它:只能读本包目录,不能写文件、起子进程;
-// 网络未被宿主隔离,靠清单权限 net:fetch 告知用户。
-// 按配置 feeds 里的地址拉 RSS 2.0 / Atom 1.0,每个条目交一条 create 事件;条目内容或时间变了,sourceVersion 跟着变。
 // 源端没给时间的条目记拉取时间。插件只交数据,盖章(来源、收到时间、不可信)由宿主做。
 import { createHash } from "node:crypto";
 
@@ -16,7 +14,6 @@ const decode = (s) =>
     }
     return ENTITIES[e.toLowerCase()] ?? m;
   });
-/** 元素的 XML 文本值:CDATA 原样保留,其余部分去掉子元素标签再解实体 */
 const xmlText = (raw) => {
   const re = /<!\[CDATA\[([\s\S]*?)\]\]>/g;
   let out = "";
@@ -27,12 +24,10 @@ const xmlText = (raw) => {
   }
   return out + decode(raw.slice(last).replace(/<[^>]*>/g, " "));
 };
-/** HTML 内容(RSS 摘要、Atom type="html")再去一层 HTML 标签 */
 const htmlText = (s) => decode(s.replace(/<[^>]*>/g, " "));
 const squash = (s) => s.replace(/\s+/g, " ").trim();
 const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const blocks = (xml, tag) => [...xml.matchAll(new RegExp(`<${esc(tag)}(?:\\s[^>]*)?>([\\s\\S]*?)</${esc(tag)}>`, "gi"))].map((m) => m[1]);
-/** html: true 按 HTML 转纯文本;"auto" 看 type 属性(Atom);false 按纯文本 */
 const field = (block, html, ...tags) => {
   for (const t of tags) {
     const m = new RegExp(`<${esc(t)}(\\s[^>]*)?>([\\s\\S]*?)</${esc(t)}>`, "i").exec(block);

@@ -24,7 +24,6 @@ const NOTICE: Record<NoticeEvent['level'], { icon: LucideIcon; className: string
   info: { icon: Info, className: 'text-fg-3' },
 }
 
-/** 系统提示：接口报错、自动重试。失败与重试在这里用颜色和图标一起标出，不靠颜色单独表达 */
 function NoticeRow({ event }: { event: NoticeEvent }) {
   const n = NOTICE[event.level]
   return (
@@ -35,7 +34,6 @@ function NoticeRow({ event }: { event: NoticeEvent }) {
   )
 }
 
-/** 相邻两块之间的距离：话和它后面的工具/子代理贴近，别的拉开 */
 function gapBefore(prev: TranscriptBlock | undefined, cur: TranscriptBlock) {
   if (!prev) return ''
   if ((cur.type === 'tools' || cur.type === 'agents' || cur.type === 'notice') && prev.type !== 'prompt') return 'mt-1.5'

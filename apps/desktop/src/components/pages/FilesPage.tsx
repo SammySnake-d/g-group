@@ -6,7 +6,6 @@ import { EmptyState } from '@/components/ui/section'
 import { ListItem } from '@/components/ui/list-row'
 import { Hint, PageScroll } from './kit/parts'
 
-/* ---------- 群文件:助手交付的文档、页面、任务板、服务器账号;点一个在分屏里打开 ---------- */
 export function FilesPage({ id }: { id: string }) {
   const { openSplit, closeAll } = useApp()
   const list = artifacts.filter((a) => a.conv === id)

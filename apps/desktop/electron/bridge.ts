@@ -1,6 +1,4 @@
 // 主进程这一侧的后端桥:按 @g-group/api-contract 的方法表校验参数,转给宿主服务,回包前校验结果。
-// 宿主服务(dev/integration 上的内核组装)接进来之前,所有方法如实回 unavailable「后端未连接」,
-// 渲染层据此显示「演示数据」并用本地演示适配器,不假装成功。
 import { type ApiError, type ApiResult, checkParams, checkResult, formatIssues, isMethodName, type MethodName, type ServerEvent } from "@g-group/api-contract";
 
 export type HostServer = {
@@ -9,7 +7,6 @@ export type HostServer = {
 };
 
 let server: HostServer | null = null;
-/** 宿主服务就绪后调用(后端集成接上时在 main.ts 里注入)。 */
 export function attachServer(s: HostServer | null) {
   server = s;
 }

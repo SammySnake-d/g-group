@@ -55,7 +55,6 @@ export function Field({ label, hint, error, layout = "stack", group, className, 
   )
 }
 
-/* ---------------------------------------------------------------- 控件外观 */
 
 export const controlVariants = cva(
   "w-full min-w-0 rounded-lg border bg-bg text-fg outline-none transition-[border-color,box-shadow] duration-fast ease-out placeholder:text-fg-3 hover:border-fg-3/50 focus-visible:border-fg-3 focus-visible:ring-2 focus-visible:ring-ring/25 disabled:cursor-not-allowed disabled:opacity-50",
@@ -69,7 +68,6 @@ export const controlVariants = cva(
 )
 type ControlSize = "sm" | "md" | "lg"
 
-/** 控件从 Field 拿 id / 说明 / 是否出错;自己传的优先 */
 function useControl(id?: string, invalid?: boolean, describedBy?: string) {
   const f = useField()
   const bad = invalid ?? f?.invalid ?? false
@@ -90,7 +88,6 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({ 
 })
 Textarea.displayName = "Textarea"
 
-/** 原生下拉:测试和无障碍都按原生 select 走(键盘、系统菜单),外观和其它控件一致。className 落在外壳上(管宽度) */
 export interface NativeSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> { size?: ControlSize; invalid?: boolean }
 export const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(({ className, size = "sm", invalid, id, "aria-describedby": d, children, ...props }, ref) => {
   const { invalid: bad, ...a } = useControl(id, invalid, d)
@@ -103,8 +100,6 @@ export const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProp
 })
 NativeSelect.displayName = "NativeSelect"
 
-/* ---------------------------------------------------------------- 菜单式下拉(Radix DropdownMenu)
-   选项少、要带说明、或者不需要原生行为的单选:触发器长得像输入框,菜单从触发器方向长出(origin-aware),方向键 / 字母跳转 / Esc。 */
 
 export interface SelectMenuOption<T extends string> { value: T; label: React.ReactNode; hint?: React.ReactNode; disabled?: boolean }
 
@@ -117,7 +112,6 @@ export function SelectMenu<T extends string>({ value, onChange, options, placeho
   invalid?: boolean
   className?: string
   testid?: string
-  /** 没有 Field 包着时的无障碍名 */
   label?: string
   align?: "start" | "end"
 }) {

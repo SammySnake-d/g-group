@@ -36,7 +36,6 @@ export const INITIAL_MODEL_SETTINGS: ModelSettings = {
 
 export const harnessLabel = (h: string) => HARNESS_LABEL[h] ?? h
 export const modelLabel = (id: string | undefined, s: ModelSettings) => (id ? findModel(id, s.models)?.label ?? id : '没填')
-/** 下拉框里一行：名字 · 厂商 · 能在哪些 Harness 上跑 */
 export const modelOption = (id: string, s: ModelSettings) => {
   const m = findModel(id, s.models)
   if (!m) return id
@@ -55,7 +54,6 @@ export const toContactModels = (p: Person): ContactModels => ({
   computeModel: p.computeModel ?? { mode: 'inherit' },
 })
 
-/** 继承链上的一跳翻成人话 */
 const SETTING_LABEL: Record<string, string> = {
   speakingModel: '说话模型', harness: 'Compute Harness', 'computeModel.model': '单独指定的模型', 'computeModel.effort': 'effort',
   defaultComputeModel: 'Compute 模型', defaultEffort: 'effort', model: '模型', effort: 'effort',
@@ -69,7 +67,6 @@ export function hopParts(h: Hop): { where: string; value?: string } {
   return { where: `${LAYER_LABEL[h.layer]}${/^[A-Za-z]/.test(s) ? ' ' : ''}${s}`, value: h.value || '（没填）' }
 }
 
-/** 演示数据里 Compute 记的是展示名（「Claude Opus 5.5」「Claude Code」），按目录换回 id 当作任务的启动快照 */
 export function snapshotOfCompute(c: Compute, s: ModelSettings): ModelSnapshot {
   const m = s.models.find((x) => x.label === c.model || x.id === c.model)
   const h = Object.entries(HARNESS_LABEL).find(([, l]) => l === c.harness)?.[0] ?? c.harness

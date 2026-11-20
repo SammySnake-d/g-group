@@ -176,7 +176,6 @@ test("缓存断点不超过 4 个,位于工具定义末尾、stable 末尾、已
   assert.equal(noCompressed.request.segments.filter((s) => s.cacheBreakpoint).length, 3);
 });
 
-// —— 第四轮:R3-01..R3-06
 const FOOD = "用户原来决定吃面";
 function foodLog(): Log {
   let log = append(emptyLog(), user, { kind: "message", text: FOOD }, at);
@@ -359,7 +358,6 @@ test("会变状态原文逐字出现在 tail 末段;空字符串不产生段(R3-
   assert.equal(empty.request.segments.some((s) => s.label === "volatile"), false);
 });
 
-// —— 第五轮:R4-01、R4-07
 const S = [{ kind: "system", text: "助手规则" }] as const;
 function retractedLog(text: string): Log {
   let log = append(emptyLog(), user, { kind: "message", text }, at);
@@ -473,7 +471,6 @@ test("恰好 4 字与 3 字的撤回原文都拦,未撤回的同样文字照常(
   }
 });
 
-// —— 第六轮:R5-03..R5-05
 function staleBlockLog(): Log {
   let log = append(emptyLog(), user, { kind: "message", text: "旧的保密原文" }, at);
   log = append(log, user, { kind: "message", text: "普通消息" }, at);
@@ -593,8 +590,6 @@ test("日志或装配选项带 getter、Proxy 时显式失败,getter 调用 0 �
   assert.equal(assemble(log, { stable: S, quotes: [1], budgetBytes: BIG }).ok, true);
 });
 
-// —— 第六轮:原型污染穿透调用链(R6-01 / R6-02)、公开工具执行 getter(R6-03)、空白定义与实现同源(R6-05)
-/** 在 target 的 key 上临时装属性(描述符用空原型构造),只在 fn 执行期间生效,结束后一定复原 */
 function polluted<T>(target: object, key: string, mode: "setter" | "readonly", counter: { n: number }, fn: () => T): T {
   const had = Object.getOwnPropertyDescriptor(target, key);
   const d: PropertyDescriptor = Object.create(null);
@@ -668,7 +663,6 @@ test("撤回比对用的不可见字符定义与实现同源:每个样例都在 
   assert.equal(r.ok, true);
 });
 
-// —— 第七轮:导出策略对象不可变(R7-04)、squash 公开入口(R7-02)、JSON null 等非对象输入(R7-06)、同一可见旧消息重复引用(R7-M3)
 test("导出的固定段顺序是冻结副本、撤回空白正则不导出实例:调用方改它们之后,顺序校验与撤回扫描都不受影响(R7-04 阳性埋雷)", () => {
   const reversed = { stable: [{ kind: "persona", text: "风格" }, { kind: "system", text: "规则" }], quotes: [], budgetBytes: BIG } as unknown as AssembleOptions;
   const leak = { stable: S, quotes: [], volatile: "秘\u0085密口令", budgetBytes: BIG };
@@ -678,7 +672,6 @@ test("导出的固定段顺序是冻结副本、撤回空白正则不导出实�
   assert.deepEqual([...STABLE_ORDER], ["system", "tools", "persona"]);
   assert.equal("INVISIBLE" in assembleModule, false, "可变的 RegExp 实例不导出");
   assert.equal(typeof INVISIBLE_SOURCE, "string");
-  // 调用方能拿到的只有规范文本:照它新建、改写自己的实例,宿主的扫描不受影响
   const mine = new RegExp(INVISIBLE_SOURCE, "gu");
   mine.compile("x", "g");
   const after = [assemble(retractedLog("无关"), reversed), assemble(retractedLog("秘密口令"), leak)];

@@ -1,9 +1,5 @@
 #!/usr/bin/env node
-// 手动 smoke:用默认 runner 起真实 `claude` 跑一次小任务,打印适配器产出的语义事件与装配清单。
-// 不进 npm test(慢且要额度)。用法:
-//   node packages/adapter-cc-compute/smoke/real-claude.mjs > packages/adapter-cc-compute/proof/smoke-real.txt 2>&1
 // 模型网关配置由宿主经 hostEnv 显式交给 CLI(这里从本进程环境挑出 ANTHROPIC_BASE_URL 与鉴权变量);
-// brief 里的凭据只有引用句柄。
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -12,7 +8,6 @@ import { createComputeAdapter } from "../src/index.ts";
 const pick = ["ANTHROPIC_BASE_URL", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_MODEL",
   "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_SMALL_FAST_MODEL"];
 const hostEnv = Object.fromEntries(pick.filter((k) => process.env[k]).map((k) => [k, process.env[k]]));
-// --bare 只认 ANTHROPIC_API_KEY;网关只给了 AUTH_TOKEN 时按同一值补上
 if (!hostEnv.ANTHROPIC_API_KEY && hostEnv.ANTHROPIC_AUTH_TOKEN) hostEnv.ANTHROPIC_API_KEY = hostEnv.ANTHROPIC_AUTH_TOKEN;
 
 const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "cc-smoke-"));

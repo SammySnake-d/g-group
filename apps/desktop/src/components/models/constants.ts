@@ -4,14 +4,12 @@ import type { ModelSlot } from '@g-group/ui-core'
 /** Compute 模型三态的顺序 */
 export const MODES: readonly ModelSlot['mode'][] = ['inherit', 'follow-speaking', 'explicit']
 
-/** 设置页「默认」一节的四个字段 */
 export const DEFAULT_FIELDS = ['defaultHarness', 'defaultSpeakingModel', 'defaultComputeModel', 'defaultEffort'] as const
 export type DefaultField = (typeof DEFAULT_FIELDS)[number]
 export const DEFAULT_FIELD_LABEL: Record<DefaultField, string> = {
   defaultHarness: '默认 Harness', defaultSpeakingModel: '默认说话模型', defaultComputeModel: '默认 Compute 模型', defaultEffort: '默认 effort',
 }
 
-/** 批量替换里一处引用的说法 */
 export const REF_LABEL: Record<string, string> = {
   defaultSpeakingModel: '默认说话模型', defaultComputeModel: '默认 Compute 模型', speakingModel: '说话模型', 'computeModel.model': 'Compute（单独指定）',
 }

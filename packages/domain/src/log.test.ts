@@ -32,7 +32,6 @@ test("原地改写旧记录正文会被 hash 链查出(阳性埋雷)", () => {
 test("单条 hash 自洽但与前一条脱链会被查出(阳性埋雷)", () => {
   const log = sample();
   const forged = append(append(emptyLog(), user, { kind: "message", text: "另一条历史" }, at), contactA, { kind: "message", text: "我来" }, at);
-  // 用另一条链上 seq=2 的事件替换:它自身 hash 正确,但 prev 指向的不是本链第 1 条
   const spliced: Log = { events: [log.events[0]!, forged.events[1]!] };
   assert.notEqual(spliced.events[1]?.prev, spliced.events[0]?.hash);
   assert.deepEqual(verify(spliced), { ok: false, brokenAt: 2 });

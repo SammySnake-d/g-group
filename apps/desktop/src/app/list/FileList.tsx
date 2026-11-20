@@ -6,10 +6,8 @@ import { ListRow } from '../ListRow'
 import { FILE_KINDS } from './labels'
 import { matchFile } from '@/components/files/context'
 
-/** 文件区:按类别分组(网页 / 文档 / 清单 / 资产),写明谁在哪个会话里做的 */
 export function FileList({ query }: { query: string }) {
   const { convs, fileSel, setFileSel } = useApp((s) => ({ convs: s.convs, fileSel: s.fileSel, setFileSel: s.setFileSel }))
-  /* 连上后端列 files.list 读到的,没连上列演示文件 */
   const files = useApp(fileList)
   const hit = files.filter((a) => matchFile(a, query, convs))
   return (

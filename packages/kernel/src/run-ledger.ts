@@ -2,15 +2,9 @@
 //   - 单元四层五类:联系人轮次 → Compute 会话 → 会话里的轮次 → 后台任务 / 子代理;每行带 parent_id、来源(会话 + #seq)、属于谁(联系人)。
 //   - 状态集合固定:queued / running / waiting_user / done / failed / interrupted / orphaned;failed、interrupted 必带原因类别与原文。
 //   - 父子一致:子单元还在跑,父单元不能记 done;父单元失败/中断/成孤儿时,还在跑的子单元一起标 orphaned,不留「运行中」。
-//   - 存活核对:上一次宿主启动留下的、或执行进程已不在的 running 单元,一个核对周期内变 orphaned 并写明原因。
-//   - 卡死判失败:只有真实事件算进展;harness 的「正在重试」公告、心跳、进程存活都不刷新计时;合法等待(等人回答、工具子进程在跑、
-//     首字节窗口内、休眠唤醒宽限期)不计时;到阈值给出 failed + 原因类别(stalled / no_response / stream_dropped)+ 用时 + 最后进展时间 + 判定阈值。
 //   - 阈值默认 15 分钟 / 120 秒(#2827),可按联系人或按上游单独设;两边都设取更宽的那个(少误判),并记下按哪个判。
-//   - 可见范围:私聊只看该联系人在这个私聊里的单元;群里看本群全部成员在本群的单元;别处不返回;用户本人全看。
 //   - 重跑规则(#2628):只接受 failed / interrupted / orphaned;人停的拒绝(用户本人这次明确要求除外);平台拒绝、上下文超长、会话丢失开新会话;
 //     同一单元同时只一个重跑(租约);自己名下自动重跑有上限(默认 2 次,是助手建议、用户未定,做成参数,#2646);别人名下不自动重跑,
-//     明确发起才执行并在群里留记录;每次重跑给出一条事件。
-//   - 同一会话里同一上游同一原因的多条失败合并成一条群级提示。
 import { type AutoRerun, classifyFailure, type FailureClass, type ReasonClass, type RetryClass } from "./failure-class.ts";
 import { DEFAULT_WAKE_POLICY } from "./retry-policy.ts";
 
@@ -20,7 +14,6 @@ export const RUN_LAYERS: readonly RunLayer[] = Object.freeze(["contact-round", "
 export const RUN_STATUSES: readonly RunStatus[] = Object.freeze(["queued", "running", "waiting_user", "done", "failed", "interrupted", "orphaned"]);
 const LIVE: ReadonlySet<RunStatus> = new Set<RunStatus>(["queued", "running", "waiting_user"]);
 const RERUNNABLE: ReadonlySet<RunStatus> = new Set<RunStatus>(["failed", "interrupted", "orphaned"]);
-/** 卡死计时的对象:在跑的轮次(联系人轮次、Compute 会话里的轮次) */
 const TIMED: ReadonlySet<RunLayer> = new Set<RunLayer>(["contact-round", "compute-turn"]);
 
 export const isLiveRun = (s: RunStatus) => LIVE.has(s);
@@ -33,7 +26,6 @@ export interface StallThresholds {
 export const DEFAULT_STALL_THRESHOLDS: Readonly<StallThresholds> = Object.freeze({ stallMs: 15 * 60_000, firstByteMs: 120_000 });
 /** 自己名下自动重跑上限:助手建议 2 次,用户未定(#2646),是参数 */
 export const DEFAULT_RERUN_LIMIT = 2;
-/** 重跑租约默认有效期 */
 export const DEFAULT_RERUN_LEASE_MS = 10 * 60_000;
 /** 休眠唤醒后的宽限期默认值(D15.1 第六层 ① 举例 3 分钟);只有一个来源:内核休眠门 DEFAULT_WAKE_POLICY.graceMs */
 export const DEFAULT_SLEEP_GRACE_MS = DEFAULT_WAKE_POLICY.graceMs;
@@ -61,17 +53,12 @@ export const runFailure = (c: FailureClass): RunFailure =>
   });
 
 export interface RunProgress {
-  /** 最后一次真实进展 */
   readonly lastProgressAt: number;
   /** 模型调用已发出、还没收到任何回应的起点(首字节窗口);收到真实事件即清空 */
   readonly awaitingSince: number | null;
-  /** 在跑的工具调用(工具子进程在跑是合法等待) */
   readonly toolsRunning: readonly string[];
-  /** 上次进展以来 harness 报了几次「正在重试」 */
   readonly retries: number;
-  /** 最近一次重试公告带的原文 */
   readonly lastRetry: string | null;
-  /** 最近一次合法等待(等人回答)结束的时刻:计时从这里重新开始 */
   readonly resumedAt: number | null;
 }
 
@@ -104,7 +91,6 @@ export interface RunUnit {
   readonly pid: number | null;
   readonly progress: RunProgress;
   readonly failure: RunFailure | null;
-  /** 孤儿原因等说明 */
   readonly note: string | null;
   readonly verdict: StallVerdict | null;
   readonly rerunOf: string | null;
@@ -168,7 +154,6 @@ export function newRun(input: NewRun): RunUnit {
   });
 }
 
-/** harness 上报的一件事。只有 progress / tool_start / tool_end 是真实进展;model_call 开始首字节窗口;retry、heartbeat、alive 不算进展 */
 export type RunActivity =
   | { readonly kind: "progress"; readonly what: "text" | "thinking" | "tool_output" | "subagent" | "semantic" | "output" }
   | { readonly kind: "tool_start"; readonly toolId: string }
@@ -188,7 +173,6 @@ export function noteActivity(unit: RunUnit, a: RunActivity, at: number): RunUnit
   else if (a.kind === "tool_end") next = progressed(p.toolsRunning.filter((t) => t !== a.toolId));
   else if (a.kind === "model_call") next = { ...p, toolsRunning: [...p.toolsRunning], awaitingSince: p.awaitingSince ?? at };
   else if (a.kind === "retry") next = { ...p, toolsRunning: [...p.toolsRunning], retries: p.retries + 1, lastRetry: typeof a.error === "string" ? a.error : null };
-  // heartbeat / alive:进程活着、心跳都不代表在进展,不刷新
   if (next === p) return unit;
   return freezeUnit({ ...unit, progress: next });
 }
@@ -295,15 +279,12 @@ export function resolveThresholds(cfg: ThresholdConfig, contactId: string, upstr
 
 export interface StallCheck {
   readonly verdict: StallVerdict | null;
-  /** 正处于哪种合法等待(不计时) */
   readonly waiting: "waiting_user" | "tool_running" | "first_byte" | "sleep_grace" | null;
-  /** 已计入的无进展时长 */
   readonly idleMs: number;
 }
 const SRC_TEXT: Readonly<Record<ThresholdSource, string>> = Object.freeze({ default: "按默认值", contact: "按联系人单独设的值", upstream: "按上游单独设的值" });
 const mins = (ms: number) => Math.round((ms / 60_000) * 10) / 10;
 
-/** 判一个单元此刻是否卡死。sleep.awakeSince 是最近一次检测到休眠唤醒的时刻(由调用方按时钟跳变检出) */
 export function stallCheck(unit: RunUnit, now: number, th: ResolvedThresholds, sleep: { readonly awakeSince: number | null; readonly graceMs?: number } = { awakeSince: null }): StallCheck {
   const none = (waiting: StallCheck["waiting"], idleMs = 0): StallCheck => ({ verdict: null, waiting, idleMs });
   if (unit.status === "waiting_user") return none("waiting_user");
@@ -332,7 +313,6 @@ export function stallCheck(unit: RunUnit, now: number, th: ResolvedThresholds, s
 
 export type RunViewer = { readonly kind: "user" } | { readonly kind: "contact"; readonly contactId: string; readonly roomId: string; readonly roomKind: "dm" | "group" };
 
-/** 查询工具的可见范围,由宿主机械过滤,不看联系人自报 */
 export function visibleRuns(units: readonly RunUnit[], viewer: RunViewer): readonly RunUnit[] {
   if (viewer.kind === "user") return [...units];
   if (viewer.roomKind === "dm") return units.filter((u) => u.roomId === viewer.roomId && u.contactId === viewer.contactId);
@@ -345,21 +325,16 @@ export interface RerunLease {
 }
 export interface RerunRequest {
   readonly at: number;
-  /** 谁发起:用户本人或某位联系人 */
   readonly initiator: { readonly kind: "user" | "contact"; readonly id: string };
-  /** auto:联系人自己决定重跑;explicit:有人明确要求(用户发话、或联系人依据一条明确请求) */
   readonly trigger: "auto" | "explicit";
   readonly leaseMs?: number;
 }
 export interface RerunContext {
   readonly unit: RunUnit;
-  /** 这个单元(含之前重跑出的)已经由主人自动重跑了几次 */
   readonly autoReruns: number;
   readonly limit?: number;
   readonly lease: RerunLease | null;
-  /** 这条任务在同一上游上连续失败了几次(含这一次) */
   readonly sameUpstreamFailures: number;
-  /** 这次重跑会换到别的上游 */
   readonly upstreamChanged?: boolean;
 }
 export interface RerunEvent {
@@ -426,7 +401,6 @@ export interface FailureGroup {
   readonly label: string;
   readonly unitIds: readonly string[];
 }
-/** 同一会话里同一上游同一原因的失败合并成一条群级提示(只看 failed、带上游的单元) */
 export function failureGroups(units: readonly RunUnit[]): readonly FailureGroup[] {
   const m = new Map<string, { roomId: string; upstream: string; reasonClass: ReasonClass; label: string; unitIds: string[] }>();
   for (const u of units) {
@@ -447,7 +421,6 @@ const dur = (ms: number): string => {
   return `${Math.floor(m / 60)} 小时 ${m % 60} 分`;
 };
 export type RunTone = "queued" | "running" | "waiting" | "done" | "failed" | "stopped" | "orphaned";
-/** 画板一行:失败「失败 · 原因 · 用时」,人停的「已停止」(色调与失败不同),孤儿「没跑完 · 原因」 */
 export function runDisplay(unit: RunUnit, now: number): { readonly tone: RunTone; readonly text: string } {
   const took = dur((unit.endedAt ?? now) - unit.startedAt);
   switch (unit.status) {

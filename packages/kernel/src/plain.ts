@@ -1,20 +1,14 @@
 // 普通数据对象判定(与 PR #3 统一的输入契约):"普通数据对象"即 JSON 可产生的形状。
 // 判定顺序:先 types.isProxy → 原型 Object.prototype / null(数组为 Array.prototype)→ 逐层用属性描述符检查,
 // 所有自有属性(含数组元素)必须是数据属性;出现 getter/setter 直接拒绝,永不调用。
-// 只接受:字符串、有限数字、布尔、null、普通数组(不稀疏、只有下标与 length)、普通对象(可枚举的字符串键)。
 // 对象属性值为 undefined 时按 JSON.stringify 的规则当作不存在;数组元素不能是 undefined。
-// 中间表与结果都不经过原型链:描述符表放在空原型对象里,结果数组用 pushOwn(defineProperty)追加,
-// 传给 defineProperty 的描述符本身也是空原型对象,检查访问器只看描述符的自有 get/set 字段;
-// Object.prototype / Array.prototype 上的同名 setter、只读属性或可写值都不会被调用、挡住或借来补洞。
 // 内核所有对外入口(插件注册、发送请求与回执、拉取结果、上下文装配、入站分类)都用这一个函数。
-// 内核插件契约只接受普通数据对象,不承诺防御任意 JS 元编程对象:遇到就拒绝并点名路径。
 import { types } from "node:util";
 import { dataDesc, pushOwn } from "./own.ts";
 
 export type PlainResult = { readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly path: string; readonly why: string };
 export type PlainItems = { readonly ok: true; readonly items: readonly unknown[] } | { readonly ok: false; readonly path: string; readonly why: string };
 export interface PlainOptions {
-  /** 顶层对象的直接字段可以是函数(插件的 send/pull、装配的 recompress);函数原样保留引用 */
   readonly topFunctions?: boolean;
 }
 
@@ -22,10 +16,8 @@ const MAX_DEPTH = 32;
 const INDEX = /^(0|[1-9]\d*)$/;
 const bad = (path: string, why: string) => ({ ok: false as const, path, why });
 
-/** 是不是访问器:只看描述符自己的 get/set 字段,不看继承来的同名属性 */
 const isAccessor = (d: PropertyDescriptor): boolean => Object.hasOwn(d, "get") || Object.hasOwn(d, "set");
 
-/** 自有属性描述符表,放进空原型对象:按键取值不会走到 Object.prototype 上的同名属性 */
 function ownDescs(x: object): Record<string, PropertyDescriptor> {
   const table: Record<string, PropertyDescriptor> = Object.create(null);
   for (const k of Reflect.ownKeys(x)) {
@@ -35,20 +27,14 @@ function ownDescs(x: object): Record<string, PropertyDescriptor> {
   return table;
 }
 
-/** 往数组末尾追加自有元素:用 defineProperty,不经过 Array.prototype 上的同名 setter 或只读下标。内核所有结果数组都用它。
- *  公开入口,目标按普通数组合同整体判定(与 plainItems 同一套:非 Proxy、原型 Array.prototype、只有下标与 length、
- *  不稀疏、元素都是可枚举数据属性);不合格时抛受控 TypeError,不调用任何访问器,也不写入。 */
 export function appendOwn<T>(out: T[], v: T): void {
   if (!items(out, "appendOwn 的目标").ok) throw new TypeError("appendOwn 的目标必须是普通数组");
   pushOwn(out, v);
 }
 
-/** 路径参数也是外部输入:只收字符串(不传按默认值)。typeof 不会触发访问器或 Proxy 陷阱,判定在任何插值之前。 */
 const PATH_ARG = "<路径参数>";
 const badPath = () => bad(PATH_ARG, "路径参数必须是字符串");
 
-/** 判定选项本身也按普通数据对象判:整个对象逐个看自有属性,只允许数据属性 topFunctions(布尔),
- *  getter/setter(可枚举或不可枚举)、其它键、Symbol 键、非普通对象都判非法(返回 undefined),访问器不调用 */
 function topFunctionsOf(opts: unknown): boolean | undefined {
   if (opts === undefined) return false;
   if (typeof opts !== "object" || opts === null || types.isProxy(opts)) return undefined;
@@ -65,7 +51,6 @@ function topFunctionsOf(opts: unknown): boolean | undefined {
   return value;
 }
 
-/** 判定并克隆:通过时返回递归冻结的纯数据副本(对象原型为 null),之后只读这份副本。自身不抛错。 */
 export function plainData(x: unknown, at: string = "输入", opts?: PlainOptions): PlainResult {
   if (typeof at !== "string") return badPath();
   try {
@@ -77,7 +62,6 @@ export function plainData(x: unknown, at: string = "输入", opts?: PlainOptions
   }
 }
 
-/** 只判定数组容器本身(Proxy、原型、只有下标与 length、不稀疏、元素是数据属性),返回元素原值,不读下标。自身不抛错。 */
 export function plainItems(x: unknown, at: string = "输入"): PlainItems {
   if (typeof at !== "string") return badPath();
   try { return items(x, at); } catch (err) {
@@ -138,12 +122,6 @@ function items(x: unknown, at: string): PlainItems {
   const descs = ownDescs(x);
   const lenDesc = descs.length as PropertyDescriptor;
   const len = lenDesc.value as number;
-  // 每个自有键都按「真数组索引 + 落在当前 length 内」校验(R11-02)。
-  // INDEX 只挡前导零、符号与非数字文本,2^32-1(2^32-1 不是数组索引)与 9007199254740992 这类十进制数字名
-  // 照样通过它;它们不改变 length,后面的 0..length-1 循环又不会查它们的描述符,于是挂在它们上面的访问器
-  // 会被静默净化成 ok:true/[]。真数组索引最大是 2^32-2,而 length 最大是 2^32-1,所以「索引 < length」
-  // 一条就把非索引数字名与超界下标一起挡掉,不需要另列上界常数。length 本身在真实数组上必然是
-  // 自有的非访问器数据属性(JS 引擎强制),这里只读它的值。
   for (const k of Object.keys(descs)) {
     if (k === "length") continue;
     if (!INDEX.test(k) || Number(k) >= len) return bad(`${at}[${k}]`, "数组只能有下标元素");
@@ -203,7 +181,6 @@ function render(v: unknown, seen: WeakSet<object>, depth: number): string {
   return `{${parts.join(",")}}`;
 }
 
-/** 抛出的东西来自外部:原生异常只读自有数据属性 message(不调 getter、不走 instanceof),其余按 safeDescribe 描述 */
 export function describeThrown(err: unknown): string {
   try {
     if (typeof err === "object" && err !== null && !types.isProxy(err) && types.isNativeError(err)) {

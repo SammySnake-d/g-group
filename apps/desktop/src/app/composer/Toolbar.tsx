@@ -19,18 +19,14 @@ type Props = {
   conv: Conversation
   inv: SlashInvocation | null
   canSend: boolean
-  /** 每按一次回车但参数不全 +1:「还差 …」闪一下 */
   nudge: number
   onInsert: (s: string) => void
   onAt: () => void
   onSlash: () => void
-  /** file:选中的本地文件或当前窗口截图;宿主持久化后发出。 */
   onFile: (name: string, kind: Artifact['kind'], meta: string, file?: File) => void | Promise<void>
   onSubmit: () => void
 }
 
-/* 输入框底部工具栏:左边取外部消息、表情、@、/、截图、文件、图片;右边缺什么 + 发送。
-   全部 32px 命中区,提示同组里第一个有延迟、后面即时(TooltipProvider 的 skipDelay)。 */
 export function Toolbar({ conv, inv, canSend, nudge, onInsert, onAt, onSlash, onFile, onSubmit }: Props) {
   const { push, toast, isLive } = useApp((s) => ({ push: s.push, toast: s.toast, isLive: live(s) }))
   const fileRef = useRef<HTMLInputElement>(null)

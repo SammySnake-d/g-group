@@ -10,13 +10,9 @@ import { FLOAT_RESIZE } from './constants'
 import { pageKey, pageTitle } from './titles'
 import { PageBody } from './PageBody'
 
-/* ============ 右侧浮层:一摞页面。返回 / 关闭 / Esc 都只退一层;点浮层外面才全部收起(Esc 与遮罩在 App) ============
-   进出场:从右侧滑入,退场更快(数值全部取自 Animate UI token,见 kit/motion)。
-   压栈时新页从右边来、返回时从左边来,旧页立即让位——浮层里永远只有一份控件,testid 不会重复。 */
 
 export function FloatPanel({ stack, width, onResize }: { stack: Page[]; width: number; onResize: (w: number) => void }) {
   const reduced = useReducedMotion()
-  // 退场动画期间 stack 已经空了,用最后一摞把内容画完
   const last = useRef(stack)
   if (stack.length) last.current = stack
   const depth = useRef(stack.length)

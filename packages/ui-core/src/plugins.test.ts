@@ -51,7 +51,6 @@ const mf = (over: Partial<PluginManifest>): PluginManifest => ({
   changelog: [{ version: "1.4.2", date: "2026-09-20", notes: ["修了长消息被截断"] }],
   ...over,
 });
-/** 一份合法的原始清单(JSON 里的样子) */
 const raw = (over: Record<string, unknown> = {}) => ({
   id: "acme.notes",
   name: "笔记",
@@ -64,7 +63,6 @@ const raw = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-// ---------------------------------------------------------------- semver
 
 test("parseSemver / isValidSemver:只认 主.次.修订[-预发布][+构建]", () => {
   assert.deepEqual(parseSemver("1.4.2"), { major: 1, minor: 4, patch: 2, pre: [] });
@@ -89,7 +87,6 @@ test("compareSemver:逐段按数字比,预发布低于正式版,预发布标识�
   assert.throws(() => compareSemver("1.2", "1.0.0"), /版本号「1\.2」不合法/);
 });
 
-// ---------------------------------------------------------------- 清单校验
 
 test("validateManifest:合法清单通过,并补齐默认图标、空的能力和更新日志", () => {
   const r = validateManifest(raw());
@@ -206,7 +203,6 @@ test("readInstallSource:{ 开头当清单,https 当地址,其它说清楚为什�
   assert.deepEqual(readInstallSource("飞书插件"), { kind: "invalid", error: "看不出是清单还是地址：粘贴清单 JSON（以 { 开头），或者 https:// 开头的地址" });
 });
 
-// ---------------------------------------------------------------- 权限比较
 
 test("permissionDiff / permissionsToConsent:新增和风险升高要重新同意,降低和删掉的不用", () => {
   const granted = [READ, perm("feishu.users:read", "high"), perm("feishu.chats:list", "low")];
@@ -220,7 +216,6 @@ test("permissionDiff / permissionsToConsent:新增和风险升高要重新同意
   assert.deepEqual(permissionsToConsent(granted, granted), []);
 });
 
-// ---------------------------------------------------------------- 生命周期
 
 test("pluginReducer:未安装 → 安装中 → 已启用 ⇄ 已停用 → 卸载中 → 未安装", () => {
   const m = mf({});
@@ -397,7 +392,6 @@ test("pluginCommands / commandUsage / attachable:只列已启用、挂在本聊�
   assert.deepEqual(attachable(installs, "g-design").map((s) => s.id), ["g-group.feishu", "g-group.cve", "g-group.webhook"]);
 });
 
-// ---------------------------------------------------------------- 市场
 
 const CATALOG: PluginManifest[] = [
   mf({ version: "1.5.0", changelog: [{ version: "1.5.0", date: "2026-11-02", notes: ["能读飞书文档"] }] }),
@@ -457,7 +451,6 @@ test("marketCounts:总数、已安装、有更新、各类别数", () => {
   assert.deepEqual(marketCounts(CATALOG, []), { all: 6, installed: 0, updates: 0, byCategory: { source: 2, outbound: 1, ui: 1, command: 2 } });
 });
 
-// ---------------------------------------------------------------- 命令可用性、本会话插件
 
 test("commandAvailability:已装、已启用、挂在本会话、调用者在白名单、权限都同意过,缺一不可", () => {
   const at = { conv: "g", caller: "argon" };
@@ -474,14 +467,11 @@ test("commandAvailability:已装、已启用、挂在本会话、调用者在白
   assert.equal(why([on], "feishu", { conv: "g", caller: "codex" }), "caller_not_allowed|codex 不在「飞书」的调用名单里");
   // 版本升级扩大了权限、还没同意 → 暂停,不能绕过
   assert.equal(why([{ ...on, manifest: mf({ permissions: [READ, DOCS] }) }]), "permissions_pending|「飞书」有新权限等你同意，先暂停");
-  // 安装中、卸载中都不算装好
   assert.equal(why([{ ...on, phase: "uninstalling" }]), "not_installed|/feishu 来自「飞书」，还没安装");
   assert.equal(why([], "mail"), "not_installed|/mail 来自「Gmail」，还没安装");
-  // 新版本才有的命令:已装旧版 → 要更新
   const oldGmail = seedInstalled(mf({ id: "g-group.gmail", name: "Gmail", version: "2.0.0", contributes: { commands: [], panels: [], events: [] } }), { enabled: true, convs: ["g"], callers: ["argon"] });
   assert.equal(why([oldGmail], "mail"), "needs_update|/mail 要把「Gmail」更新到 v2.1.0 才有");
   assert.equal(why([on], "nope"), "unknown|没有 /nope 这个命令");
-  // 两个插件都给了同名命令:有一个能用就用它
   const other = seedInstalled(mf({ id: "acme.feishu", name: "飞书(社区版)" }), { enabled: false, convs: [], callers: [] });
   const both = commandAvailability([other, on], "feishu", at);
   assert.equal(both.ok && both.plugin, "g-group.feishu");
@@ -503,7 +493,6 @@ test("pluginsInConv:列出本会话可用的插件,可按类别只要数据源",
   assert.deepEqual(pluginsInConv(installs, "dm-argon"), []);
 });
 
-// ---------------------------------------------------------------- 外发预授权
 
 const GRANT: OutboundGrant = {
   commitment: "每天 8 点日报",

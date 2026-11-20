@@ -1,6 +1,5 @@
 // pi 适配器的用量回报与缓存断点(AC-39 ③⑤、D22 第 3 节第 3、7 条)。
 // 进程内 Anthropic Messages 兼容假端点(经 opts.fetch 注入,不连网)按脚本回放模型输出,并在 message_start / message_delta 里带 usage;
-// 核对的是实际发出的请求体与交给宿主回执口的内容:每次请求一条、数字取自端点、线路不含网关路径里的令牌段、断点 ≤ 4 且位置正确。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
@@ -11,7 +10,6 @@ import { placeBreakpoints, probeRequest, usageLine } from "./usage.ts";
 
 const KEY = "NEUTRAL_FIXTURE_B4_NOT_A_CREDENTIAL";
 const MODEL = "test-model-1";
-// 本机网关的形状:令牌放在 URL 路径里。线路只能留主机名
 const TOKEN_SEGMENT = "NEUTRAL_TOKEN_SEGMENT_9f2c";
 const BASE = `http://gw.example.invalid:52247/${TOKEN_SEGMENT}/v1`;
 const LINE = `fake|gw.example.invalid|${MODEL}`;
@@ -64,7 +62,6 @@ const input = (tag: string): RoundInput => ({
 });
 const live = () => new AbortController().signal;
 const sha = (x: unknown) => createHash("sha256").update(JSON.stringify(x), "utf8").digest("hex");
-/** 请求体里每个 cache_control 的位置 */
 function marks(b: Body): string[] {
   const out: string[] = [];
   for (const [i, t] of (b.tools ?? []).entries()) if ("cache_control" in t) out.push(`tools[${i}]`);

@@ -87,8 +87,6 @@ test("判定过程中陷阱抛错也返回拒绝,判定函数自身不抛错", (
   assert.equal(typeof describeThrown(bad), "string");
 });
 
-// —— 原型链污染:临时字段表与结果数组不经过原型链上的同名属性
-/** 在 target 的 key 上临时装一个属性,只在 fn 执行期间生效,结束后一定复原 */
 function withPolluted<T>(target: object, key: string, desc: PropertyDescriptor, fn: () => T): T {
   const had = Object.getOwnPropertyDescriptor(target, key);
   Object.defineProperty(target, key, { configurable: true, ...desc });
@@ -170,9 +168,7 @@ test("safeDescribe 与 describeThrown 给出确切的诊断文字", () => {
   assert.equal(describeThrown(bad), "{}");
 });
 
-// —— 第六轮:描述符字段名污染(R6-01)、判定选项 getter(R6-03)、诊断不执行外部代码(R6-04)、普通小数(R6-M1)
 const DESC_KEYS = ["get", "set", "value", "writable", "enumerable", "configurable"] as const;
-/** 在 Object.prototype 上临时装同名 setter(计数)或不可写普通值;结束后一定复原 */
 function underDescKey<T>(key: string, mode: "setter" | "readonly", counter: { n: number }, fn: () => T): T {
   const d: PropertyDescriptor = Object.create(null);
   d.configurable = true;
@@ -196,7 +192,7 @@ test("Object.prototype 上有描述符字段名(get/set/value/writable/enumerabl
 test("描述符字段名污染下 getter 仍被拒绝并点名路径,getter 调用 0 次(R6-01 单开关对照)", () => {
   for (const key of DESC_KEYS) {
     const calls = { n: 0 };
-    const input = { a: getterOn({}, "k", calls) }; // 污染前构造:测试自己的 defineProperty 不受污染影响
+    const input = { a: getterOn({}, "k", calls) };
     const r = underDescKey(key, "readonly", { n: 0 }, () => plainData(input, "x"));
     assert.deepEqual(r.ok === false && [r.path, r.why], ["x.a.k", "不允许 getter/setter"], key);
     assert.equal(calls.n, 0);
@@ -230,7 +226,6 @@ test("有限小数照常通过并原样保留(R6-M1 单开关对照:只拒绝 Na
   assert.deepEqual(r.ok && JSON.parse(JSON.stringify(r.value)), { ratio: 2.5, neg: -0.125, list: [0.1] });
 });
 
-// —— 第七轮:公开工具 appendOwn 与判定选项(R7-02)、topFunctions:false 单开关(R7-M1)
 test("appendOwn 的目标不是普通数组(带 length getter 的对象、Proxy 数组、null)时抛受控 TypeError,getter 调用 0 次;普通数组照常追加(R7-02 阳性埋雷)", () => {
   const calls = { n: 0 };
   const fake = getterOn({}, "length", calls);
@@ -265,8 +260,6 @@ test("topFunctions:false 与不传一样拒绝顶层函数,只有 true 放行(R7
   assert.equal(plainData({ fn }, "x", { topFunctions: true }).ok, true);
 });
 
-// —— 第八轮:路径参数(R8-01)、appendOwn 真实数组目标(R8-02)、数组下标不可枚举(R8-05 / 审查 R8-M2)
-/** 路径参数的各种非法形态:Symbol.toPrimitive getter、带 get 陷阱的 Proxy、toString getter、null、数字;每次被触发就计数 */
 function badPathArgs(counter: { n: number }): unknown[] {
   const prim = {};
   Object.defineProperty(prim, Symbol.toPrimitive, { get() { counter.n++; return () => "路径"; } });
@@ -344,9 +337,6 @@ test("数组下标都是可枚举数据属性时 plainItems 与 plainData 放行
   assert.deepEqual(d.ok && { ...(d.value as object) }, { list: ["a", "b"] });
 });
 
-// —— 第十一轮审查 R11-02:数组只能有下标与 length。2^32-1 不是数组索引,更大的十进制数字名也不是;
-// 旧实现只用 /^(0|[1-9]\d*)$/ 判文本,这些键被当成下标放过去,后面的 0..length-1 循环又不会查它们的描述符,
-// 于是空数组上的这些键(哪怕挂着 getter)被静默净化成 ok:true/[]。
 test("数组上 2^32-1 与更大的十进制数字键上的访问器一律拒绝并点名路径,getter 调用 0 次(R11-02 阳性埋雷)", () => {
   const calls = { n: 0 };
   for (const key of ["4294967295", "9007199254740992"]) {
@@ -377,12 +367,10 @@ test("单开关对照:同一位置换成普通额外键、真下标或 length �
   const extra = Object.assign(["a"], { k: 1 });
   const it = plainItems(extra, "x");
   assert.deepEqual(it.ok === false && [it.path, it.why], ["x[k]", "数组只能有下标元素"]);
-  // 真下标上的访问器按"不允许 getter/setter"拒绝(不是被当成额外键,也不是被静默吞掉)
   const accessor: unknown[] = [];
   Object.defineProperty(accessor, "0", { enumerable: true, configurable: true, get() { return "neutral"; } });
   const a = plainItems(accessor, "x");
   assert.deepEqual(a.ok === false && [a.path, a.why], ["x[0]", "不允许 getter/setter"]);
-  // 同样的下标换成数据属性就照常放行,length 内的一切正常
   const ok = plainItems(["a", "b"], "x");
   assert.deepEqual(ok.ok && ok.items, ["a", "b"]);
   const d = plainData({ list: ["a", "b"] }, "x");

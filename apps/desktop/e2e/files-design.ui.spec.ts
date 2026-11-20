@@ -11,7 +11,6 @@ for (const theme of ['light', 'dark'] as const) {
     await page.goto(theme === 'dark' ? '/?theme=dark' : '/');
     await page.getByTestId('nav-files').click();
     await expect(page.locator('[data-testid^="shelf-a"]')).toHaveCount(5);
-    // 总览不再放第二个搜索框和类别筛选
     await expect(page.getByRole('searchbox', { name: '搜索文件' })).toHaveCount(0);
     await shot(page, `files-design/${theme}/catalog`, 300);
     const search = page.getByTestId('list').getByRole('textbox', { name: '搜索' });
@@ -21,7 +20,6 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByRole('button', { name: '清除搜索' }).click();
     await expect(search).toHaveValue('');
     await expect(page.locator('[data-testid^="shelf-a"]')).toHaveCount(5);
-    // 按作者、来自哪个对话也能搜到
     await search.fill('Argon');
     await expect(page.locator('[data-testid^="file-a"]')).toHaveCount(1);
     await expect(page.locator('[data-testid^="shelf-a"]')).toHaveCount(1);
@@ -66,7 +64,6 @@ for (const theme of ['light', 'dark'] as const) {
     const composer = page.getByTestId('composer');
     await expect(composer).toHaveValue(/@Helper.*VPS · 香港 1 号机/);
     await expect(page.getByTestId('quote-text')).toHaveCount(0);
-    // 动作只预填；没有自动生成一条用户消息。
     await expect(page.locator('[data-from="me"]').filter({ hasText: '关于「VPS · 香港 1 号机」' })).toHaveCount(0);
   });
 }

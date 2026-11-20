@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 
 const TOAST_ID = 'gg-update'
-/** 提示条上的按钮:sonner 默认点了就把提示关掉;这里要留着它显示下载进度、再给「重启并安装」 */
 const keep = (fn: () => void) => (e: MouseEvent<HTMLButtonElement>) => { e.preventDefault(); fn() }
 export const percent = (s: UpdateState) => (s.size ? Math.min(100, Math.floor(((s.received ?? 0) / s.size) * 100)) : 0)
 export const mb = (n?: number) => (n ? `${(n / 1024 / 1024).toFixed(1)} MB` : '')
@@ -34,7 +33,6 @@ export function useUpdateToast() {
   }, [update])
 }
 
-/** 设置页「版本与更新」一行右侧:按当前进度给出下一步 */
 export function UpdateAction() {
   const update = useAppShell((s) => s.update)
   if (!update) return null

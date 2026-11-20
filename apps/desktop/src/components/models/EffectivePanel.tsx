@@ -5,7 +5,6 @@ import { MODE_LABEL, VENDOR_LABEL, snapshotOfCompute, type ModelSettings } from 
 import { Chain } from './Chain'
 import { CM } from './constants'
 
-/** 右栏:按现在(或保存后)的配置,下一轮实际会用什么、每个值从哪一层来;在跑的任务用的是启动时的快照 */
 export function EffectivePanel({ name, cm, s, speaking, compute, allowed, dirty, running }: {
   name: string
   cm: ContactModels
@@ -45,7 +44,7 @@ export function EffectivePanel({ name, cm, s, speaking, compute, allowed, dirty,
 
 /** 在跑的任务实际在用的模型(启动时记下,不追溯);配置变了就注明下一轮起用新的 */
 function RunningNow({ running, cm, s, allowed, dirty, compute }: { running: Compute[]; cm: ContactModels; s: ModelSettings; allowed: boolean; dirty: boolean; compute: ComputeResolution }) {
-  const drift = new Set(running.flatMap((c) => taskModels(snapshotOfCompute(c, s), cm, s).drift.filter((f) => f !== 'effort'))) // 演示数据的 Compute 没记 effort
+  const drift = new Set(running.flatMap((c) => taskModels(snapshotOfCompute(c, s), cm, s).drift.filter((f) => f !== 'effort')))
   return (
     <div data-testid="cm-running" className="border-t border-line pt-2">
       <div className="mb-1 text-[12px] font-medium text-fg-3">{CM.runningTitle}</div>

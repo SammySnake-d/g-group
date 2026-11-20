@@ -26,7 +26,6 @@ export function resolveOptions(opts: unknown, profile: "mind" | "compactor" | "p
   if (typeof opts !== "object" || opts === null || types.isProxy(opts)) return bad("必须是普通对象");
   const proto = Object.getPrototypeOf(opts);
   if (proto !== Object.prototype && proto !== null) return bad("必须是普通对象");
-  // Only this one explicitly branded mutable capability is exempt from the plain-data check.
   const descriptors = Object.getOwnPropertyDescriptors(opts);
   const health = Object.getOwnPropertyDescriptor(opts, "healthCache");
   const cache: unknown = health?.value;
@@ -81,7 +80,6 @@ export function resolveOptions(opts: unknown, profile: "mind" | "compactor" | "p
   };
 }
 
-/** Error bodies can echo keys, URLs or upstream account identifiers. Never copy those into receipts/errors. */
 export function redactEndpointError(message: string, baseUrl: string, apiKey: string): string {
   const marker = "[密钥已隐去]";
   let safe = apiKey ? message.split(apiKey).join(marker) : message;
@@ -100,7 +98,6 @@ export interface Attempt {
   committed: boolean;
 }
 
-/** Retry the same model and only when nothing observable left this attempt. */
 export async function withProtocols<T>(cfg: Resolved, signal: AbortSignal | undefined, run: (attempt: Attempt) => Promise<T>, onFailure?: (protocol: PiProtocol, error: string) => void): Promise<{ protocol: PiProtocol; value: T }> {
   const choices = cfg.healthCache.candidates(cfg.baseUrl, cfg.model, cfg.protocols);
   for (const [index, protocol] of choices.entries()) {
@@ -145,8 +142,6 @@ export function streamRequest(cfg: Resolved, attempt: Attempt, context: Transcri
   const model = modelForProtocol(protocol, cfg);
   const keys = keyOptions(protocol, cfg.auth.get(protocol)!, cfg.apiKey);
   const cacheRetention = protocol === "anthropic-messages" && s.cache ? cfg.cacheRetention : "none";
-  // In pi-ai 1.5 the OpenAI SDK affinity headers are gated by cacheRetention.
-  // Retain transport affinity without opting into any explicit cache-retention payload fields.
   const sessionId = s.sessionId;
   let headers = { ...s.options?.headers, ...keys.headers };
   if (sessionId && protocol === "openai-chat" && (model.compat as Model<"openai-completions">["compat"])?.sendSessionAffinityHeaders) {
@@ -181,7 +176,6 @@ export function streamRequest(cfg: Resolved, attempt: Attempt, context: Transcri
       }
       watched.end(await source.result());
     } catch (error) {
-      // SDK streams normally push a typed error. Handle an iterator exception as the same provider failure.
       const message: AssistantMessage = { role: "assistant", api: model.api, model: model.id, provider: model.provider, content: [], stopReason: "error", errorMessage: cfg.redact(describe(error)), timestamp: Date.now(), usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } };
       watched.push({ type: "error", reason: "error", error: message });
       watched.end(message);

@@ -1,8 +1,6 @@
 // AC-43 运行台账的纯逻辑(需求文档 D26 第 3–5 节、第 8.3/8.5/8.6 节):
 //   ① 五类单元与固定状态集合,failed/interrupted 必带原因类别与原文;② 孤儿识别(宿主启动号 / 进程存活);③ 父子一致;
 //   ④ 可见范围(私聊只看自己在这个私聊的、群里看本群全部、别处不返回、用户全看);⑤ 重跑规则(#2628,上限是参数);
-//   ⑦ 卡死判失败(真实事件才算进展;重试公告、心跳、存活不刷新;合法等待不计时;默认 15 分钟 / 120 秒,可按联系人或上游单独设);
-//   ⑨ 画板展示(人停的与失败不同)与同一上游同一原因的合并键。宿主落盘与接线在 server 包。
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { classifyFailure } from "./failure-class.ts";
@@ -121,7 +119,6 @@ test("同一启动里进程已不在的 running 单元变 orphaned;进程活着�
   const units = [live, dead, fin.changed[0]!];
   const changed = reconcileOrphans(units, { bootId: "boot-1", at: T0 + MIN, alive: (pid) => pid === 1 });
   assert.deepEqual(changed.map((u) => [u.id, u.status, u.note]), [["dead", "orphaned", "执行进程已不在"]]);
-  // 同一夹具不杀进程:全部正常结束为 done,核对不产生 orphaned
   const ok = [newRun({ ...base, id: "a", layer: "contact-round", parentId: null }), newRun({ ...base, id: "b", layer: "compute-turn", parentId: "a", pid: 7 })];
   assert.ok(apply(ok, "b", "done", T0 + 1).ok && apply(ok, "a", "done", T0 + 2).ok);
   assert.deepEqual(reconcileOrphans(ok, { bootId: "boot-2", at: T0 + MIN, alive: () => false }), []);
@@ -157,10 +154,8 @@ test("默认阈值是 15 分钟 / 120 秒;按联系人、按上游单独设都�
   assert.deepEqual([both.stallMs, both.source.stallMs], [40 * MIN, "upstream"]);
   const other = resolveThresholds(cfg, "c2", "gw/model-z");
   assert.deepEqual([other.stallMs, other.firstByteMs, other.source.stallMs], [15 * MIN, 120_000, "default"]);
-  // 不合法的单独设置不生效,回到默认
   const bad = resolveThresholds({ byContact: { c1: { stallMs: -5, firstByteMs: Number.NaN } } }, "c1", null);
   assert.deepEqual([bad.stallMs, bad.firstByteMs], [15 * MIN, 120_000]);
-  // 单独设的阈值真的用于判定:默认下 20 分钟会判失败,c1 设了 30 分钟就不判
   const u = newRun({ ...base, id: "r", layer: "compute-turn", parentId: null });
   assert.equal(stallCheck(u, T0 + 20 * MIN, d).verdict?.kind, "stalled");
   assert.equal(stallCheck(u, T0 + 20 * MIN, c).verdict, null);
@@ -186,7 +181,6 @@ test("卡死判失败:一轮无进展到阈值判 failed,带原因类别、原�
   const units = [u];
   assert.ok(apply(units, "r", "failed", v.judgedAt, { failure: v.failure, verdict: v }).ok);
   assert.deepEqual([units[0]!.status, units[0]!.verdict?.thresholdMs], ["failed", 10 * MIN]);
-  // 只对在跑的轮次计时:会话、后台任务本身不判卡死
   assert.equal(stallCheck(newRun({ ...base, id: "s", layer: "compute-session", parentId: null }), T0 + 60 * MIN, short).verdict, null);
 });
 
@@ -218,14 +212,12 @@ test("重放 2734 号上游无响应:调用发出后既不回应也不断开,超
   assert.equal(v?.failure.reasonClass, "no_response");
   assert.equal(v?.thresholdMs, 60_000);
   assert.match(v?.failure.raw ?? "", /没有任何回应/);
-  // 收到任何真实事件就离开首字节等待
   const replied = noteActivity(u, { kind: "progress", what: "thinking" }, T0 + 30_000);
   assert.equal(replied.progress.awaitingSince, null);
   assert.equal(stallCheck(replied, T0 + 5 * MIN, short).verdict, null);
 });
 
 test("合法等待不误判:等用户回答、工具子进程在跑、休眠唤醒宽限期内都不计时;等待结束后从结束时刻重新计时(AC-43 ⑫)", () => {
-  // 等人回答超过阈值
   const units = [newRun({ ...base, id: "r", layer: "compute-turn", parentId: null })];
   assert.ok(apply(units, "r", "waiting_user", T0 + MIN).ok);
   const w = stallCheck(units[0]!, T0 + 60 * MIN, short);
@@ -233,7 +225,6 @@ test("合法等待不误判:等用户回答、工具子进程在跑、休眠唤�
   assert.ok(apply(units, "r", "running", T0 + 60 * MIN).ok);
   assert.equal(stallCheck(units[0]!, T0 + 65 * MIN, short).verdict, null, "回答后从回来那一刻重新计时");
   assert.equal(stallCheck(units[0]!, T0 + 71 * MIN, short).verdict?.kind, "stalled");
-  // 一个工具子进程持续运行超过阈值
   let t = newRun({ ...base, id: "tool", layer: "compute-turn", parentId: null });
   t = noteActivity(t, { kind: "tool_start", toolId: "bash-1" }, T0 + MIN);
   const tw = stallCheck(t, T0 + 90 * MIN, short);
@@ -241,7 +232,6 @@ test("合法等待不误判:等用户回答、工具子进程在跑、休眠唤�
   t = noteActivity(t, { kind: "tool_end", toolId: "bash-1" }, T0 + 90 * MIN);
   assert.equal(stallCheck(t, T0 + 95 * MIN, short).verdict, null, "工具结束是真实进展");
   assert.equal(stallCheck(t, T0 + 101 * MIN, short).verdict?.kind, "stalled");
-  // 合盖休眠:唤醒后的宽限期内不判,宽限期过后从唤醒时刻起算,真停滞照常检出
   const s = newRun({ ...base, id: "sleep", layer: "contact-round", parentId: null });
   const sleep = { awakeSince: T0 + 120 * MIN, graceMs: 3 * MIN };
   const sg = stallCheck(s, T0 + 121 * MIN, short, sleep);
@@ -388,7 +378,6 @@ test("别人名下的失败任务不自动重跑;明确发起才执行,并要在
   assert.equal(p.announce, true);
   assert.equal(p.countsTowardLimit, false);
   assert.deepEqual([p.event.initiator.id, p.event.owner, p.event.basis.unitId, p.event.basis.taskId, p.event.basis.reasonClass], ["c2", "c1", "r", "t-1", "stalled"]);
-  // 自己名下的自动重跑不需要群里留记录
   const own = planRerun({ unit, autoReruns: 0, lease: null, sameUpstreamFailures: 0 }, { at: T0 + 2, initiator: { kind: "contact", id: "c1" }, trigger: "auto" });
   assert.ok(own.ok);
   assert.equal(own.announce, false);
@@ -413,7 +402,6 @@ test("鉴权额度、请求无效不自动重跑;上游无响应不自动重跑�
   assert.equal(planRerun({ unit: up, autoReruns: 0, lease: null, sameUpstreamFailures: 1 }, req).ok, true, "第一次上游不可用可以重跑");
   const again = planRerun({ unit: up, autoReruns: 1, lease: null, sameUpstreamFailures: 2 }, req);
   assert.ok(!again.ok && again.reason === "same-upstream");
-  // 明确发起不受自动重跑的这些限制
   assert.equal(planRerun({ unit: up, autoReruns: 9, lease: null, sameUpstreamFailures: 9 }, { ...req, trigger: "explicit" }).ok, true);
 });
 

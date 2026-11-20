@@ -1,8 +1,6 @@
 import type { HarnessTranscript } from '@g-group/ui-core'
 import { ch, session } from './build'
 
-/* Codex 会话：首页性能（做完，先量再改再量）、查报错日志（在跑，卡在登录）、IM 竞品对照（做完，4 路子代理，其中一路失败后重派）。
-   Codex 的工具名照它自己的：shell、apply_patch、update_plan、web_search、browser。 */
 
 const perf = session({ computeId: 'perf', harness: 'codex', model: 'GPT-6.1', start: '01:30:00', end: '01:48:00', background: [{ id: 'dev', command: 'pnpm dev --port 5173', state: 'killed' }] }, (s) => {
   s.prompt('codex', '首页打开太慢了，查一下。来源：模型助手群聊 #g4。')

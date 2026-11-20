@@ -60,7 +60,6 @@ async function localGateway(file: string): Promise<string> {
   return DEFAULT_GATEWAY;
 }
 
-/** Read only gateway.json (never account/settings files); do not send credentials until /api/hello identifies Magpie. */
 export async function discoverMagpieGateway(o: MagpieDiscoveryOptions = {}): Promise<MagpieGateway> {
   const env = o.env ?? process.env;
   const raw = o.baseUrl ?? env.MAGPIE_BASE_URL ?? env.ANTHROPIC_BASE_URL ?? env.OPENAI_BASE_URL
@@ -95,7 +94,6 @@ export async function discoverMagpieGateway(o: MagpieDiscoveryOptions = {}): Pro
     const m = object(item);
     if (typeof m.id !== "string" || m.id.trim() === "" || seen.has(m.id)) continue;
     seen.add(m.id);
-    // Presence of native_endpoints (even an empty or unrecognized list) is authoritative.
     const endpoints = Object.hasOwn(m, "native_endpoints") ? strings(m.native_endpoints) : undefined;
     const advertised = new Set(endpoints?.map(protocolForEndpoint));
     const order = [...new Set([...(o.protocols ?? []), ...(m.reasoning === true || m.tool_call === true ? REASONING_ORDER : PI_PROTOCOLS)])];
@@ -118,7 +116,6 @@ const PROBE_TOOL = toToolDeclaration({
   parameters: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"], additionalProperties: false },
 });
 
-/** Verifies a real decoded tool call without executing tools or changing conversation state. */
 export async function probeModelConnection(o: PiContactMindOptions, signal = AbortSignal.timeout(120_000)): Promise<ProbeResult> {
   const attempts: ProtocolAttempt[] = [];
   try {

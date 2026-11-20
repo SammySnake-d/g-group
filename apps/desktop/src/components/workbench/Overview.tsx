@@ -11,7 +11,6 @@ import { DUTY_FALLBACK, PENDING_CTA, PENDING_VERB } from './constants'
 import { DoingRow } from './DoingRow'
 import { Source, TextLink, WbCard, pressRow, pressRowCls } from './parts'
 
-/* 概览:等你(最先看)→ 在做 → 做完(默认收起)→ 所在的群。等你和出错用底色区分,不用彩色左边框 */
 const Empty = ({ children }: { children: string }) => <div className="text-[13px] text-fg-3">{children}</div>
 const rowCls = 'flex items-center gap-2 rounded-lg px-3 py-2 transition-[filter] duration-fast ease-out hover:brightness-[0.98]'
 const warmCta = 'bg-warm text-white hover:bg-warm/90'
@@ -92,7 +91,6 @@ export function Overview({ id }: { id: PersonId }) {
   )
 }
 
-/** 等你的一件事:问题 / 提议 / 交付 / 出错。点整行去处理的地方,按钮直接去回答 */
 function PendingRow({ x, conv, title, link }: { x: Pending; conv?: Conversation; title: string; link: ReactNode }) {
   const { openSplit, openConv } = useApp()
   const cid = 'computeId' in x ? x.computeId : undefined
@@ -115,7 +113,6 @@ function PendingRow({ x, conv, title, link }: { x: Pending; conv?: Conversation;
   )
 }
 
-/** 做完的一件:弱化成一行灰字,点了照样能看过程 */
 function DoneRow({ c, conv, link }: { c: Compute; conv?: Conversation; link: ReactNode }) {
   const { openSplit } = useApp()
   return (

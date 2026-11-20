@@ -1,4 +1,3 @@
-/* 已安装:每行写清挂在哪、谁能调用;就地启停、更新、卸载(卸载走二次确认)。装着的,加上正在装 / 正在卸的(让你看到进度)。 */
 import { Trash2 } from 'lucide-react'
 import { PHASE_LABEL, marketList } from '@g-group/ui-core'
 import type { PluginState } from '@/data'

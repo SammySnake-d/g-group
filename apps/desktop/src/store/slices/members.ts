@@ -1,6 +1,3 @@
-// 群与成员切片:建群、加人、踢人、关联会话、置顶/免打扰、拍一拍、禁言、群算力、退出/解散、撤下公告、新建联系人。
-// 连上后端时改走接线层(api/wire/rooms、notices):以后端回包和事件为准;移出成员、解散群碰上在途任务,后端拒绝并列出,
-// 写进 groupAsk 由界面问你「先停下再移出 / 解散」。
 import { people, poolUsed, type PersonId } from '@/data'
 import { createContactLive } from '@/api/wire/contacts'
 import { live, liveCtx } from '@/api/wire/live'
@@ -10,10 +7,8 @@ import { broken } from '@/mut'
 import { uid } from '../boot'
 import { lens, type Slice } from '../state'
 
-/** 后端因在途任务拒绝了移出成员 / 解散群:界面据此问你要不要先停下这些事(tasks 是任务标题) */
 export type GroupAsk = { kind: 'remove'; conv: string; who: PersonId; tasks: string[] } | { kind: 'dissolve'; conv: string; tasks: string[] }
 
-/** 这一片经 useApp() 对外暴露的字段(Ctx 的一部分)。加字段:写在这里,再把名字加进下面的 MEMBERS_CTX_KEYS */
 export interface MembersCtx {
   addMembers: (convId: string, ids: PersonId[], by?: PersonId) => void
   /** 移出成员;stopTasks = 你已确认先停下它在本群在做的事(AC-49) */
@@ -45,7 +40,6 @@ export const createMembersSlice: Slice<MembersSlice> = (set, get) => {
 
   return {
     createGroup: (title, ids, note, pool) => {
-      /* 连上后端:由后端建群(会话 id 等回包),建好切过去;这里先返回空 */
       if (live(get())) { void createGroupLive(liveCtx(get, set), title, ids, pool); return '' }
       const cid = 'g-' + uid()
       L.convs((cs) => [{ id: cid, kind: 'group', title, members: ['me', ...ids], time: '刚刚', links: [], tempCompute: pool ? { max: pool } : undefined, messages: [{ k: 'sys', id: 'n' + uid(), text: note ?? `你创建了群聊，拉进了 ${names(ids)}` }] }, ...cs])
@@ -55,7 +49,6 @@ export const createMembersSlice: Slice<MembersSlice> = (set, get) => {
     createContact: (p) => {
       if (live(get())) { void createContactLive(liveCtx(get, set), { name: p.name, role: p.role, quota: p.quota }); return }
       const id = 'c-' + uid()
-      /* 经联系人切片登记:登记表和通讯录列表一起更新 */
       get().upsertContact({ id, name: p.name, role: p.role, shape: p.shape, color: p.color, model: p.model, harness: get().modelSettings.defaultHarness, computeModel: { mode: 'inherit' }, computeQuota: p.quota, today: '¥0', month: '¥0', tools: people.claude?.tools?.map((t) => ({ ...t, on: false })) })
       const cid = 'dm-' + id
       L.convs((cs) => [{ id: cid, kind: 'dm', title: p.name, members: ['me', id], time: '刚刚', messages: [{ k: 'sys', id: 'n' + uid(), text: `你添加了 ${p.name}` }, { k: 'text', id: 'h' + uid(), from: id, text: `你好，我是 ${p.name}，${p.role}。有活直接说。` }] }, ...cs])
@@ -128,7 +121,6 @@ export const createMembersSlice: Slice<MembersSlice> = (set, get) => {
     /* #32:群主可以解散(所有人都没有这个群了,定时一起停),成员只能退出(只是你看不到了,助手们还在群里继续) */
     leaveConv: (id, dissolve, opts) => {
       if (live(get())) {
-        /* 你是每个群的群主:群主不单独退出,要离开就解散 */
         if (!dissolve) { get().toast('你是群主：群主不能只退出，要离开就解散这个群'); return }
         set({ groupAsk: null })
         void dissolveLive(liveCtx(get, set), id, !!opts?.stopTasks).then((r) => {

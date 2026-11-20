@@ -15,7 +15,6 @@ const TIP_KEY = 'gg.concept.dblreply.tip'
 const TIP = '小提示：在消息上双击，也能直接回复它'
 
 
-/** 和悬浮条「回复」一致的引用摘要 */
 const quoteText = (m: Msg) => (m.k === 'text' ? m.text.replace(/^@\S+\s/, '') : m.k === 'compute' ? '[Compute]' : m.k === 'file' ? '[文件]' : m.k === 'board' ? '[任务板]' : m.k === 'forward' ? '[转发]' : null)
 
 const SKIP = 'button, a, input, textarea, select, label, [role=button], [role=menuitem], [contenteditable=true], [data-no-dblreply]'
@@ -23,7 +22,6 @@ const SKIP = 'button, a, input, textarea, select, label, [role=button], [role=me
 export function DoubleClickReply({ conv, scrollRef, disabled }: { conv: Conversation; scrollRef: RefObject<HTMLDivElement | null>; disabled?: boolean }) {
   const { addQuote, toast } = useApp((s) => ({ addQuote: s.addQuote, toast: s.toast }))
   const reduce = useReducedMotion()
-  /* 监听器只挂一次,读最新的会话 / 开关 */
   const latest = useRef({ conv, disabled, addQuote, reduce, toast })
   latest.current = { conv, disabled, addQuote, reduce, toast }
 
@@ -46,7 +44,6 @@ export function DoubleClickReply({ conv, scrollRef, disabled }: { conv: Conversa
       if (reduce) return
       void animate(anchor, { scale: scale.press }, slow(spring.press)).then(() => animate(anchor, { scale: 1 }, slow(spring.press)))
     }
-    /* 第一次点悬浮条「回复」(走了远路):提示一次就记住 */
     const onClick = (e: MouseEvent) => {
       if (!(e.target as HTMLElement).closest('[data-testid^="reply-"]')) return
       try { if (localStorage.getItem(TIP_KEY)) return; localStorage.setItem(TIP_KEY, '1') } catch { return }

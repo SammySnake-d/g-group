@@ -9,7 +9,6 @@ import { Segmented } from '@/components/ui/segmented'
 import { PageFooter, PageScroll, TextInput, ctaDisabled } from './kit/parts'
 import { NEW_GROUP_POOL } from './constants'
 
-/* ---------- 发起群聊:群名可不填;勾人;底部选临时算力格数,主按钮写明还差什么 / 建好有几人 ---------- */
 export function NewGroupPage() {
   const { createGroup, closeAll } = useApp()
   const [title, setTitle] = useState('')

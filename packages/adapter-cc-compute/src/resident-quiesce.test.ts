@@ -1,6 +1,5 @@
 // AC-23 停止确认(常驻适配器一侧,生产入口用的就是它;需求 §8.1 已定第 16 条:停止照 mirasim、不用容器,
 // 「助手启动的程序及其子程序全部找出来关掉、确认都退出才显示已停止;交给系统后台托管的程序找不到也关不掉」;D10)。
-// 起真实子进程:假 CLI(test-support/fake-claude-resident.mjs)按剧本在一轮开始时起常驻孙进程,孙进程不写任何文件,只在收到 SIGTERM 时留标记。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";

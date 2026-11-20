@@ -1,4 +1,3 @@
-/* 详情页左栏的几节:说明、提供的能力、权限、版本与更新日志。 */
 import type { ReactNode } from 'react'
 import { Check, ShieldAlert } from 'lucide-react'
 import { commandUsage, type PluginManifest, type PluginPermission } from '@g-group/ui-core'

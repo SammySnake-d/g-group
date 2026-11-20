@@ -1,4 +1,3 @@
-// 演示推进:登录页深色这件 Compute 按脚本每隔一拍往前走,最后在群里汇报。接上真后端后由事件流替代。
 import { people, type Activity, type PersonId } from '@/data'
 import { SWATCHES } from '@/data'
 import { broken } from '@/mut'
@@ -7,7 +6,6 @@ import { LIVE, LIVE_DONE_TEXT, LIVE_FINISH, LIVE_TICK_MS, ROGUE_COMPUTE } from '
 import type { AppState } from './state'
 import type { StoreApi } from 'zustand'
 
-/** 启动推进,返回停止函数。冻结(?freeze)时不推进 */
 export function startLiveDemo(store: StoreApi<AppState>): () => void {
   if (frozen) return () => {}
   const { setState: set, getState: get } = store

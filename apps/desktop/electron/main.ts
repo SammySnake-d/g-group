@@ -14,9 +14,7 @@ import { initLog, log } from "./log.ts";
 import { fixPath } from "./shell-env.ts";
 import { DEFAULT_FEED, Updater } from "./updater.ts";
 
-// 测试与验收可以把整个应用的数据放到别处(设置、数据库、更新下载),不碰用户自己的那份
 if (process.env.GG_USER_DATA_DIR) app.setPath("userData", process.env.GG_USER_DATA_DIR);
-// 从访达打开时 PATH 只有系统目录:先并上登录 shell 的 PATH,Compute 才找得到 claude
 fixPath();
 
 const DEV_URL = process.env.GG_DEV_URL ?? "";
@@ -74,7 +72,6 @@ function createWindow() {
     },
   });
   const contents = win.webContents;
-  // 页面里点外链:不在应用窗口里打开,交给系统浏览器(只放行 https)
   contents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https://")) void shell.openExternal(url);
     return { action: "deny" };
@@ -92,7 +89,6 @@ ipcMain.handle(IPC.invoke, async (event, req: unknown) => {
   return handleInvoke(checked.method, checked.params);
 });
 
-// 事件流:每个渲染进程一份订阅,窗口关掉或取消时退订
 const subs = new Map<number, () => void>();
 ipcMain.on(IPC.subscribe, (event, opts: unknown) => {
   if (!isTrustedOrigin(event.senderFrame?.url ?? "", DEV_ORIGIN)) return;
@@ -123,7 +119,6 @@ app.whenReady().then(async () => {
   const backend = new Backend({ packaged: app.isPackaged, userData, config, dir: __dirname, execPath: process.execPath, onServer: (s) => attachServer(s?.service ?? null) });
   const run = await backend.restart();
   log(`后端:${JSON.stringify(run)}`);
-  // 退出:先把窗口收起来(用户立刻看到应用关了),再停宿主(停掉还在跑的 Compute 进程、关数据库);最多等 8 秒
   let quitting = false;
   app.on("before-quit", (e) => {
     if (quitting) return;
@@ -154,12 +149,10 @@ app.whenReady().then(async () => {
   });
   updater.cleanup();
   bindAppIpc({ config, backend, updater, ...(DEV_ORIGIN ? { devOrigin: DEV_ORIGIN } : {}) });
-  // 打包后的应用:启动 10 秒后查一次新版,之后每 6 小时查一次;只提示,下载与安装等用户点
   if (app.isPackaged && process.env.GG_UPDATE_AUTO !== "off") {
     setTimeout(() => void updater.check(), 10_000);
     setInterval(() => void updater.check(), UPDATE_CHECK_EVERY_MS);
   }
-  // 渲染层不申请任何系统权限(摄像头、通知、定位……)
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
   createWindow();
   app.on("activate", () => {

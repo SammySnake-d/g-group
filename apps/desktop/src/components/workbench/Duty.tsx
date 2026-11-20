@@ -10,7 +10,6 @@ import { GroupAvatar } from '../Avatar'
 import { DUTY_FALLBACK } from './constants'
 import { InlineEdit, LayerHint, Source, WbCard } from './parts'
 
-/* 职责与预设:四层设定从「最常改」到「基本不变」往下排——职责、预设、(候选)性格、红线 */
 const label = 'w-24 shrink-0 text-[12.5px]'
 
 export function Duty({ id }: { id: PersonId }) {

@@ -1,4 +1,3 @@
-/* 一条消息的一行:头像列 + 名字行 + 引用 + 气泡(悬停工具条和回执挂在气泡上)+ 气泡下的附属(提问卡片、归属、定时、交代、过程灰字、表情) */
 import type { ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -21,9 +20,8 @@ import * as Concept from '@/concept'
 import { ComputeLine } from './compute/ComputeLine'
 import type { Bodied } from './types'
 
-type RowProps = { m: Bodied; first: boolean; compact: boolean; highlight: boolean; selecting?: boolean; checked?: boolean; onSelect?: (id: string) => void; trail?: string; /** 这条的引用上面同一个人刚画过,不重复画 */ hideQuotes?: boolean; children: ReactNode }
+type RowProps = { m: Bodied; first: boolean; compact: boolean; highlight: boolean; selecting?: boolean; checked?: boolean; onSelect?: (id: string) => void; trail?: string;                            hideQuotes?: boolean; children: ReactNode }
 
-/** 新到的消息(本地发出 / 刚收到)进场时轻轻浮起,历史消息不动 */
 const isNew = (id: string) => /^(me-|h|c-|s)[a-z0-9]{6}$/.test(id)
 
 export function Row({ m, first, compact, highlight, selecting, checked, onSelect, trail, hideQuotes, children }: RowProps) {
@@ -82,7 +80,6 @@ export function Row({ m, first, compact, highlight, selecting, checked, onSelect
   )
 }
 
-/** 名字行:名字 + 身份(软件助手 / 助手)+ 时间。只在一组连续消息的第一条出现 */
 function RowHead({ m }: { m: Bodied }) {
   const p = people[m.from]
   return (

@@ -17,8 +17,6 @@
 */
 @layer base {
   :root {
-    /* g-group 视觉:「纸 · 墨 · 柿」——暖白纸面做底,墨色做骨架(左侧导航、我的气泡、主按钮),
-       柿红只给品牌信号(当前位置、命令、市场主操作),靛蓝给可点的链接与选中。 */
     --bg: 40 33% 98.6%;
     --side: 38 22% 95.6%;
     --bubble: 36 18% 93.5%;
@@ -74,7 +72,6 @@
     --ring: var(--fg3);
     --radius: 0.75rem;
     --shadow-elev: 0 0 0 1px rgb(40 30 10 / 0.04), 0 2px 4px -1px rgb(40 30 10 / 0.06), 0 12px 28px -8px rgb(40 30 10 / 0.18);
-    /* 动效 token 的兜底值;运行时由 src/config/motion.ts 的 applyMotionCssVars 用 Animate UI 的 token 覆盖 */
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
     --dur-fast: 150ms;
@@ -151,7 +148,6 @@
 @keyframes fade-up { from { transform: translateY(4px); opacity: 0 } to { transform: none; opacity: 1 } }
 .fade-up { animation: fade-up .2s ease-out; }
 .spin-ring { width: 12px; height: 12px; border-radius: 9999px; border: 2px solid hsl(var(--run) / .25); border-top-color: hsl(var(--run)); animation: spin .9s linear infinite; display: inline-block; flex-shrink: 0; will-change: transform }
-/* 新消息入场：从下方 6px 淡入，160ms，和 QQ / iMessage 的发送反馈同量级；只用 transform + opacity */
 @keyframes msg-in { from { transform: translateY(6px); opacity: 0 } to { transform: none; opacity: 1 } }
 [data-msg].msg-new { animation: msg-in .16s cubic-bezier(.2,.8,.2,1) }
 @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-2px) } }
@@ -161,7 +157,6 @@
 .shimmer { background: hsl(var(--sel)); animation: shimmer 1.6s ease-in-out infinite; will-change: opacity }
 @media (prefers-reduced-motion: reduce) { .slide-in, .fade-up, .pulse-dot, .spin-ring, .shimmer, .bob, [data-msg].msg-new { animation: none } }
 
-/* 进展全景遮罩：背景淡入，面板轻微放大浮出（只动 opacity/transform，不触发重排） */
 @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
 @keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(.985) } to { opacity: 1; transform: none } }
 .fade-in { animation: fade-in .16s ease-out both }

@@ -11,7 +11,6 @@ import { LAYERS } from './constants'
 
 /* 工作台的小零件:卡片、来源标签、就地编辑、层级说明、整行可点的 div。只管展示和本地编辑态。 */
 
-/** 工作台里的一块:沉在纸面上的浅底,不套卡片阴影(层级靠标题和间距) */
 export function WbCard({ children, className, testid }: { children: ReactNode; className?: string; testid?: string }) {
   return (
     <Surface elevation="sunken" data-testid={testid} className={cn('p-4', className)}>
@@ -34,14 +33,11 @@ export function Source({ conv }: { conv?: Conversation }) {
   )
 }
 
-/** 标题旁的一句:这一层谁来写、多久变一次 */
 export function LayerHint({ k }: { k: string }) {
   const l = LAYERS.find((x) => x.k === k)
   return l ? <span className="ml-1.5 text-[11.5px] font-normal text-fg-3">{l.who}</span> : null
 }
 
-/** 整行可点、里面还有按钮的 div:补上键盘(Enter / 空格)和 focus 环。
-    只响应落在行本身上的按键,行内按钮自己的 Enter 不会再触发整行。 */
 export function pressRow(action: () => void) {
   return {
     role: 'button' as const,
@@ -55,7 +51,6 @@ export function pressRow(action: () => void) {
 }
 export const pressRowCls = 'cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring/60'
 
-/** 「打开会话」这类弱化的文字链接;不冒泡到整行 */
 export function TextLink({ children, onClick, testid, className }: { children: ReactNode; onClick: () => void; testid?: string; className?: string }) {
   return (
     <Button variant="link" size="xs" data-testid={testid} onClick={(e) => { e.stopPropagation(); onClick() }}
@@ -65,7 +60,6 @@ export function TextLink({ children, onClick, testid, className }: { children: R
   )
 }
 
-/** 就地编辑的一行文字:点了变输入框,Enter 保存,Esc 取消 */
 export function InlineEdit({ value, onSave, testid, placeholder }: { value: string; onSave: (v: string) => void; testid: string; placeholder?: string }) {
   const [editing, setEditing] = useState(false)
   const [v, setV] = useState(value)

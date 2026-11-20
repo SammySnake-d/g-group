@@ -6,14 +6,12 @@ import { findInfo } from '@/pluginInfo'
 import { useApp } from '@/store'
 import { slashEntries } from '@/store/select'
 
-/** 后端这个会话没给这条命令 */
 const NOT_OFFERED = '后端在这个会话没提供这条命令'
 
 type Args = {
   conv: Conversation
   draft: string
   setDraft: (v: string) => void
-  /** 光标位置和输入框是否聚焦:决定 / 菜单开不开 */
   caret: number
   focused: boolean
   editing: boolean
@@ -22,7 +20,6 @@ type Args = {
   inputRef: { current: HTMLTextAreaElement | null }
 }
 
-/** 斜杠命令:识别光标处的 /token、过滤菜单、解析参数、执行。Telegram 式:选中后在输入框里提示该填的参数 */
 export function useSlash({ conv, draft, setDraft, caret, focused, editing, placeCaret, onSend, inputRef }: Args) {
   const { plugins, pluginCatalog, offered, loadCommands, push, toast, summarize, addTask, setNotice, openSplit, openSchedule } = useApp((s) => ({
     plugins: s.plugins, pluginCatalog: s.pluginCatalog, offered: s.roomCommands[conv.id], loadCommands: s.loadCommands,
@@ -51,7 +48,6 @@ export function useSlash({ conv, draft, setDraft, caret, focused, editing, place
 
   useEffect(() => { setSlashIdx(0) }, [token?.query])
 
-  /** 执行一条命令。返回 true = 做了,输入框清空;false = 没做(要等后端、被拦),草稿留着 */
   const run = (v: SlashInvocation): boolean => {
     const c = v.command
     const val = (k: string) => v.values[k] ?? ''
@@ -83,7 +79,6 @@ export function useSlash({ conv, draft, setDraft, caret, focused, editing, place
     return false
   }
 
-  /** 从菜单里选中:不带参数的直接执行(Tab 只补全);带参数的把 /name 填进输入框,等你填参数 */
   const choose = (e: SlashEntry, how: 'enter' | 'tab' | 'click') => {
     if (!token || e.disabled) return
     const c = e.command
@@ -98,7 +93,6 @@ export function useSlash({ conv, draft, setDraft, caret, focused, editing, place
     setDraft(r.text); placeCaret(r.cursor)
   }
 
-  /** 回车:是命令就执行(参数不全时提醒缺什么),否则当普通消息发 */
   const submit = () => {
     if (inv) {
       if (!inv.ok) { setNudge((n) => n + 1); if (inv.blocked) toast(inv.blocked); return }
@@ -108,7 +102,6 @@ export function useSlash({ conv, draft, setDraft, caret, focused, editing, place
     onSend()
   }
 
-  /** 工具栏的 / 按钮:光标处已有 /token 就重新弹出,否则插一个 / */
   const open = () => {
     setDismissed(null)
     if (token) { placeCaret(caret); return }
@@ -119,7 +112,6 @@ export function useSlash({ conv, draft, setDraft, caret, focused, editing, place
     placeCaret(pos + ins.length)
   }
 
-  /** 菜单开着时接管方向键、回车、Tab、Esc;返回 true = 已处理 */
   const onMenuKey = (e: React.KeyboardEvent): boolean => {
     if (!menuOpen) return false
     if (nUsable && e.key === 'ArrowDown') { e.preventDefault(); setSlashIdx((sel + 1) % nUsable); return true }

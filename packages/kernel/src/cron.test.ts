@@ -21,7 +21,7 @@ test("严格在 after 之后:正好在触发点上不重复返回", () => {
 });
 
 test("工作日 9:30、每 15 分钟、月末与名字写法", () => {
-  const after = Date.parse("2026-11-06T10:00:00+08:00"); // 周五
+  const after = Date.parse("2026-11-06T10:00:00+08:00");
   assert.deepEqual(iso(nextRuns(spec("30 9 * * MON-FRI"), "Asia/Shanghai", after, 2)), ["2026-11-09T01:30:00.000Z", "2026-11-10T01:30:00.000Z"]);
   assert.deepEqual(iso(nextRuns(spec("*/15 * * * *"), "UTC", Date.parse("2026-11-08T10:07:00Z"), 3)), ["2026-11-08T10:15:00.000Z", "2026-11-08T10:30:00.000Z", "2026-11-08T10:45:00.000Z"]);
   assert.deepEqual(iso(nextRuns(spec("0 0 31 * *"), "UTC", Date.parse("2026-11-08T00:00:00Z"), 2)), ["2026-12-31T00:00:00.000Z", "2027-01-31T00:00:00.000Z"]);
@@ -29,7 +29,7 @@ test("工作日 9:30、每 15 分钟、月末与名字写法", () => {
 });
 
 test("日与周都受限时取「或」;周日写 0 或 7 都行", () => {
-  const after = Date.parse("2026-11-08T12:00:00Z"); // 周日
+  const after = Date.parse("2026-11-08T12:00:00Z");
   assert.deepEqual(iso(nextRuns(spec("0 9 13 * 1"), "UTC", after, 2)), ["2026-11-09T09:00:00.000Z", "2026-11-13T09:00:00.000Z"]);
   assert.deepEqual(nextRuns(spec("0 9 * * 7"), "UTC", after, 1), nextRuns(spec("0 9 * * 0"), "UTC", after, 1));
 });

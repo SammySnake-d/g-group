@@ -1,5 +1,3 @@
-// 消息操作接线(连上后端时):撤回、编辑、表情、私聊回退、删除 / 清空(只在你这边)、转发、置顶、改挂补充、发附件。
-// 每个动作调合同方法,以后端回包和事件为准写回界面;失败就说清原因、界面不变。没连后端时这些都不走这里(切片里照旧演示)。
 import type { RewindPreview, TaskView } from '@g-group/api-contract'
 import type { MsgFile } from '@/data'
 import { notify } from '@/hooks/use-toast'
@@ -8,7 +6,6 @@ import { loadMessages, msgId, putMessages, recalledText, sendLive, seqOf } from 
 import { upsertRoom } from './rooms'
 import { actionId, defineWiring, read, type WireCtx } from './types'
 
-/** 消息 id → 所在会话与序号;本地还没回包的、演示消息都没有 */
 export function locate(w: WireCtx, id: string): { roomId: string; seq: number } | null {
   const seq = seqOf(id)
   const conv = w.get().convs.find((c) => c.messages.some((m) => 'id' in m && m.id === id))
@@ -17,7 +14,6 @@ export function locate(w: WireCtx, id: string): { roomId: string; seq: number } 
 const fail = (w: WireCtx, what: string, e: { message: string }) => w.get().toast(`${what}：${e.message}`)
 const notYet = (w: WireCtx) => w.get().toast('这条还没发出去，等它发出去再操作')
 
-/** 撤回自己的消息:后端只给「撤回了一条」,原文留在这台机器上给「重新编辑」用 */
 export async function recallLive(w: WireCtx, id: string) {
   const at = locate(w, id)
   if (!at) return notYet(w)
@@ -28,7 +24,6 @@ export async function recallLive(w: WireCtx, id: string) {
   putMessages(w, at.roomId, [r.value])
 }
 
-/** 编辑自己的消息:以回包为准标「已编辑」;在途任务原位升版由宿主做,界面跟着事件显示 */
 export async function editLive(w: WireCtx, id: string, text: string): Promise<boolean> {
   const at = locate(w, id)
   if (!at) { notYet(w); return false }
@@ -38,7 +33,6 @@ export async function editLive(w: WireCtx, id: string, text: string): Promise<bo
   return true
 }
 
-/** 表情:你点过就取消,没点过就加上;以回包里的回应为准 */
 export async function reactLive(w: WireCtx, id: string, emoji: string) {
   const at = locate(w, id)
   if (!at) return notYet(w)
@@ -48,7 +42,6 @@ export async function reactLive(w: WireCtx, id: string, emoji: string) {
   putMessages(w, at.roomId, [r.value])
 }
 
-/** 私聊回退预览:只读,算出会撤下几条、取消哪些在途任务、作废几条承诺、哪些已发生的事撤不回 */
 export async function rewindPreviewLive(w: WireCtx, roomId: string, id: string): Promise<RewindPreview | string> {
   const seq = seqOf(id)
   if (seq === null) return '这条还没发出去'
@@ -56,7 +49,6 @@ export async function rewindPreviewLive(w: WireCtx, roomId: string, id: string):
   return r.ok ? r.value : r.error.message
 }
 
-/** 私聊回退:撤下的消息、回退说明由事件带回;这里只把回包里的撤下与说明先写上 */
 export async function rewindLive(w: WireCtx, roomId: string, id: string) {
   const seq = seqOf(id)
   if (seq === null) return notYet(w)
@@ -65,7 +57,6 @@ export async function rewindLive(w: WireCtx, roomId: string, id: string) {
   await loadMessages(w, roomId).catch(() => {})
 }
 
-/** 删除(只在你这边):删完提示条上可以撤销,撤销 = 放回来再读一遍 */
 export async function hideLive(w: WireCtx, ids: readonly string[]) {
   const byRoom = new Map<string, number[]>()
   for (const id of ids) {
@@ -91,7 +82,6 @@ export async function hideLive(w: WireCtx, ids: readonly string[]) {
   notify(n > 1 ? `已删除 ${n} 条，只在你这边看不到；别人那边还在` : '已删除，只在你这边看不到；别人那边还在', { action: { label: '撤销', onClick: () => void undo() } })
 }
 
-/** 清空聊天记录(只在你这边) */
 export async function clearLive(w: WireCtx, roomId: string): Promise<boolean> {
   const r = await w.call('rooms.clearHistory', { roomId })
   if (!r.ok) { fail(w, '没清空', r.error); return false }
@@ -100,7 +90,6 @@ export async function clearLive(w: WireCtx, roomId: string): Promise<boolean> {
   return true
 }
 
-/** 转发选中的几条:收件会话里出现一张转发卡,切过去 */
 export async function forwardLive(w: WireCtx, from: string, ids: readonly string[], to: string) {
   const seqs = ids.flatMap((id) => (id.endsWith('~c') ? [] : [seqOf(id)])).filter((s): s is number => s !== null)
   if (!seqs.length) return notYet(w)
@@ -110,7 +99,6 @@ export async function forwardLive(w: WireCtx, from: string, ids: readonly string
   w.get().openConv(to)
 }
 
-/** 置顶 / 取消置顶:以回包的会话为准(置顶条、置顶消息页都读它) */
 export async function pinLive(w: WireCtx, roomId: string, id: string) {
   const seq = seqOf(id)
   if (seq === null) return notYet(w)
@@ -132,7 +120,6 @@ export async function retagLive(w: WireCtx, id: string, toTaskId: string) {
   noteTasks(w, [r.value.from, r.value.to])
 }
 
-/** 发附件:磁盘文件交给宿主读取;截图/内存文件按内容上传,再作为一条消息发出。 */
 export async function attachLive(w: WireCtx, roomId: string, files: readonly File[]) {
   const done: MsgFile[] = []
   for (const f of files) {
@@ -160,7 +147,6 @@ async function toBase64(f: File): Promise<string> {
 export const sendAsLive = (w: WireCtx, roomId: string, text: string) => sendLive(w, roomId, text, [])
 
 // ---- 补充挂在哪件事上(AC-15/40⑨):按任务的 followUps 给你的消息标「归到「…」· 已收到」 ----
-/** 每件任务最近一次的视图(改挂要带它的 bindingVersion) */
 const taskViews = new Map<string, TaskView>()
 const FOLLOW_STATE: Record<string, string> = { Received: '已收到', Applied: '已落实' }
 
@@ -168,7 +154,6 @@ function followUpOwner(roomId: string, seq: number): TaskView | undefined {
   return [...taskViews.values()].find((t) => t.followUps?.some((f) => f.roomId === roomId && f.seq === seq && f.state !== 'Rebound'))
 }
 
-/** 记下任务视图,并把它的补充标到对应消息上(改挂走的那条由它新挂的那件来标) */
 export function noteTasks(w: WireCtx, tasks: readonly TaskView[]) {
   const tags = new Map<string, { task: string; state: string } | null>()
   for (const t of tasks) {
@@ -191,7 +176,6 @@ export function noteTasks(w: WireCtx, tasks: readonly TaskView[]) {
     : c)))
 }
 
-/** 这件事的负责人还能接改挂过来的补充吗(还没收口的才行) */
 export const liveTaskOpen = (id: string) => {
   const t = taskViews.get(id)
   return !!t && !['T8_Accepted', 'T10_Cancelled', 'T11_Failed'].includes(t.state)
@@ -199,7 +183,6 @@ export const liveTaskOpen = (id: string) => {
 export const taskRoom = (id: string) => taskViews.get(id)?.roomId
 
 
-/** 补充挂在哪件事上:读全部任务、跟 task.updated,把补充标到消息上(排在任务接线之后,消息已读进来) */
 export const followUpsWiring = defineWiring({
   entity: '补充归属',
   load: async (w) => {

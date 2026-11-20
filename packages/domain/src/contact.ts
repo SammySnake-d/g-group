@@ -3,8 +3,6 @@ import { type Normalized, nestedPlainError, normalize, plainDataError, type Sche
 
 // 联系人(AC-01 / AC-33 / 概念卡第 1、11 张)。
 // 联系人是持久的 AI 同事:身份(id)一旦建立不随改名、换模型改变;直接工具只收具名有界工具;
-// 定时是它自己记下的承诺(带时区与允许误差),插件只提供数据源和输出渠道,不拥有定时。
-// 纯函数,不改入参。
 
 /** 联系人本体能直接调用的工具:必须是宿主注册的具名、有界工具(效果可知、返回短)。 */
 export interface NamedTool { readonly name: string; readonly bounded: true }
@@ -21,7 +19,6 @@ export interface Commitment {
   readonly id: string;
   readonly sourceSeq: number;
   readonly text: string;
-  /** 还没进终态的绑定任务。定时承诺不随任务回收。 */
   readonly boundTaskIds: readonly string[];
   /** 已进终态、末次汇报还没确认发出的任务。两张表都空了承诺才回收(AC-31⑤)。 */
   readonly awaitingReport: readonly string[];
@@ -57,25 +54,17 @@ const FORBIDDEN_KEYS: ReadonlySet<string> = new Set(FORBIDDEN_DIRECT_TOOLS.map(t
 /** 名字规范化后是不是通用能力(授予直接工具与恢复状态共用)。 */
 const isForbiddenTool = (name: string): boolean => FORBIDDEN_KEYS.has(toolKey(name));
 const PLACEMENTS: ReadonlySet<string> = new Set<Placement>(["local", "byom_daemon", "cloud_sandbox"]);
-/** 凭据引用句柄的形状:<scheme>://<path>;其余一律当作可能的明文拒绝。 */
 const CREDENTIAL_REF = /^[a-z][a-z0-9+.-]*:\/\/[^\s]+$/;
 /** 群消息位置合法值:非负安全整数(与 log.ts 的单调 seq 一致)。NaN/Infinity/小数/负数一律不是位置。 */
 export const isSeq = (n: number): boolean => Number.isSafeInteger(n) && n >= 0;
 const CRON_FIELD = /^(\*|\d+(-\d+)?)(\/\d+)?(,(\*|\d+(-\d+)?)(\/\d+)?)*$/;
-/** 五段 cron 各段的名字与允许取值(man 5 crontab:分钟 0–59、小时 0–23、日 1–31、月 1–12、星期 0–7,0 与 7 都是周日)。 */
 const CRON_RANGES: readonly (readonly [string, number, number])[] = [["分钟", 0, 59], ["小时", 0, 23], ["日", 1, 31], ["月", 1, 12], ["星期", 0, 7]];
 const CRON_ITEM = /^(\*|(\d+)(?:-(\d+))?)(?:\/(\d+))?$/;
 
-/**
- * 一段 cron 的语义校验(R18-02):逗号分隔的每一项是 *、单值 n 或区间 a-b,* 与区间后面可带 /步长。
- * 每个数都要落在该段允许范围内,区间起点不大于终点,步长在 1 到该段上限之间;单值后面带步长不认(vixie cron 同样报错)。
- * 只做形状和取值,实际触发时刻、日与星期的组合语义、时区/DST 由调度器切片负责。返回 null 表示合法,否则返回原因(不含表达式本身)。
- */
 function cronFieldError(field: string, index: number): string | null {
   const [name, lo, hi] = CRON_RANGES[index] as readonly [string, number, number];
   const at = `第 ${index + 1} 段(${name})`;
   for (const item of field.split(",")) {
-    // 形状已由 CRON_FIELD 整段校验过,这里每一项必然匹配
     const [, head, a, b, step] = CRON_ITEM.exec(item) as RegExpExecArray;
     if (a !== undefined) {
       if (Number(a) < lo || Number(a) > hi) return `${at}的 ${a} 超出 ${lo}–${hi}`;
@@ -103,10 +92,7 @@ const ASSET_KINDS: ReadonlySet<string> = new Set<ComputeAsset["kind"]>(["mcp", "
 // ---------------------------------------------------------------- 状态参数(CH-32 / CH-37 / CH-38)
 // 调用方传回来的联系人与目录状态也是公开入口的对象参数,按同一合同规范化:Proxy、非普通原型、含访问器一律拒绝,
 // 只取声明字段(旧版本留下的 focus 之类多余字段丢掉)。所有接受状态的入口都返回带失败分支的结果,状态不合法时返回 { ok:false, reason },不抛
-// (canCallDirectly 返回 false)。形状通过后再查业务不变量:这些都是登记入口(grantTool、grantComputeAsset、commit、addContact)
 // 本来就不可能产生的状态,出现就说明状态是伪造或损坏的,不能当授权依据(CH-38)。身份与唯一性同属此列(CH-39):
-// 联系人 id 非空(addContact 拒空 id)、直接工具名唯一(grantTool 幂等)、能力资产名唯一且只有一种类别(grantComputeAsset 同类幂等、异类拒绝)、
-// 承诺 id 唯一(commit 拒重复);出现重复就整份拒绝,不静默取第一项、不吞掉其余记录。
 const TOOL_SCHEMA: Schema = { name: { kind: "string" }, bounded: { kind: "boolean" } };
 const ASSET_SCHEMA: Schema = { name: { kind: "string" }, kind: { kind: "string" } };
 const COMMITMENT_SCHEMA: Schema = {
@@ -160,10 +146,6 @@ const readContact = (state: unknown): Normalized<Contact> => {
   return bad ? { ok: false, reason: bad } : n;
 };
 
-/**
- * 目录对外给出的联系人表:运行时只读。只有读方法,没有 set/delete/clear;内部 Map 放在私有字段里,
- * 借 Map.prototype 的方法(如 Map.prototype.delete.call)也碰不到它;实例、原型和类本身都冻结。
- */
 let tableMap: (x: object) => ReadonlyMap<string, unknown> | undefined = () => undefined;
 class ContactTable implements ReadonlyMap<string, Contact> {
   readonly #m: Map<string, Contact>;
@@ -228,7 +210,6 @@ function readDirectory(d: unknown): Normalized<{ contacts: Map<string, Contact> 
   return { ok: true, value: { contacts: out } };
 }
 
-/** 输出联系人:只按声明字段重新构造(普通对象字面量,定义属性不经过原型链 setter),再逐层冻结。 */
 const freezeContact = (c: Contact): Contact => Object.freeze({
   id: c.id,
   name: c.name,
@@ -315,7 +296,6 @@ function checkSchedule(s: Schedule): string | null {
   return null;
 }
 
-/** 登记一项只给 Compute 用的能力资产。它不会因此进入联系人直接工具清单。 */
 export function grantComputeAsset(state: Contact, input: { name: string; kind: ComputeAsset["kind"] }): ContactResult {
   const s = readContact(state);
   if (!s.ok) return s;
@@ -379,11 +359,6 @@ export function settleTask(state: Contact, taskId: string): ContactResult {
   }) };
 }
 
-/**
- * 一条末次汇报的入库确认(需求文档 1043-1046 行:每条承诺有自己的出处 source_seq 和绑定范围)。
- * commitmentIds:宿主判定这条汇报履行了哪几条承诺,一条汇报可以明确覆盖多条;
- * basedOnSeq:这条汇报依据的处理位置。出处晚于它的承诺是汇报发出后才立的,这条汇报替它作不了数。
- */
 export interface FinalReportReceipt { readonly taskId: string; readonly commitmentIds: readonly string[]; readonly basedOnSeq: number }
 
 /**

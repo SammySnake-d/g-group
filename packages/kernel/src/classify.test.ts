@@ -6,7 +6,6 @@ import { type Classifier, classifyInbound, EVENT_CODES } from "./classify.ts";
 import { safeDescribe } from "./plain.ts";
 
 const user = { kind: "user", id: "u1" } as const;
-/** 按输入框的方式给出结构化点名:找到第 nth 个 "@name" 的确切范围 */
 function at(text: string, name: string, id: string, nth = 0) {
   let start = -1;
   for (let i = 0; i <= nth; i++) start = text.indexOf(`@${name}`, start + 1);

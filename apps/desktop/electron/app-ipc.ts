@@ -19,7 +19,6 @@ export function bindAppIpc(o: { config: AppConfig; backend: Backend; updater: Up
   const H: Record<AppShellMethod, (p: Record<string, unknown>, event: IpcMainInvokeEvent) => unknown> = {
     "app.info": () => ({ version: app.getVersion(), packaged: app.isPackaged, platform: process.platform, arch: process.arch }),
     "window.capture": async (_p, event) => {
-      // 只截发起调用的应用主窗口,不枚举桌面/其他窗口,也不需要屏幕录制权限。
       const win = BrowserWindow.fromWebContents(event.sender);
       if (!win || event.senderFrame !== event.sender.mainFrame) throw new Error("只能截取当前应用窗口");
       const image = await event.sender.capturePage();
@@ -33,7 +32,6 @@ export function bindAppIpc(o: { config: AppConfig; backend: Backend; updater: Up
       log(`接入模型:网关 ${new URL(g.baseUrl).host},模型 ${g.model}`);
       await o.backend.restart();
       const v = view();
-      // 后端换了一个实例:让渲染层重新探测、全量读、订阅(回包先到,再重载)
       if (v.backend.state === "running") setTimeout(() => { for (const w of BrowserWindow.getAllWindows()) w.webContents.reload(); }, 150);
       return v;
     },

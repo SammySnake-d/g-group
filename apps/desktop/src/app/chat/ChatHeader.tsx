@@ -12,7 +12,6 @@ import { useApp } from '@/store'
 
 const titleBtn = 'h-auto min-w-0 justify-start gap-1.5 py-1 pl-1 pr-2 text-fg'
 
-/** 聊天头部:标题(群点开群资料、私聊点开对方菜单)、关联会话、Helper、查找、成员、群资料、设置 */
 export function ChatHeader({ conv }: { conv: Conversation }) {
   const { convs, helperPanel, setHelperPanel, push, openSplit, sideOpen } = useApp((s) => ({ convs: s.convs, helperPanel: s.helperPanel, setHelperPanel: s.setHelperPanel, push: s.push, openSplit: s.openSplit, sideOpen: s.tabs[s.tabIdx]?.t === 'group' }))
   const peer = conv.kind === 'dm' ? conv.members.find((m) => m !== 'me')! : null

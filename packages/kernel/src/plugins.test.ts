@@ -1,6 +1,5 @@
 // AC-35 阶段 I 宿主契约桩:三类插件(DataSource / OutboundChannel / UIExtension)注册校验与宿主快照;
 // 定时归联系人不归插件;插件互不依赖;外部事件由宿主校验并盖章(来源、版本、事件类型、双时间、附件、不可信);
-// 外发按 action_id 记账,in-flight 后超时或异常记 DeliveryUnknown,B2 渠道拒绝盲重试。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { test } from "node:test";
@@ -363,7 +362,6 @@ test("上一次发送还在途时同 action_id 再调被拒,插件只被调 1 �
   assert.equal(calls, 1);
 });
 
-/** 模拟 B1 接收端:按 action_id 去重,但只记 windowMs 毫秒;effects 是真实副作用次数 */
 function provider(clock: () => number, windowMs: number, failFirst = false) {
   const seen = new Map<string, { at: number; receipt: { action_id: string; receiptId: string } }>();
   const stats = { calls: 0, effects: 0 };
@@ -556,7 +554,6 @@ test("对未注册的插件拉取或发送显式失败", async () => {
   assert.equal(s.ok === false && s.reason, "unknown-plugin");
 });
 
-/** 按 this.endpoint 选接收端的插件:A、B 两个模拟接收端各自按 action_id 去重 */
 function endpointPlugin(failAOnce: boolean) {
   const effects: string[] = [];
   const caches: Record<string, Map<string, { action_id: string; receiptId: string }>> = { A: new Map(), B: new Map() };
@@ -630,7 +627,6 @@ test("发送在途时改插件实例的 endpoint:同 action_id 被在途拦下,�
 });
 
 
-// —— 第五轮:R4-02..R4-05
 test("配置里有 Map、Set、Date 或类实例的渠道在注册时拒绝,原因指出字段(R4-02 阳性埋雷)", () => {
   const base = { kind: "outbound-channel", id: "p", endpoint: "A", idempotency: "none", send: async () => ({ action_id: "a", receiptId: "r" }) };
   const cases: [string, Record<string, unknown>, RegExp][] = [
@@ -790,8 +786,6 @@ test("同一渠道同一 action_id 仍去重(R4-05 单开关对照)", async () =
   assert.deepEqual(calls, ["c"]);
 });
 
-// —— 第六轮:R5-01、R5-02
-/** B1 模拟服务商:按自己的时钟记住 action_id windowMs 毫秒,每次都丢回执 */
 function lossyProvider(server: () => number, windowMs: number) {
   const seen = new Map<string, number>();
   const stats = { calls: 0, effects: 0 };
@@ -876,7 +870,6 @@ test("单调读数不是有限数时同样永久停止重试", async () => {
   assert.equal(p.stats.calls, 1);
 });
 
-/** 定义可枚举 getter 并计数调用次数 */
 function trapGetter<T extends object>(o: T, key: string, value: unknown, counter: { n: number }, throws = false): T {
   Object.defineProperty(o, key, { enumerable: true, configurable: true, get() { counter.n++; if (throws) throw new Error(`${key} getter 执行`); return value; } });
   return o;
@@ -971,7 +964,6 @@ test("DataSource 与 UIExtension 走同一入口:getter 拒绝,普通数据放�
   assert.deepEqual(reg.register({ kind: "ui-extension", id: "u", mounts: ["right"] }), { ok: true });
 });
 
-// —— 统一判定接到发送请求、回执与拉取结果
 test("发送请求是 getter、Proxy 或类实例时拒绝,getter 调用 0 次且插件不被调用", async () => {
   const counter = { n: 0 };
   const calls: string[] = [];
@@ -1021,8 +1013,6 @@ test("拉取结果数组元素是 getter 时整批拒绝,事件对象里有 gett
   assert.equal(counter.n, 0);
 });
 
-// —— 第六轮:原型污染穿透拉取与注册(R6-01 / R6-02)、工厂选项 getter(R6-03)、then getter 与账本终态(R6-04)
-/** 在 target 的 key 上临时装 setter(计数)或只读值,描述符用空原型构造;fn 结束后一定复原 */
 async function pollutedAsync<T>(target: object, key: string, mode: "setter" | "readonly", counter: { n: number }, fn: () => Promise<T>): Promise<T> {
   const had = Object.getOwnPropertyDescriptor(target, key);
   const d: PropertyDescriptor = Object.create(null);
@@ -1036,8 +1026,6 @@ async function pollutedAsync<T>(target: object, key: string, mode: "setter" | "r
   }
 }
 
-/** 在独立子进程里临时污染 Array.prototype[0] 后拉取一次:跨 await 的污染会波及测试运行器与 async_hooks 自己的内部数组,
- *  只能放进不带测试运行器的子进程。子进程污染、拉取、复原后把结果与自有下标情况输出成 JSON。 */
 function pullUnderArrayPollution(mode: "setter" | "readonly", batch: unknown[]): unknown {
   const code = `
     import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
@@ -1063,7 +1051,6 @@ test("Array.prototype[0] 上有 setter 或只读值时,拉取一条、多条、�
     ["空", []],
   ];
   for (const [name, batch] of batches) {
-    // 基线:同一批次在无污染的本进程里直接拉取
     const reg = createRegistry({ now: () => T0 });
     reg.register({ kind: "data-source", id: "s", sources: ["g1"], pull: async () => batch });
     const base = await reg.pull("s", "g1");
@@ -1158,7 +1145,6 @@ test("B1 渠道 then getter 让首次落到 delivery-unknown 后,保留期内重
   assert.deepEqual([counter.n, calls, reg.delivery("p", "a")?.attempts], [0, 2, 2]);
 });
 
-// —— 第七轮:pull 返回值先判定再 await(R7-01)、发送请求是 null 等非对象(R7-06)
 test("pull 同步返回带 then getter 的对象(抛错或不抛错)或带自有 constructor getter 的原生 Promise 时直接 invalid-batch,getter 调用 0 次(R7-01 阳性埋雷)", async () => {
   const counter = { n: 0 };
   const promiseWithCtor = Promise.resolve([ev()]);
@@ -1206,7 +1192,6 @@ test("createRegistry(null) 按没给选项处理,用默认值;注册与拉取照
   assert.equal(r.ok && r.events.length, 1);
 });
 
-// —— 第八轮:拉取数组下标不可枚举(R8-05)、宿主时钟回调返回非数字(R8-03)、拒收的原生 Promise 不留未处理拒绝(R8-04)
 test("pull 结果数组的下标是不可枚举数据属性时整批 invalid-batch 并点名下标;普通数组照常拉取(R8-05 审查 R8-M2)", async () => {
   const hidden: unknown[] = [ev()];
   Object.defineProperty(hidden, "1", { value: ev({ nativeId: "m-2" }), enumerable: false, writable: true, configurable: true });
@@ -1220,8 +1205,6 @@ test("pull 结果数组的下标是不可枚举数据属性时整批 invalid-bat
   assert.deepEqual(fine.ok && fine.events.map((e) => e.origin.nativeId), ["m-1", "m-2"]);
 });
 
-/** 时钟回调的非法返回值:Symbol.toPrimitive getter(抛错或不抛)、valueOf getter、Proxy、null、字符串数字、NaN、Infinity;被触发就计数。
- *  墙钟另加超出 Date 范围的有限数(单调时钟不转日期,大数是合法读数) */
 function badClockValues(counter: { n: number }): [string, unknown][] {
   const prim = {};
   Object.defineProperty(prim, Symbol.toPrimitive, { get() { counter.n++; return () => 0; } });
@@ -1309,8 +1292,6 @@ test("B1 单调读数一直是有限数字时保留期内照常重试(R8-03 单�
   assert.deepEqual([reg.delivery("b", "a")?.clockTrusted, reg.delivery("b", "a")?.maxMonotonic, calls], [true, 1500, 2]);
 });
 
-/** 在没有 unhandledRejection 处理器的独立子进程里:插件返回一个(已拒绝或稍后拒绝的)原生 Promise,
- *  可选在实例上定义不可配置的自有 then getter。子进程打印结果后再等 60ms,输出 { result, gets, alive } 与退出码。 */
 function refusedPromiseRun(mode: "send" | "pull", shape: "then-getter" | "plain", timing: "now" | "later"): { code: number; out: unknown } {
   const code = `
     import { createRegistry } from ${JSON.stringify(new URL("./plugins.ts", import.meta.url).href)};
@@ -1331,7 +1312,6 @@ function refusedPromiseRun(mode: "send" | "pull", shape: "then-getter" | "plain"
   }
 }
 
-/** 本进程内同一形态的拒收结果(基线):插件返回已拒绝的原生 Promise,可选带自有 then getter */
 async function refusedInProcess(mode: "send" | "pull", withGetter: boolean): Promise<{ reason: string; gets: number }> {
   let gets = 0;
   const pending = Promise.reject(new Error("外部 Promise 失败"));
@@ -1421,7 +1401,6 @@ test("send / pull 返回带自有静态 Symbol.species getter 的 Promise 子类
 });
 
 // —— R9-01 / R10-01(用户 g-group#3140 选 A:"能安全处理的都做"):拒收的外部 Promise 能不执行外部代码就挂空拒绝处理的都挂上;
-// 用户排除的三类(Proxy、不可配置 getter、冻结子类)只做记录性测试;另有几种残余形态做不到或要改写内置对象,只做记录性测试,待用户拍板。
 type Shape = "plain" | "then-getter" | "ctor-getter" | "ctor-getter-enum" | "ctor-data" | "ctor-other" | "ctor-fixed-writable" | "ctor-fixed-writable-enum"
   | "ctor-fixed-writable-null" | "ctor-locked-other" | "ctor-locked-plain" | "ctor-locked-frozen-plain" | "ctor-locked-frozen-species-null"
   | "ctor-locked-frozen-species-undefined" | "ctor-locked-subclass" | "ctor-locked-species-data" | "proxy-proto" | "subclass" | "sealed-subclass" | "frozen-subclass"
@@ -1433,11 +1412,6 @@ const HANDLED: readonly Shape[] = ["then-getter", "ctor-getter", "ctor-getter-en
   "ctor-locked-subclass", "ctor-locked-species-data", "proxy-proto", "subclass", "sealed-subclass", "frozen-subclass"];
 const EXCLUDED: readonly Shape[] = ["proxy", "ctor-getter-fixed", "frozen-all"];
 const RESIDUAL: readonly Shape[] = ["ctor-locked-null", "ctor-locked-builtin", "ctor-locked-frozen-subclass", "ctor-locked-proxy"];
-/** 造一个外部返回值。不引用模块里的任何变量,子进程通过 toString 复用同一份代码。
- *  armed 期间访问器、Proxy 陷阱、子类构造与 species 都计数(访问器与 species 还会抛错);cleanup 关掉计数,
- *  用于给排除形态的底层 Promise 挂处理,不让测试进程自身留下未处理拒绝。later:5ms 后才拒绝。
- *  pre:造好底层 Promise 后、改形态前就先挂处理(给根本挂不上处理的残余形态在测试进程内用)。
- *  snap:插件类、类 prototype、Other 以及内置 Array / Promise 的相关描述符,用来核对临时改写后原样恢复。 */
 function shapedPromise(shape: string, timing: string, c: ShapeCounters, pre = false): Shaped {
   let armed = false;
   class Sub extends Promise<unknown> {
@@ -1450,18 +1424,15 @@ function shapedPromise(shape: string, timing: string, c: ShapeCounters, pre = fa
   const Other = function Other() {};
   Object.defineProperty(Other, Symbol.species, { configurable: true, get() { if (!armed) return Promise; c.species++; throw new Error("不应读取 Other 的 species"); } });
   const Plain = function Plain() {};
-  // 与第十轮审查复现相同:species 是不可配置 getter(改不了 species,只能改实例上可写的 constructor 值)
   const OtherFixed = function OtherFixed() {};
   Object.defineProperty(OtherFixed, Symbol.species, { get() { if (!armed) return Promise; c.species++; throw new Error("不应读取 OtherFixed 的 species"); } });
   const SpeciesData = function SpeciesData() {};
   Object.defineProperty(SpeciesData, Symbol.species, { value: Bare, writable: true, enumerable: false, configurable: true });
-  // 第十一轮审查 R11-03 的两个存活单点故障所对应的形态:constructor 锁成冻结的普通函数。
-  // 内核不需要改写任何对象(speciesSafe 已能判定),缺的是测试真的激活那两条分支。
-  const PlainFrozen = Object.freeze(function PlainFrozen() {});                 // 链上没有 species
+  const PlainFrozen = Object.freeze(function PlainFrozen() {});
   const PlainNullSpecies = function PlainNullSpecies() {};
-  Object.defineProperty(PlainNullSpecies, Symbol.species, { value: null, writable: false, enumerable: false, configurable: false }); // species 是只读数据属性 null
+  Object.defineProperty(PlainNullSpecies, Symbol.species, { value: null, writable: false, enumerable: false, configurable: false });
   const PlainUndefSpecies = function PlainUndefSpecies() {};
-  Object.defineProperty(PlainUndefSpecies, Symbol.species, { value: undefined, writable: false, enumerable: false, configurable: false }); // species 是只读数据属性 undefined
+  Object.defineProperty(PlainUndefSpecies, Symbol.species, { value: undefined, writable: false, enumerable: false, configurable: false });
   Object.freeze(PlainNullSpecies);
   Object.freeze(PlainUndefSpecies);
   const ProxyCtor = new Proxy(function Target() {}, { get(t, k, r) { if (armed) c.traps++; return Reflect.get(t, k, r); }, getOwnPropertyDescriptor(t, k) { if (armed) c.traps++; return Reflect.getOwnPropertyDescriptor(t, k); }, getPrototypeOf(t) { if (armed) c.traps++; return Reflect.getPrototypeOf(t); } });
@@ -1514,7 +1485,6 @@ const counters = (): ShapeCounters => ({ gets: 0, traps: 0, ctor: 0, species: 0 
 const refusedOk = (mode: "send" | "pull", shape: Shape) =>
   shape === "plain" ? (mode === "send" ? "send-threw" : "pull-failed") : (mode === "send" ? "non-promise-send" : "invalid-batch");
 
-/** 本进程:在调用方建的注册表上注册一个返回某形态外部 Promise 的插件(id "p");返回计数与插件实际造出的对象 */
 function plugShaped(reg: ReturnType<typeof createRegistry>, mode: "send" | "pull", shape: Shape, timing: "now" | "later", pre = false): { c: ShapeCounters; made: () => Shaped | undefined } {
   const c = counters();
   let made: Shaped | undefined;
@@ -1525,9 +1495,6 @@ function plugShaped(reg: ReturnType<typeof createRegistry>, mode: "send" | "pull
 }
 const callShaped = (reg: ReturnType<typeof createRegistry>, mode: "send" | "pull") => (mode === "send" ? reg.send("p", { action_id: "a", payload: "x" }) : reg.pull("p", "g"));
 
-/** 独立子进程:同一形态依次跑 send/pull × 立即/稍后拒绝四种组合,每种打印一行,最后等 80ms 再打印存活。返回退出码与各行。
- *  默认不装 unhandledRejection 处理器(进程存活即内核挂上了处理);observe 时装一个只计数的处理器,
- *  最后一行改为 { alive, unhandled },用来记录内核挂不上处理的形态确实留下了未处理拒绝。 */
 function shapedSubprocess(shape: Shape, observe = false): { code: number; lines: unknown[] } {
   const code = `
     import { writeSync } from "node:fs";
@@ -1613,7 +1580,7 @@ test("用户排除的 Proxy、不可配置的自有 constructor getter、冻结�
     assert.ok(m, name);
     assert.deepEqual(Object.getOwnPropertyDescriptor(m.raw, "constructor"), m.ctorBefore, name);
     assert.deepEqual(m.snap(), m.snapBefore, name);
-    m.cleanup(); // 测试进程自己给底层 Promise 挂处理(关掉计数后),不让本进程留下未处理拒绝
+    m.cleanup();
   }
 });
 
@@ -1688,9 +1655,6 @@ test("单开关对照:pull 返回同样长度、带正常事件与普通对象�
 });
 
 // —— 第十一轮审查 R11-01:拒收外部 Promise 时临时改写的对象范围必须可靠地排除 Node 内置对象。
-// Buffer 在 globalThis 上是访问器属性,旧实现的手列构造器清单里没有它,于是「方案 3」把内置 Buffer[Symbol.species]
-// 临时改成数据属性 Promise,同一观察窗口里正常的缓冲区切片会抛错。下面用与审查同形的样例核对:
-// 拒收结果不变、观察窗口内宿主内置对象一个都不被改写、窗口内缓冲区切片照常成功。
 /** 宿主内置对象的采样集合:globalThis 自己的每个值(访问器属性只读一次)、它们的原型、函数的 prototype 属性。
  *  不依赖被测实现的判定,用来独立核对"改写范围只在插件自己的对象上"。 */
 function hostObjects(): object[] {
@@ -1715,7 +1679,6 @@ function hostObjects(): object[] {
   }
   return out;
 }
-/** 每个宿主对象的 constructor / Symbol.species 描述符签名:值只写类型与函数名,不调用任何代码 */
 function hostSig(o: object): string {
   const one = (d: PropertyDescriptor | undefined): string => {
     if (d === undefined) return "-";
@@ -1740,10 +1703,8 @@ function hostDiff(before: Map<object, string>, now: Map<object, string>, allow: 
   }
   return out;
 }
-/** 观察窗口:每个 PROMISE init 时采一次宿主内置对象签名,并做一次正常的内置缓冲区切片。只观察,不改任何东西。 */
 interface Window {
   result: unknown;
-  /** 每一次 PROMISE init 的宿主内置对象签名快照(不是只采第一次:改写窗口可能落在第 n 个 Promise 上) */
   snaps: Map<object, string>[];
   /** 每次 init 时额外采样的对象签名,按采样顺序展平 */
   extras: string[];
@@ -1778,8 +1739,6 @@ function windowDiff(before: Map<object, string>, snaps: Map<object, string>[], a
 }
 
 test("constructor 锁成 Node 内置 Buffer 的已拒收 Promise:仍按 non-promise-send / invalid-batch 拒收,无法不改内置对象就挂处理,观察窗口内 Buffer 与其余宿主内置对象一个都没被改写,窗口内的正常缓冲区切片照常成功(R11-01 阳性埋雷)", async () => {
-  // 与审查同形:构造器锁成内置 Buffer(不可配置、不可写)。测试进程自己先挂一个空拒绝处理(改形态之前),
-  // 免得本进程留下未处理拒绝;这不改变被测行为(内核的那次挂处理同样挂不上,结果仍是拒收)
   const lockedBuffer = (): Promise<unknown> => {
     let fail: (e: unknown) => void = () => {};
     const p = new Promise((_ok, f) => { fail = f; });
@@ -1854,7 +1813,6 @@ test("拉取与发送都拒收同一形态,不能挂处理时由集成前的插�
 });
 
 test("方案 2 / 方案 3 改写窗口内的所有权边界:窗口里被改的只有插件自己的对象,宿主内置对象(Buffer、Math、JSON、Reflect、Atomics、TypedArray 原型、SharedArrayBuffer 等)逐个核对未被改动,窗口内缓冲区切片照常成功(R11-01 阳性埋雷)", async () => {
-  // 方案 3:constructor 锁成不可改写的插件类,该类自有不可配置的 species getter,只能临时把插件的 species 读成内置 Promise
   const PluginClass = function PluginClass() {};
   Object.defineProperty(PluginClass, Symbol.species, { get() { throw new Error("species 不应被调用"); } });
   const allowed = new Set<object>([PluginClass]);
@@ -1866,7 +1824,7 @@ test("方案 2 / 方案 3 改写窗口内的所有权边界:窗口里被改的�
     pull: () => {
       let fail: (e: unknown) => void = () => {};
       const p = new Promise((_ok, f) => { fail = f; });
-      Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]); // 测试进程自己先挂处理,改形态之前
+      Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]);
       Object.defineProperty(p, "constructor", { value: PluginClass, writable: false, enumerable: false, configurable: false });
       fail(new Error("外部拒绝"));
       made = p;
@@ -1877,13 +1835,11 @@ test("方案 2 / 方案 3 改写窗口内的所有权边界:窗口里被改的�
   const r = run.result as { ok: boolean; reason?: string };
   assert.deepEqual([r.ok, r.reason], [false, "invalid-batch"]);
   assert.ok(run.snaps.length > 0, "观察窗口没有采到 PROMISE init");
-  // 宿主内置对象:窗口内每一次采样与窗口外都不许变;插件自己的类允许在窗口内被临时改写
   assert.deepEqual(windowDiff(before, run.snaps, allowed), []);
   assert.deepEqual(hostDiff(before, hostSnap(), new Set()), []);
   // 窗口内正常缓冲区操作保持有效(切片成功、仍是 Buffer、内容不变)
   assert.deepEqual([run.slices.failed, run.slices.ok > 0], [0, true]);
   assert.deepEqual(run.slices.outputs.every((x) => Array.isArray(x) && x[0] === true && x[1] === "neutral"), true);
-  // 插件类事后原样恢复
   const d = Object.getOwnPropertyDescriptor(PluginClass, Symbol.species);
   assert.deepEqual([typeof d?.get, d?.configurable, d?.set === undefined, d?.enumerable, d?.writable], ["function", false, true, false, undefined]);
   assert.ok(made !== undefined);
@@ -1904,7 +1860,7 @@ test("宿主内置构造器不能被当成可临时改写的目标:constructor �
     pull: () => {
       let fail: (e: unknown) => void = () => {};
       const p = new Promise((_ok, f) => { fail = f; });
-      Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]); // 测试进程自己先挂处理,改形态之前
+      Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]);
       Object.defineProperty(p, "constructor", { value: foreign, writable: false, enumerable: false, configurable: false });
       fail(new Error("外部拒绝"));
       made = p;
@@ -1914,7 +1870,6 @@ test("宿主内置构造器不能被当成可临时改写的目标:constructor �
   const run = await inPromiseWindow(() => reg.pull("p", "g"), [foreign as object]);
   const r = run.result as { ok: boolean; reason?: string };
   assert.deepEqual([r.ok, r.reason], [false, "invalid-batch"]);
-  // 观察窗口里(不是只在事后)另一 realm 的内置 Array 也不许被临时改写:每次 init 采样都得是原样
   assert.ok(run.extras.length > 0, "观察窗口没有采到 PROMISE init");
   assert.deepEqual(run.extras.filter((x) => x !== foreignSig), []);
   assert.deepEqual(Object.getOwnPropertyDescriptor(foreign as object, Symbol.species), foreignBefore);
@@ -1924,9 +1879,6 @@ test("宿主内置构造器不能被当成可临时改写的目标:constructor �
 });
 
 test("改写链上只剩另一 realm 的内置原型可动时仍然不动它:实例与中间对象都不可扩展,该原型的 constructor(原生函数)在观察窗口内始终是原来那个(R11-01 单开关对照)", async () => {
-  // 链:本 realm 的 Promise 实例 → 另一 realm 的普通对象 → 该 realm 的 Promise.prototype。
-  // 实例与中间对象都 preventExtensions,于是「方案 2」唯一能动的对象是 foreignProto(它的 constructor 是可写数据属性),
-  // 判定它属于宿主只能靠「constructor 是原生函数」这一条(它不在本 realm 的 globalThis 闭包里)。
   const vm = await import("node:vm");
   const ctx = vm.createContext({});
   const foreignProto = vm.runInContext("Promise.prototype", ctx) as object;
@@ -1936,7 +1888,6 @@ test("改写链上只剩另一 realm 的内置原型可动时仍然不动它:实
   Object.preventExtensions(mid);
   const beforeOwn = Object.getOwnPropertyDescriptor(foreignProto, "constructor");
   assert.equal(beforeOwn?.writable, true, "foreignProto.constructor 要是可写数据属性,变异版才动得了它");
-  // 观察窗口:每次 PROMISE init 记下 foreignProto.constructor 是不是原来那个原生函数
   const { createHook } = await import("node:async_hooks");
   const intact: boolean[] = [];
   const hook = createHook({
@@ -1951,7 +1902,7 @@ test("改写链上只剩另一 realm 的内置原型可动时仍然不动它:实
     pull: () => {
       let fail: (e: unknown) => void = () => {};
       const p = new Promise((_ok, f) => { fail = f; });
-      Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]); // 测试进程自己先挂处理,改原型之前
+      Reflect.apply(Promise.prototype.then, p, [undefined, () => {}]);
       Object.setPrototypeOf(p, mid);
       Object.preventExtensions(p);
       fail(new Error("外部拒绝"));
@@ -1964,7 +1915,6 @@ test("改写链上只剩另一 realm 的内置原型可动时仍然不动它:实
   assert.deepEqual([r.ok, r.ok === false && r.reason], [false, "invalid-batch"]);
   assert.ok(intact.length > 0, "观察窗口没有采到 PROMISE init");
   assert.deepEqual(intact.filter((x) => x === false), []);
-  // 事后逐字段不变,也没有凭空多出别的键
   assert.deepEqual(Object.getOwnPropertyDescriptor(foreignProto, "constructor"), beforeOwn);
   assert.deepEqual(Reflect.ownKeys(foreignProto).map(String).sort(), Reflect.ownKeys(vm.runInContext("Promise.prototype", vm.createContext({}))).map(String).sort());
   assert.equal(Object.hasOwn(mid, "constructor"), false);

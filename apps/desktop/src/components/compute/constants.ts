@@ -17,7 +17,6 @@ export const STATUS: Record<CStatus, { label: string; tone: Tone }> = {
   stopped: { label: '已停止', tone: 'neutral' },
 }
 
-/** 工具类别的图标：mirasim 的 shell / file / search / web / tool 五种画法，对应到 lucide 的同形图标 */
 export const TOOL_ICON: Record<ToolKind, LucideIcon> = { edit: SquarePen, command: Terminal, read: File, search: Search, web: Globe, other: Wrench }
 
 const KIND_WORD: Record<ToolKind, string> = { edit: '改', command: '命令', read: '读', search: '搜', web: '网页', other: '其它' }
@@ -65,7 +64,6 @@ export const COPY = {
   declineHuman: '不做了',
   returnHuman: (owner: string) => `交还给 ${owner}`,
   interrupted: '已中断：Compute 停下了，这次调用没做完',
-  /* 停止照 mirasim(需求 v3.20 §8.1 已定 16):助手启动的程序及子程序都确认退出才显示「已停止」,并注明范围 */
   stopping: '正在停止…',
   stoppingHint: '等助手启动的程序及其子程序都确认退出',
   stopped: '已停止',
@@ -88,12 +86,10 @@ export const JOB_STATE: Record<'running' | 'done' | 'failed' | 'killed', { label
   killed: { label: '已收掉', tone: 'neutral' },
 }
 
-/** 折叠的工具组上那串「改 2 · 命令 1 · 读 3」 */
 export function toolMix(t: ToolTally): string {
   return KIND_ORDER.filter((k) => t[k] > 0).map((k) => `${KIND_WORD[k]} ${t[k]}`).join(' · ')
 }
 
-/** mirasim 消息头那句「改了 1 个文件，执行了 37 条命令」(hub.act.*)：按 改 → 命令 → 读 → 搜 → 网页 取前两样 */
 export function workLine(s: WorkSummary): string {
   const parts = [
     s.filesChanged > 0 ? `改了 ${s.filesChanged} 个文件` : '',

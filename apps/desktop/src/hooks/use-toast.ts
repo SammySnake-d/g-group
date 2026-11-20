@@ -5,7 +5,6 @@ import { create } from 'zustand'
 
 export type NotifyOptions = { action?: { label: string; onClick: () => void } }
 
-/* 只有最新那条提示带 data-testid="toast":旧提示还在堆叠或退场时,不和新提示抢同一个锚点 */
 const useLatest = create<{ id: number }>(() => ({ id: 0 }))
 let seq = 0
 

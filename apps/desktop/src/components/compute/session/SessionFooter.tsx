@@ -27,7 +27,6 @@ export function SessionFooter({ state, elapsed, turns, calls, agents, background
     ...(agents > 0 ? [{ key: 'agents', text: COPY.agents(agents) }] : []),
     ...(background > 0 && state.key !== 'stopping' ? [{ key: 'bg', text: COPY.backgroundN(background) }] : []),
   ]
-  /* 停止说明单独一段,窄分屏里换到下一行,不被截掉 */
   const note = state.key === 'stopping' ? `${COPY.stopping} ${COPY.stoppingHint}` : state.key === 'stopped' ? `${COPY.stopped} · ${COPY.stoppedScope}` : ''
   return (
     <footer className="shrink-0 border-t border-line">

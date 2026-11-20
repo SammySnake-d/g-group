@@ -1,4 +1,3 @@
-/* 插件中心左边自己的一栏:发现 / 已安装 / 有更新 + 类别 + 从文件或地址安装。 */
 import { FileUp } from 'lucide-react'
 import { CATEGORY_LABEL, PLUGIN_CATEGORIES, type PluginCategory } from '@g-group/ui-core'
 import { Button } from '@/components/ui/button'

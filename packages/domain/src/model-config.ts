@@ -29,7 +29,6 @@ export interface ContactModels {
   readonly harness: string;
   readonly computeModel: ComputeSlot;
 }
-/** 单个任务的临时覆盖(派活时的可选参数)。 */
 export interface TaskModelOverride {
   readonly model?: string;
   readonly effort?: string;
@@ -119,19 +118,15 @@ export function checkCompressionCall(contact: ContactModels, requestedModel: str
 }
 
 // ------------------------------------------------------------------ 说话侧有效配置快照(T-177 G2 = D;AC-32 ③)
-/** 宿主级的说话侧端点配置:联系人只有 speakingModel 一个字段,其余都取这一份(启动参数与环境变量)。 */
 export interface SpeakingEndpoint {
   readonly provider: string;
   readonly baseUrl: string;
-  /** 认证引用,不是密钥值:`<请求头>:env:<变量名>`(请求头 bearer / x-api-key),或 none。密钥只在私有调用边界按引用解析。 */
   readonly authRef: string;
   /** 单次输出上限,映射到适配器的 maxTokens;与状态笔记字节上限 stateNoteMaxBytes 无关。 */
   readonly maxOutputTokens: number;
   readonly contextWindow: number;
-  /** 推理参数,默认空;适配器没声明支持就显式拒绝,不丢弃后假装继承。 */
   readonly reasoning?: Readonly<Record<string, unknown>>;
 }
-/** 一轮里对话、补写、检查共用的同一份不可变配置;fingerprint 覆盖全部非敏感字段与宿主启动号。 */
 export type EffectiveSpeakingConfig = Readonly<{
   model: string;
   vendor: Vendor;
@@ -143,7 +138,6 @@ export type EffectiveSpeakingConfig = Readonly<{
   reasoning: Readonly<Record<string, unknown>>;
   fingerprint: string;
 }>;
-/** 与两个 pi 适配器原有默认值相同(4096 / 200000),开发入口与生产入口共用这一份,不各写一套。 */
 export const DEFAULT_SPEAKING_ENDPOINT: SpeakingEndpoint = Object.freeze({ provider: "anthropic", baseUrl: "https://api.anthropic.com", authRef: "none", maxOutputTokens: 4096, contextWindow: 200_000, reasoning: Object.freeze({}) });
 const AUTH_REF = /^(?:none|(?:bearer|x-api-key):env:[A-Z_][A-Z0-9_]*)$/;
 export class SpeakingConfigError extends Error {
@@ -154,7 +148,6 @@ function canonical(v: unknown): unknown {
   if (v && typeof v === "object") return Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical((v as Record<string, unknown>)[k])]));
   return v;
 }
-/** 宿主端点配置的合法性:错了直接拒绝(说明里不回显原值,认证引用位置可能被误填成密钥)。 */
 export function checkSpeakingEndpoint(e: SpeakingEndpoint): SpeakingEndpoint {
   const bad = (why: string): never => {
     throw new SpeakingConfigError(`说话侧配置不合格:${why}`);
@@ -195,7 +188,6 @@ export function resolveSpeakingConfig(endpoint: SpeakingEndpoint, model: string,
   const body = { model, vendor: vendorOf(model), provider: e.provider, baseUrl: e.baseUrl, authRef: e.authRef, maxOutputTokens: e.maxOutputTokens, contextWindow: e.contextWindow, reasoning };
   return freeze({ ...body, fingerprint: speakingFingerprint(body, bootId) });
 }
-/** 快照指纹:规范化后的全部非敏感字段 + 宿主启动号的 sha256。缓存、诊断都按它认同一份配置。 */
 export function speakingFingerprint(body: Omit<EffectiveSpeakingConfig, "fingerprint">, bootId: string): string {
   return `sha256:${createHash("sha256").update(JSON.stringify(canonical({ ...body, bootId }))).digest("hex")}`;
 }
@@ -227,14 +219,12 @@ export function checkCompute(caps: readonly ModelCapability[], resolved: Resolve
   return freeze({ ok: false, code: "model-incompatible", reason: incompatibleReason(resolved), resolved, fixes: fixesFor(caps, resolved) });
 }
 
-// ------------------------------------------------------------------ 上游改动预览与批量替换
 export type ModelChange =
   | { readonly kind: "defaults"; readonly patch: Partial<ModelDefaults> }
   | { readonly kind: "contact"; readonly contactId: string; readonly patch: Partial<Pick<ContactModels, "speakingModel" | "harness" | "computeModel">> }
   | { readonly kind: "batch-replace"; readonly from: string; readonly to: string };
 
 export type ChangedField = "speaking-model" | "harness" | "compute-model" | "compute-effort";
-/** 批量替换里这个联系人是怎么被牵连的:显式引用了 X / 跟着上游变(继承者) */
 export type Involvement = "explicit-reference" | "downstream";
 export interface AffectedContact {
   readonly contactId: string;
@@ -254,7 +244,6 @@ export interface ChangePreview {
   readonly change: ModelChange;
   readonly defaultsBefore: ModelDefaults;
   readonly defaultsAfter: ModelDefaults;
-  /** 全局默认里被改到的字段(批量替换时是显式引用了 X 的默认项)。 */
   readonly defaultsChanged: readonly (keyof ModelDefaults)[];
   readonly affected: readonly AffectedContact[];
   readonly conflicts: readonly AffectedContact[];
@@ -298,7 +287,6 @@ function applyToContact(c: ContactModels, change: ModelChange, defaultsAfter: Mo
   return { next: c.speakingModelInherited ? { ...c, speakingModel: defaultsAfter.speakingModel } : c, explicit: false };
 }
 
-/** 保存前预检(时机 ①②):算出改动后每位联系人的生效值,列出所有受影响的下游与冲突;不落盘。 */
 export function previewChange(defaults: ModelDefaults, contacts: readonly ContactModels[], caps: readonly ModelCapability[], change: ModelChange): ChangeOutcome {
   const defaultsAfter = applyToDefaults(defaults, change);
   const defaultsChanged = (Object.keys(defaults) as (keyof ModelDefaults)[]).filter((k) => defaults[k] !== defaultsAfter[k]);

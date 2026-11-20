@@ -12,7 +12,6 @@ export const isShort = (opts: string[]) => opts.length <= 3 && opts.every((o) =>
 
 type Asking = Extract<Pending, { kind: 'choice' | 'proposal' }>
 
-/** 把待你处理的提问(或已经回答过的记录)变成卡片上的一排选项;只有等你选时选项才带动作 */
 export function askOptions(p: Asking | undefined, done: Answer | undefined, resolve: (pid: string, action: string, value?: number) => void): AskOpt[] {
   if (!p) return done ? done.options.map((o) => ({ label: o })) : []
   if (p.kind === 'choice') return p.options.map((o, i) => ({ label: o, primary: i === (p.recommend ?? -1), run: () => resolve(p.id, 'pick', i) }))
@@ -20,7 +19,6 @@ export function askOptions(p: Asking | undefined, done: Answer | undefined, reso
   return [{ label: '同意', primary: true, run: () => resolve(p.id, 'ok') }, { label: '先不改', run: () => resolve(p.id, 'no') }]
 }
 
-/** 挂在消息 msgId 下的提问卡片;没有提问也没有回答记录时返回 null */
 export function useAsk(msgId: string) {
   const { pending, resolve, addQuote, convs, answers } = useApp()
   const p = pending.find((x): x is Asking => (x.kind === 'choice' || x.kind === 'proposal') && x.ask === msgId)
@@ -30,7 +28,6 @@ export function useAsk(msgId: string) {
   const live = !!p && !stale
   const state: AskState = live ? 'open' : stale ? 'stale' : 'answered'
   const opts = askOptions(p, done, resolve)
-  /** 都不是:引用这条提问并 @ 提问的人,你自己写回答 */
   const answerOwn = () => {
     for (const c of convs) {
       const m = c.messages.find((x): x is TextMsg => x.k === 'text' && x.id === msgId)

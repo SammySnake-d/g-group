@@ -13,7 +13,6 @@ import { appear } from './kit/motion'
 import { HELPER_PAGE as H, IN_CONV } from './constants'
 import { helperReply, type HelperMsg } from './helperReply'
 
-/* ---------- 浮层里的 Helper:手动能做的事都能说;改东西前先出确认卡 ---------- */
 export function HelperPage() {
   const ctx = useApp()
   const reduced = useReducedMotion()

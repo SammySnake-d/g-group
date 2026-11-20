@@ -1,4 +1,3 @@
-/* 装好的那一刻接着问:挂到哪些聊天、哪些助手能调用。装了不挂不生效,所以就地给出下一步。 */
 import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { useApp } from '@/ctx'

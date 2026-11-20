@@ -10,7 +10,6 @@ import { addContact, briefFor, type Contact, type ContactResult, canCallDirectly
 import { normalize } from "./plain.ts";
 import { routeHelper } from "./helper.ts";
 
-/** 按需求文档 75-78 行独立列出的通用能力样本,不取自被测实现的清单。 */
 const SPEC_GENERAL_TOOLS = ["bash", "shell", "exec", "run_command", "write_file", "edit_file", "apply_patch", "browser", "computer_use", "run_script"];
 
 const mk = () => {
@@ -18,9 +17,7 @@ const mk = () => {
   if (!r.ok) throw new Error(r.reason);
   return r.dir;
 };
-/** 末次汇报回执夹具:默认履行 k1,依据位置足够新。 */
 const rc = (taskId: string, commitmentIds: readonly string[] = ["k1"], basedOnSeq = 10_000) => ({ taskId, commitmentIds, basedOnSeq });
-/** settleTask/confirmFinalReport 返回带失败分支的结果(CH-37);正常路径取出联系人,失败就让所在测试按名字失败。 */
 const unwrap = (r: ContactResult): Contact => {
   if (!r.ok) throw new Error(r.reason);
   return r.contact;
@@ -497,7 +494,6 @@ test("CH-15 已回收(done)的承诺不能被撤销改写成 revoked;有效承�
   assert.equal(ok.ok && ok.contact.commitments[0]?.status, "revoked");
 });
 
-/** 规格里 Compute 能力资产的全部类别(ComputeAsset.kind),独立列出,不取自被测实现。 */
 const ASSET_KINDS = ["mcp", "skill", "script"] as const;
 
 test("CH-16 同名资产 3×3 类别组合:同类重复登记幂等(只留一项),异类第二次登记明确拒绝且原资产不变", () => {
@@ -636,7 +632,6 @@ test("CH-19 多项凭据逐项校验:合法引用后跟明文、空路径、路�
   }
 });
 
-/** 访问器夹具:在普通对象上把 key 定义成 getter(或 setter),返回对象和调用计数;getter 被调用就计数。 */
 const withAccessor = (base: Record<string, unknown>, key: string, kind: "get" | "set" = "get") => {
   const calls = { n: 0 };
   const o: Record<string, unknown> = { ...base };
@@ -908,7 +903,6 @@ test("g-group 第 2273 号讨论撤销专职开关:联系人没有 focus 字段,
   assert.deepEqual(sources.filter(([, src]) => /decline-focused|onlyCommitmentId/.test(src)).map(([n]) => n), []);
 });
 
-/** 在 Object.prototype(及 Array.prototype)上临时放同名属性,跑完 f 立即恢复;返回同名 setter 被调用的次数。 */
 const withPollution = (keys: readonly string[], mode: "none" | "writable" | "setter" | "readonly" | "readonlyTrue", f: () => void): number => {
   const saved: [object, string, PropertyDescriptor | undefined][] = [];
   let calls = 0;
@@ -932,7 +926,6 @@ const withPollution = (keys: readonly string[], mode: "none" | "writable" | "set
   return calls;
 };
 
-/** 每个公开入口的一份合法调用:返回是否被接受。用于访问器、Symbol、不可枚举、原型污染的逐入口对照。 */
 const entryCases = () => {
   const dir = mk();
   const c = dir.contacts.get("c-mi")!;
@@ -1171,12 +1164,10 @@ test("CH-34 commit 存下的是按下标复制的快照:boundTaskIds 自带的 S
 
 // ---------------------------------------------------------------- 第十三轮(CH-36–CH-38、公开快照只读、AD01–AD04、CY06)
 
-/** 计数 Proxy:handler 本身也是 Proxy,对目标的任何操作(get、ownKeys、getOwnPropertyDescriptor、getPrototypeOf……)都要先查一次 trap,查一次记一次。 */
 const counted = <T extends object>(target: T, n: { v: number }): T =>
   new Proxy(target, new Proxy({}, { get: (_h, trap) => { n.v++; return Reflect.get(Reflect, trap); } }) as ProxyHandler<T>);
 /** 普通 JSON 数据:模拟宿主从存储读回来的状态。 */
 const js = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
-/** 带一项直接工具、一项 Compute 能力资产、一条绑定任务 T 的承诺 k 的联系人(全经登记入口产生)。 */
 const fullContact = (): Contact => {
   const g = grantTool(mk().contacts.get("c-mi")!, { name: "get_weather", bounded: true });
   const a = grantComputeAsset(g.ok ? g.contact : (null as never), { name: "ws_script", kind: "script" });
@@ -1403,9 +1394,7 @@ test("CY06 回执 commitmentIds 自带 includes 数据属性函数时,确认只�
   assert.deepEqual(plain.commitments.map((k) => [k.id, k.status]), [["a", "done"], ["b", "active"]]);
 });
 
-// ---------------------------------------------------------------- 第十四轮(reviews/feat-contact-helper.md CH-39 / CH-40)
 // 合法状态一律经登记入口产生再 JSON 往返(模拟宿主从存储读回),反例只把其中的标识改成空或重复。
-/** 经登记入口产生:直接工具 get_weather、t_a、t_b;能力资产 ws_script/script、a_mcp/mcp、a_skill/skill;承诺 k(绑定 T)、k2(绑定 T2)、k3(定时)。 */
 const threeOfEach = (): Contact => {
   let c = fullContact();
   for (const name of ["t_a", "t_b"]) c = unwrap(grantTool(c, { name, bounded: true }));
@@ -1588,8 +1577,6 @@ test("CH-40 回执 commitmentIds 按承诺 id 精确点名:回执只点名 promi
   assert.deepEqual(one.commitments.map((k) => [k.id, k.status]), [["promise", "done"], ["promise-long", "active"]]);
 });
 
-// ---------------------------------------------------------------- 第十五轮(reviews/feat-contact-helper.md CH-41 / CH-42 / CH-43)
-/** 计数陷阱:Proxy 的任何 trap、getter、setter 被碰一次就计一次并抛错;合同要求它们一次都不被调用。 */
 const traps = () => {
   const n = { v: 0 };
   const hit = (): never => { n.v++; throw new Error("不该被调用"); };
@@ -1766,7 +1753,6 @@ test("CH-43 状态逐项校验与长度无关:直接工具、能力资产、承�
 });
 
 test("CH-44 非普通对象同时作为函数 prototype 和普通字段的别名时，无论遍历顺序如何都必须拒收", () => {
-  // 构造一个非普通原型对象（Object.create 产生的对象，原型不是 Object.prototype/null）
   const nonPlain = Object.create({ inherited: true });
   const fn = function dummy() {};
   fn.prototype = nonPlain;
@@ -1774,24 +1760,18 @@ test("CH-44 非普通对象同时作为函数 prototype 和普通字段的别名
   // 测试三种遍历顺序：别名直接出现、函数先于别名、别名先于函数
   const c = fullContact();
 
-  // 1. 非普通对象直接出现
   const r1 = grantTool(c, { name: "tool1", bounded: true, ignored: { nonPlain } } as never);
   assert.equal(r1.ok, false, "直接出现应拒收");
   assert.match(!r1.ok ? r1.reason : "", /只接受普通数据/, "应报告非普通数据");
 
-  // 2. 函数先于别名（fn 先遍历，fn.prototype 指向 nonPlain）
   const r2 = grantTool(c, { name: "tool2", bounded: true, ignored: { fn, nonPlain } } as never);
   assert.equal(r2.ok, false, "函数先于别名应拒收");
   assert.match(!r2.ok ? r2.reason : "", /只接受普通数据/, "应报告非普通数据");
 
-  // 3. 别名先于函数（nonPlain 先遍历并加入 seen，后续 fn.prototype 指向同一对象）
-  // 这是 bug 场景：如果别名先遍历，它会被正常检查并拒绝（或者如果作为被丢弃字段，会被加入 seen）
-  // 但如果它作为被丢弃字段先遍历，然后 fn.prototype 指向它，就可能被错误接受
   const r3 = grantTool(c, { name: "tool3", bounded: true, ignored: { nonPlain, fn } } as never);
   assert.equal(r3.ok, false, "别名先于函数应拒收");
   assert.match(!r3.ok ? r3.reason : "", /只接受普通数据/, "应报告非普通数据");
 
-  // 确认普通对象照常接受（阴性对照）
   const plainProto = {};
   const plainFn = function dummy() {};
   plainFn.prototype = plainProto;
@@ -1799,8 +1779,6 @@ test("CH-44 非普通对象同时作为函数 prototype 和普通字段的别名
   assert.equal(r4.ok, true, "普通对象对照应通过");
 });
 
-// ---------------------------------------------------------------- 第十七轮(reviews/feat-contact-helper.md R17-01 / R17-03)
-/** 函数自有 prototype 的几类值:引擎生成的原型、调用方换上的普通对象、调用方换上的非普通原型对象。 */
 const protoCases = () => {
   const nonPlain = Object.create({ inherited: true }) as Record<string, unknown>;
   const swapped = function swapped() {};
@@ -1823,7 +1801,6 @@ const protoCases = () => {
 test("CH-47 函数自有 prototype 单一路径:调用方换上的非普通原型对象必须拒收,引擎生成的生成器原型与普通函数原型照常(对照)", () => {
   const c = fullContact();
   const { nonPlain, swapped, swappedPlain, swappedNull, gen, agen, genSwapped, genSwappedPlain, genWithProxy } = protoCases();
-  // 单一路径:被丢弃字段里只有函数自己,别名不同时出现,所以只能由 prototype 这条路查到
   const only = grantTool(c, { name: "tool1", bounded: true, ignored: { swapped } } as never);
   assert.equal(only.ok, false, "单一路径应拒收");
   assert.match(!only.ok ? only.reason : "", /^直接工具\.ignored\.swapped\.prototype 只接受普通数据对象$/, "理由应指向 prototype");
@@ -1836,16 +1813,12 @@ test("CH-47 函数自有 prototype 单一路径:调用方换上的非普通原�
   const genProxy = grantTool(c, { name: "tool4", bounded: true, ignored: { genWithProxy } } as never);
   assert.equal(genProxy.ok, false, "引擎生成的生成器原型里的 Proxy 照样拒收");
   assert.match(!genProxy.ok ? genProxy.reason : "", /genWithProxy\.prototype\.extra 只接受普通数据\(不能是 Proxy\)$/, "生成器原型自有属性也要查");
-  // 对照:引擎生成的生成器原型、换上的普通对象与 null 原型、普通函数都照常接受
   for (const [label, fn] of [["生成器", gen], ["异步生成器", agen], ["换普通对象的普通函数", swappedPlain], ["换 null 原型的普通函数", swappedNull], ["生成器换普通对象", genSwappedPlain]] as const) {
     const r = grantTool(c, { name: "tool_ok", bounded: true, ignored: { fn } } as never);
     assert.equal(r.ok, true, label);
   }
   assert.equal(nonPlain !== undefined, true, "夹具自检:非普通原型对象已构造");
-  // 换上的原型挂在引擎生成器原型层上的对象:结构上与引擎刚生成的原型无法区分(都是空对象、上层只有引擎原型),
-  // 里面没有任何调用方的数据可达,所以放行;一旦带上调用方的数据(自有属性、自有访问器、Proxy、普通对象)就照常拒收。
   const GEN = Object.getPrototypeOf((function* () {}).prototype) as object;
-  // 生成器函数的原型被换成"空对象、上层正好是引擎原型":结构与引擎刚生成的那个一致,里面没有任何调用方的数据可达,放行。
   const genForged = function* genForged() {};
   (genForged as { prototype: unknown }).prototype = Object.create(GEN);
   assert.equal(grantTool(c, { name: "tool5", bounded: true, ignored: { genForged } } as never).ok, true, "同层空对象放行(无调用方数据可达)");
@@ -1854,14 +1827,12 @@ test("CH-47 函数自有 prototype 单一路径:调用方换上的非普通原�
   const ownBad = grantTool(c, { name: "tool6", bounded: true, ignored: { forgedOwn } } as never);
   assert.equal(ownBad.ok, false, "带上调用方数据的同层原型对象拒收");
   assert.match(!ownBad.ok ? ownBad.reason : "", /forgedOwn\.prototype\.inherited 只接受普通数据对象$/, "理由应指向调用方数据");
-  // 生成器函数被别人换成另一层的原型(同步 / 异步)同样拒收
   const agenSync = async function* agenSync() {};
   (agenSync as { prototype: unknown }).prototype = Object.create(GEN);
   assert.equal(grantTool(c, { name: "tool7", bounded: true, ignored: { agenSync } } as never).ok, false, "异步生成器换同步那层原型拒收");
   const plainFake = function plainFake() {};
   (plainFake as { prototype: unknown }).prototype = Object.create(GEN);
   assert.equal(grantTool(c, { name: "tool8", bounded: true, ignored: { plainFake } } as never).ok, false, "普通函数拿生成器那层原型拒收");
-  // CH-44 的 seen 修复与本条同源:引擎生成的生成器原型先在免查原型的位置出现,之后又作为普通字段出现时,
   // 必须检查对象本身(它的原型不是 Object.prototype),不能因为"已经见过"就跳过——两种遍历顺序结果一致。
   const protoSelf = function* protoSelf() {};
   const engineProto = (protoSelf as { prototype: unknown }).prototype;
@@ -1871,7 +1842,6 @@ test("CH-47 函数自有 prototype 单一路径:调用方换上的非普通原�
   const orderDirectFirst = grantTool(c, { name: "tool10", bounded: true, ignored: { direct: engineProto, protoSelf } } as never);
   assert.equal(orderDirectFirst.ok, false, "生成器原型又作为普通字段出现(字段在前)应拒收");
   assert.match(!orderDirectFirst.ok ? orderDirectFirst.reason : "", /只接受普通数据对象$/, "两种顺序理由一致");
-  // 同一路径在 Helper 入口与回执入口上同样生效
   const helper = routeHelper({ kind: "global", extra: { swapped } } as never, { kind: "user", id: "u" }, "u");
   assert.equal(helper.ok, false, "Helper 入口同样拒收");
   assert.match(!helper.ok ? helper.reason : "", /extra\.swapped\.prototype 只接受普通数据对象$/, "Helper 理由应指向 prototype");
@@ -1926,14 +1896,12 @@ test("CH-48 函数自有访问器:被丢弃字段里的函数带 getter/setter(�
     assert.equal(receipt.ok, want, `${label} 回执入口`);
     assert.equal(calls, 0, `${label} 回执调用次数`);
   }
-  // 对照:引擎生成的生成器原型照样放行(它自带 Symbol.toStringTag 这类数据属性,不是访问器)
   calls = 0;
   const ok = grantTool(c, { name: "tool2", bounded: true, ignored: { gen } } as never);
   assert.equal(ok.ok, true, "生成器对照");
   assert.equal(calls, 0, "生成器对照调用次数");
 });
 
-/** 全部 13 种 trap 都计数的 Proxy 处理器;mode 为 throw 时每个 trap 先计数再抛中性错误。 */
 const countingHandler = (counter: { n: number }, mode: "count" | "throw"): ProxyHandler<object> => {
   const h = Object.create(null) as Record<string, unknown>;
   for (const trap of ["getPrototypeOf", "setPrototypeOf", "isExtensible", "preventExtensions", "getOwnPropertyDescriptor", "defineProperty", "has", "get", "set", "deleteProperty", "ownKeys", "apply", "construct"]) {
@@ -1978,11 +1946,9 @@ test("CH-49 生成器函数自有 prototype 是 Proxy(计数型、抛错型 trap
         assert.equal(counter.n, 0, `${kindLabel} ${mode} ${entry} trap 调用次数`);
       }
     }
-    // 对照:未替换的生成器原样接受,普通数据照常
     for (const entry of ENTRIES) assert.equal(callEntry(entry, make()).ok, true, `${kindLabel} 未替换对照 ${entry}`);
   }
   for (const entry of ENTRIES) assert.equal(callEntry(entry, { a: [1, "x", null] }).ok, true, `普通数据对照 ${entry}`);
-  // 既有合同不弱化:函数本身是 Proxy、被丢弃字段直接是 Proxy 也照样不调用即拒
   const counter = { n: 0 };
   const proxied = new Proxy(function* g() {}, countingHandler(counter, "count"));
   const direct = new Proxy({}, countingHandler(counter, "count"));
@@ -2039,8 +2005,6 @@ test("CH-50 定时 cron 按语义校验:各段越界、区间倒置、零步长�
   }
 });
 
-// ---------------------------------------------------------------- 第十九轮复审(R19-01 / R19-02)
-/** 统计 fn 执行期间对 target 的自有属性描述符读取次数(只计这一个数组;结束后一定恢复原函数)。用来观察复制是否在第一个无效项处短路。 */
 const descriptorReads = <T>(target: object, fn: () => T): { result: T; reads: number } => {
   const orig = Object.getOwnPropertyDescriptor;
   let reads = 0;
@@ -2054,13 +2018,11 @@ const descriptorReads = <T>(target: object, fn: () => T): { result: T; reads: nu
     Object.getOwnPropertyDescriptor = orig;
   }
 };
-/** 声明长度 len、自有下标只有 own 里那些的普通稀疏数组(不用 Proxy、访问器或原型改写)。 */
 const sparseOf = (len: number, own: readonly unknown[] = []): unknown[] => {
   const a: unknown[] = [...own];
   a.length = len;
   return a;
 };
-/** 合法 JSON 解析出的 n 项数组:首项 first,其余是字符串。 */
 const jsonList = (n: number, first: string): unknown[] => JSON.parse(`[${first}${',"x"'.repeat(n - 1)}]`) as unknown[];
 const reasonOf = (r: { ok: boolean; reason?: string }): string | false => !r.ok && (r.reason as string);
 /** 入口结果摘要:拒绝取理由;回执入口对字段类型不对的回执按 CH-42 既有约定 {ok:true} 原样返回状态,摘要成"状态不变"+承诺快照。 */
@@ -2071,7 +2033,6 @@ test("CH-51 数组字段遇到空位或无效项当场拒绝,不按声明长度�
   const st = js(c) as unknown as Record<string, unknown> & { commitments: Record<string, unknown>[] };
   const k0 = st.commitments[0]!;
   const big = 1_000_000;
-  // 对该数组的描述符读取上限:与声明长度无关的小常数(第一个无效下标之前的项 + length 与整份回执预检这类固定开销)
   const READ_LIMIT = 8;
   // [名称, 入口, 用某个数组值调用入口];回执入口对坏回执不拒绝而是原样返回状态(CH-42),其余入口都拒绝
   const entries: [string, (a: unknown[]) => { ok: boolean; reason?: string; contact?: Contact }][] = [
@@ -2087,14 +2048,12 @@ test("CH-51 数组字段遇到空位或无效项当场拒绝,不按声明长度�
     const receipt = name.startsWith("回执");
     // 小数组对照:拒绝入口给出理由,回执入口原样返回状态
     const expectSmall = (r: string) => (receipt ? assert.equal(r, unchanged, `${name} 小数组对照状态不变`) : assert.ok(!r.startsWith("状态不变"), `${name} 小数组对照被拒`));
-    // 1) 0 个自有下标、length 100 万:只读第 0 个下标就停
     const small = outcomeOf(call(sparseOf(2)));
     expectSmall(small);
     const a1 = sparseOf(big);
     const r1 = descriptorReads(a1, () => call(a1));
     assert.equal(outcomeOf(r1.result), small, `${name} 大稀疏数组结果`);
     assert.ok(r1.reads <= READ_LIMIT, `${name} 大稀疏数组只读到第一个空位,实际读 ${r1.reads} 次`);
-    // 2) 第 1 个下标是空位:读到第 1 个就停
     const first = name.includes("对象数组") ? (name.includes("tools") ? (st.tools as unknown[])[0] : k0) : "T";
     const smallGap = outcomeOf(call(sparseOf(2, [first])));
     expectSmall(smallGap);
@@ -2102,31 +2061,26 @@ test("CH-51 数组字段遇到空位或无效项当场拒绝,不按声明长度�
     const r2 = descriptorReads(a2, () => call(a2));
     assert.equal(outcomeOf(r2.result), smallGap, `${name} 第 1 位空位结果`);
     assert.ok(r2.reads <= READ_LIMIT, `${name} 第 1 位空位后不再往下读,实际读 ${r2.reads} 次`);
-    // 3) 合法 JSON 的 100 万项数组,首项 null:只读首项就停
     const smallNull = outcomeOf(call(JSON.parse('[null,"x"]') as unknown[]));
     expectSmall(smallNull);
     const a3 = jsonList(big, "null");
     const r3 = descriptorReads(a3, () => call(a3));
     assert.equal(outcomeOf(r3.result), smallNull, `${name} 首项 null 大数组结果`);
     // 回执入口按 CH-42 合同要先查整份回执里任何一层的 Proxy/访问器(首项 null 之后若有 Proxy 必须拒收),所以对调用方实际给出的
-    // 自有下标做一遍只读预检(每个下标 2 次描述符读取),不复制;其余入口在首项就停
     const limit3 = receipt ? 2 * big + READ_LIMIT : READ_LIMIT;
     assert.ok(r3.reads <= limit3, `${name} 首项 null 读取上限 ${limit3},实际读 ${r3.reads} 次`);
   }
-  // 无效项在最后一位仍被拒绝(不是只看前几项)
   const tailBad = [...Array.from({ length: 9_999 }, (_, i) => `T${i}`), 42];
   assert.equal(reasonOf(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: tailBad as never, schedule: null })), "boundTaskIds 里只能是字符串");
   const tailGap = [...Array.from({ length: 9_999 }, (_, i) => `T${i}`)];
   tailGap.length = 10_000;
   assert.equal(reasonOf(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: tailGap, schedule: null })), "boundTaskIds 里只能是字符串");
-  // 访问器照旧不调用即拒:无效项在访问器之前、之后都一样 0 次
   let n = 0;
   const withGetter = (head: unknown[]) => { const a: unknown[] = [...head]; Object.defineProperty(a, a.length, { enumerable: true, get: () => { n++; return "x"; } }); return a; };
   assert.equal(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: withGetter(["T"]) as never, schedule: null }).ok, false);
   assert.equal(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: withGetter([42]) as never, schedule: null }).ok, false);
   assert.equal(grantTool({ ...st, tools: withGetter([(st.tools as unknown[])[0]]) } as never, { name: "weather", bounded: true }).ok, false);
   assert.equal(n, 0, "访问器调用次数");
-  // 合法对照:1 万项字符串数组原样登记并能恢复;合法对象数组恢复照常
   const many = Array.from({ length: 10_000 }, (_, i) => `T${i}`);
   const ok = commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: many, schedule: null });
   assert.equal(ok.ok, true);
@@ -2140,7 +2094,6 @@ test("CH-51 数组字段遇到空位或无效项当场拒绝,不按声明长度�
 
 test("CH-51 声明长度 2^32-1 的空稀疏数组在隔离子进程(堆上限 64 MB)里登记、派活、回执与恢复状态都立即返回(回执按 CH-42 原样返回状态),进程正常退出", () => {
   const url = new URL("./contact.ts", import.meta.url).href;
-  // 同进程小对照:同一构造的短数组照样被拒
   assert.equal(commit(fullContact(), { id: "s", sourceSeq: 1, text: "t", boundTaskIds: sparseOf(3) as never, schedule: null }).ok, false);
   const body = `
 const m = await import(process.env.CONTACT_URL);
@@ -2200,12 +2153,10 @@ test("CH-53 数组字段改为逐项判定后:下标以外的访问器(字符串
     assert.equal(reasonOf(viaRestore(withAcc([tool0], key, enumerable))), `tools 只接受普通数据数组(${label} 是访问器属性)`, `恢复 ${label}`);
   }
   assert.equal(n, 0, "访问器调用次数");
-  // 原型不是 Array.prototype 的数组:放在被丢弃字段、数组下标以外的属性里都拒绝
   const odd = (): string[] => Object.setPrototypeOf(["a"], Object.create(Array.prototype)) as string[];
   assert.equal(reasonOf(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null, extra: odd() } as never)), "承诺.extra 只接受普通数据数组");
   assert.equal(reasonOf(viaCommit(Object.assign(["T"], { foo: odd() }))), "boundTaskIds.foo 只接受普通数据数组");
   assert.equal(reasonOf(grantTool({ ...st, extra: [odd()] } as never, { name: "weather", bounded: true })), "联系人状态.extra.0 只接受普通数据数组");
-  // 对照:同样内容的数据属性、普通数组照常
   assert.equal(viaCommit(Object.assign(["T"], { foo: "x", [sym]: "y", bar: ["a"] })).ok, true);
   assert.equal(viaRestore(Object.assign([tool0], { foo: "x" })).ok, true);
   assert.equal(commit(c, { id: "s", sourceSeq: 1, text: "t", boundTaskIds: [], schedule: null, extra: ["a"] } as never).ok, true);
@@ -2221,7 +2172,6 @@ test("CH-54 通用能力黑名单按规范化名字比对:大小写、首尾空�
     n.toUpperCase(), n[0]!.toUpperCase() + n.slice(1), `${n} `, ` ${n}`, `\t${n}\n`, `　${n}`, fullwidth(n), fullwidth(n.toUpperCase()),
     n.replaceAll("_", "-"), n.replaceAll("_", "."), n.replaceAll("_", " "), n.replaceAll("_", ""), camel(n), camel(n).replace(/^./, (x) => x.toUpperCase()),
   ];
-  // 题面复现样本(独立列出,不由上面的规则生成)
   const reported = ["BASH", "Bash", "bash ", " shell ", "Run_Command", "browser\t"];
   const all = [...new Set([...reported, ...SPEC_GENERAL_TOOLS.flatMap(variants)])].filter((v) => !SPEC_GENERAL_TOOLS.includes(v));
   assert.ok(all.length >= 100, `变体数 ${all.length}`);
@@ -2233,7 +2183,6 @@ test("CH-54 通用能力黑名单按规范化名字比对:大小写、首尾空�
     assert.equal(canCallDirectly(forged, v), false, `canCallDirectly ${JSON.stringify(v)}`);
     assert.equal(briefFor(forged, { task: "t", rules: [], tools: [v], credentialRefs: [] }).ok, false, `briefFor ${JSON.stringify(v)}`);
   }
-  // 对照:名字里只是含有禁项片段、或带前后缀的有界工具照常授予、可直接调用并能恢复(整键比对,不按前缀或子串)
   for (const name of ["bash_history", "shellcheck", "my_shell_notes", "browser_history", "exec_summary", "run_commands", "get_weather", "Get_Weather"]) {
     const g = grantTool(c, { name, bounded: true });
     assert.equal(g.ok, true, `对照 ${name}${g.ok ? "" : ` ${g.reason}`}`);

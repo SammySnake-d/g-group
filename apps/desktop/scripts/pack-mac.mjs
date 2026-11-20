@@ -2,9 +2,7 @@
 // 打 macOS 安装包:先构建(渲染层 + 主进程 + 汇报工具),再在干净的暂存目录里交给 electron-builder。
 // 暂存目录只放运行要的东西(dist、dist-electron、插件示例目录、精简的 package.json),不带 node_modules:
 // 主进程与宿主已由 vite 打成单文件,应用里不需要任何运行时依赖。
-//   node scripts/pack-mac.mjs                构建 + 打包(dmg + zip + latest-mac.yml,输出在 release/)
 //   node scripts/pack-mac.mjs --skip-build   dist/ 与 dist-electron/ 已构建好(例如在别的机器上构建)时只打包
-//   GG_VERSION=0.1.1 node scripts/pack-mac.mjs   临时改版本号打包(验收自动更新用;正式发版改 package.json 的 version)
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";

@@ -1,5 +1,3 @@
-/* 定时编辑器的表单:做什么 → 由谁、在哪 → 什么时候醒 → 什么时候开口 → 开启。
-   保存前整张校验,不合法保存按钮不可用;缺什么写在保存按钮旁边。 */
 import { useId, useState, type ReactNode } from 'react'
 import { Megaphone } from 'lucide-react'
 import { CRON_PRESETS, parseCron, toLocalDateTime, triggerError, type CronTrigger, type CronTriggerKind } from '@g-group/ui-core'
@@ -22,7 +20,6 @@ import { convName, isBot } from './util'
 export type CronDraft = Omit<Cron, 'id' | 'runs'>
 export type EditorProps = { init?: Cron; seed?: { text?: string; expr?: string } | undefined; conv?: string | undefined; owner?: PersonId | undefined; onClose: () => void; onSave: (d: CronDraft) => void }
 
-/** 一组控件的名字(芯片、分段切换、整块触发设置):role=group 挂标签,不把 id 分给里面的控件 */
 function Group({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   const id = useId()
   return (
@@ -74,7 +71,6 @@ export function EditorBody({ init, seed, conv, owner, onClose, onSave }: EditorP
   }
   const save = () => {
     if (!ok || !where || !who) return
-    /* 存规整后的表达式（段间单空格、英文名大写），各处显示和将来交给后端都是同一个写法 */
     const t: CronTrigger = trigger.kind === 'cron' && parsed.ok ? { kind: 'cron', expr: parsed.spec.expr } : trigger
     onSave({ owner: who, conv: where, text: text.trim(), trigger: t, speak, paused: !on, ...(init?.uses ? { uses: init.uses } : {}), ...(init?.srcMsg ? { srcMsg: init.srcMsg } : {}) })
   }

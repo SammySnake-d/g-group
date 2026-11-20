@@ -15,11 +15,7 @@ import { Bubble, Bulb } from './parts'
 import { nid } from './store'
 import type { DraftItem, GItem, GrantItem } from './types'
 
-/* 全局 ⌘K:默认什么都不读;读要授权,发要草稿。Esc 关闭由 App 统一处理(先关这一层)。
-   命令列表是 combobox + listbox:焦点留在输入框,↑↓ 移动选中(有输入时 ↑ 能退到「不选命令」),
-   Enter 执行选中的命令 / 文字正好等于命令名就执行 / 否则把文字当问题发出。 */
 
-/* ⌘K 呼出很频繁,只给库里最快的淡入(Emil:键盘高频操作不加位移动画);数值来自库 token */
 const pop = { initial: { opacity: 0 }, animate: { opacity: 1, transition: transition.popOut } }
 
 export function HelperGlobal() {

@@ -21,7 +21,6 @@ Init ==
   /\ winners = {}
   /\ act = [op |-> "init"]
 
-\* 读任务快照
 Read(c) ==
   /\ pc[c] = "idle"
   /\ seenVer' = [seenVer EXCEPT ![c] = ver]
@@ -38,7 +37,6 @@ Rejected(c) ==
   /\ act' = [op |-> "rejected", who |-> c, ver |-> seenVer[c]]
   /\ UNCHANGED <<ver, owner, seenVer, seenOwner, retried, winners>>
 
-\* 提交点:UseCAS 时原子比较读到的版本与当前版本
 Commit(c) ==
   /\ pc[c] = "read"
   /\ seenOwner[c] = NONE
@@ -50,7 +48,6 @@ Commit(c) ==
   /\ act' = [op |-> "commit", who |-> c, base |-> seenVer[c], over |-> ver]
   /\ UNCHANGED <<seenVer, seenOwner, retried>>
 
-\* 版本已变:收到冲突,重读一次;已重读过就放弃
 Conflict(c) ==
   /\ UseCAS
   /\ pc[c] = "read"
@@ -72,9 +69,7 @@ Next == Done \/ \E c \in Contacts : Read(c) \/ Rejected(c) \/ Commit(c) \/ Confl
 Spec == Init /\ [][Next]_vars /\ WF_vars(Next)
 
 TypeOK == pc \in [Contacts -> {"idle", "read", "won", "lost"}]
-\* 无双持有:至多一个联系人认领成功
 AtMostOneWinner == Cardinality(winners) <= 1
-\* 负责人就是唯一的认领成功者
 OwnerIsWinner == owner # NONE => winners = {owner}
 Terminates == <>(\A c \in Contacts : pc[c] \in {"won", "lost"})
 \* 见证(不是安全性质):取反后让 TLC 给出一条「冲突 → 重读 → 状态机拒绝重复认领」的真实行为,供回放核对真实实现逐步一致

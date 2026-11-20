@@ -3,7 +3,6 @@ import { Command, CommandItem, CommandList } from '@/components/ui/command'
 import { people } from '@/data'
 import * as Concept from '@/concept'
 
-/** @ 选人:第一项是 Helper(回复留在这里)。和 / 菜单同一套原语,焦点留在输入框里 */
 export function MentionMenu({ cands, idx, onHover, onPick }: { cands: string[]; idx: number; onHover: (i: number) => void; onPick: (id: string) => void }) {
   return (
     <Command shouldFilter={false} label="选择要 @ 的人" value={cands[idx] ?? ''} onValueChange={(v) => { const i = cands.indexOf(v); if (i >= 0) onHover(i) }}

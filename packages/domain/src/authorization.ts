@@ -1,16 +1,10 @@
 // 授权:归入任务不等于获授权(不变量 I3、U99、D28.6;验收 AC-17、AC-19、AC-20)。
 // ① 群规「改代码前先问我」生效时,执行器拿不到写工具,写之前必须先问;
-// ② 用户本人在对话里直接说「同意」即可授权,不要求点卡片;按钮只是可选交互;
-// ③ 答复绑定 (task_id, q_id, constraint_ver)、动作和授权人;前提失效、取消、版本已变的迟到同意不放行;
-// ④ 只有用户本人的直接表态算数:联系人/Helper 的话、转发、引用块或引号里的旧同意、外部材料都不产生授权;
-//    同时有多个待授权动作又没指明是哪一个,不猜,追问。
 // 这里全是机械规则(能由规则判定的不调模型,需求文档 1.2 语义判断层);拿不准一律不放行。纯函数,导出常量冻结(#2662)。
 import { normalize } from "./plain.ts";
 
-/** 能改工作区的内置工具:群规要求先问时,未获授权的执行器一律拿不到。Bash 能写文件,同样收走。 */
 export const WRITE_TOOLS: readonly string[] = Object.freeze(["Write", "Edit", "MultiEdit", "NotebookEdit", "Bash"]);
 
-// 「改代码前先问我」这一类群规:动作词(改/写/动/提交/合并/删/修改)+「前/之前」+「先问」,或「先问(我)再/才 + 动作词」,或英文 ask before。
 const ASK_BEFORE: readonly RegExp[] = Object.freeze([
   /(改|写|动|提交|合并|删|修改|编辑|推送|部署)[^。\n]{0,8}(前|之前|以前)[^。\n]{0,4}(先|要|必须|得)?(问|征求|确认)/,
   /先(问|征求|确认)[^。\n]{0,4}(再|才|然后)[^。\n]{0,4}(改|写|动|提交|合并|删|修改|编辑|推送|部署)/,
@@ -18,7 +12,6 @@ const ASK_BEFORE: readonly RegExp[] = Object.freeze([
   /\bask (me )?(first )?before (you )?(edit|writ|chang|modif|commit)/i,
 ]);
 
-/** 群规里生效的「改前先问」那一行原文;没有返回 null。群规是用户写的自由文本,按行查。 */
 export function askBeforeWriteRule(rules: string): string | null {
   if (typeof rules !== "string") throw new TypeError("群规必须是字符串");
   for (const raw of rules.split(/\r?\n/)) {
@@ -28,14 +21,12 @@ export function askBeforeWriteRule(rules: string): string | null {
   return null;
 }
 
-/** 按群规收紧执行器工具:要先问且这一版没拿到授权,就去掉全部写工具;否则原样。返回冻结的新数组。 */
 export function gateTools(tools: readonly string[], askFirst: boolean, granted: boolean): readonly string[] {
   if (!Array.isArray(tools) || !tools.every((t) => typeof t === "string")) throw new TypeError("tools 必须是字符串数组");
   if (typeof askFirst !== "boolean" || typeof granted !== "boolean") throw new TypeError("askFirst/granted 必须是布尔值");
   return Object.freeze(askFirst && !granted ? tools.filter((t) => !WRITE_TOOLS.includes(t)) : [...tools]);
 }
 
-// ---------------------------------------------------------------- 表态识别
 export type Intent = "approve" | "reject" | "unclear";
 const APPROVE_WORDS: ReadonlySet<string> = new Set([
   "同意", "同意了", "我同意", "同意的", "可以", "可以的", "可以了", "可以改", "可以写", "可以做", "可以动", "行", "行吧", "行的", "好", "好的", "好吧", "好啊",
@@ -47,9 +38,7 @@ const REJECT_WORDS: ReadonlySet<string> = new Set([
   "取消", "no", "nope", "reject", "deny", "stop",
 ]);
 const CONSENT_VERB = /同意|批准|允许|授权/;
-// 分句里出现任何否定词,含同意动词的整句都不算同意(「不要同意」「我没同意」「别批准」);短句白名单(如「没问题」)先于这条判
 const NEGATOR = /不|未|没|别|拒绝|否|\bno\b|\bnot\b|don'?t/;
-// 条件、保留、反问:有这些就不是干脆的同意,追问
 const HEDGE = /但|不过|除了|只能|只许|仅限|前提|如果|要是|假如|等等|等一下|稍等|暂停|再说|考虑|想想|[?？]|吗$|么$|呢$/;
 
 /** 去掉引用块(> 开头的行)、代码块与引号里的话:那是别人或过去说的,不是本人此刻的表态(AC-20)。 */
@@ -64,10 +53,6 @@ function ownWords(text: string): string {
 const clauses = (s: string): string[] =>
   s.toLowerCase().split(/[，,。.!！;；、\n~～…]+/).map((c) => c.replace(/[\s\p{Extended_Pictographic}]/gu, "").replace(/(呀|啊|哈|嘛|啦|哦|噢)+$/u, "")).filter(Boolean);
 
-/**
- * 一条消息里本人此刻的表态:每个分句都是同意(短句白名单,或含未被否定的「同意/批准/允许/授权」)才算 approve;
- * 每个分句都是拒绝才算 reject;混合、带条件、反问、或只有别的内容一律 unclear(不放行,交给追问)。
- */
 export function consentIntent(text: string): Intent {
   if (typeof text !== "string") throw new TypeError("text 必须是字符串");
   const own = ownWords(text);
@@ -81,10 +66,8 @@ export function consentIntent(text: string): Intent {
   return "unclear";
 }
 
-// ---------------------------------------------------------------- 待授权请求与答复绑定
 export const REQUEST_STATES = Object.freeze(["pending", "granted", "denied", "expired"] as const);
 export type RequestState = (typeof REQUEST_STATES)[number];
-/** 一次待授权:宿主在任务进 T4b 时登记,绑定任务、提问号、当时的约束版本、要做的动作、谁能授权(提出者本人)、提问消息位置。 */
 export interface AuthRequest {
   readonly qId: string;
   readonly taskId: string;
@@ -94,7 +77,6 @@ export interface AuthRequest {
   readonly roomId: string;
   readonly askedSeq: number;
   readonly state: RequestState;
-  /** 了结它的那条答复(granted/denied 时);expired 时为 null */
   readonly decidedBy: { readonly roomId: string; readonly seq: number } | null;
   readonly reason: string | null;
 }
@@ -105,9 +87,7 @@ export interface ConsentMessage {
   readonly text: string;
   readonly replyToSeq: number | null;
   readonly quotedSeqs: readonly number[];
-  /** 转发来的消息(不是本人此刻写的) */
   readonly forwarded: boolean;
-  /** 来自外部数据源插件的不可信内容(R-10) */
   readonly external: boolean;
 }
 export interface Binding {
@@ -133,7 +113,6 @@ const REQ_INPUT = {
   qId: { kind: "string" }, taskId: { kind: "string" }, constraintVer: { kind: "number" }, action: { kind: "string" },
   principal: { kind: "string" }, roomId: { kind: "string" }, askedSeq: { kind: "number" },
 } as const;
-/** 登记一次待授权。字段不合格抛 TypeError(宿主内部调用,不是用户输入)。 */
 export function openRequest(input: { qId: string; taskId: string; constraintVer: number; action: string; principal: string; roomId: string; askedSeq: number }): AuthRequest {
   const n = normalize<typeof input>(input, REQ_INPUT, "待授权请求");
   if (!n.ok) throw new TypeError(n.reason);
@@ -142,7 +121,6 @@ export function openRequest(input: { qId: string; taskId: string; constraintVer:
   return freeze({ ...r, state: "pending" as const, decidedBy: null, reason: null });
 }
 
-/** 取答复消息的纯数据快照:sender 与 replyToSeq/quotedSeqs 单独核对类型,不合格返回 null。 */
 function readMessage(msg: unknown): ConsentMessage | null {
   const n = normalize<{ roomId: string; seq: number; text: string; forwarded: boolean; external: boolean }>(
     msg, { roomId: { kind: "string" }, seq: { kind: "number" }, text: { kind: "string" }, forwarded: { kind: "boolean" }, external: { kind: "boolean" } }, "答复消息");
@@ -202,7 +180,6 @@ export function resolveConsent(requests: readonly AuthRequest[], msg: ConsentMes
   return freeze({ kind: "none", reason: "没有待授权的动作" });
 }
 
-/** 任务当前的绑定快照:用来核对答复是否仍然有效(前提没变、没取消、版本没变)。 */
 export interface TaskBinding { readonly taskId: string; readonly state: string; readonly constraintVer: number; readonly pendingQId: string | null }
 
 /**
@@ -231,7 +208,6 @@ export function settleRequest(req: AuthRequest, binding: Binding, decision: "app
   };
 }
 
-/** 任务前提变了(改条件、取消、版本推进、卡被替换):把还 pending 的请求记为 expired。返回新数组,不改入参。 */
 export function expireStale(requests: readonly AuthRequest[], task: TaskBinding): readonly AuthRequest[] {
   return Object.freeze(requests.map((r) => {
     if (r.state !== "pending" || r.taskId !== task.taskId) return r;
@@ -240,7 +216,6 @@ export function expireStale(requests: readonly AuthRequest[], task: TaskBinding)
   }));
 }
 
-/** 这一版有没有本人给过的写授权(granted 且版本等于当前版本)。 */
 export function hasGrant(requests: readonly AuthRequest[], taskId: string, constraintVer: number): boolean {
   return requests.some((r) => r.taskId === taskId && r.state === "granted" && r.constraintVer === constraintVer);
 }

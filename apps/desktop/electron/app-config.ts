@@ -1,6 +1,4 @@
 // 应用自己的设置:模型网关(地址、令牌、模型)与更新地址,存在 userData/gg-config.json(权限 600)。
-// 令牌不用钥匙串(safeStorage):没有开发者证书时应用是临时签名,每次更新签名都变,钥匙串会每次弹窗要授权。
-// 有了开发者证书后改成 safeStorage。令牌只进不出:渲染层只拿到 hasToken。
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { GatewayView, SetupInput } from "../src/api/app-shell-types";
@@ -45,7 +43,6 @@ export class AppConfig {
     if (!g) return null;
     return { baseUrl: g.baseUrl ?? "", model: g.model ?? "", hasToken: !!g.token };
   }
-  /** 校验后保存;不合格抛 Error(人话原因) */
   saveGateway(input: SetupInput): Gateway {
     const baseUrl = String(input.baseUrl ?? "").trim().replace(/\/+$/, "");
     const model = String(input.model ?? "").trim();

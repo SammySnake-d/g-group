@@ -1,9 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { shot } from "./shots";
 
-// 进展全景看板(#806 四级 + 单击即跳;#872 / #877 照 mirasim「会话全景」;#998 带暗背景的弹出遮罩)。
-// 对照 g-group-progress-panel 原型 README 的 20 项核对里能在桌面端成立的部分:悬停整条链、状态筛选、各类单击落点、
-// Esc / 点暗背景关闭、搜索框里 Esc 先清搜索、关了再开筛选还在、展开后收起吸底、按联系人、1024 宽子任务列自动隐藏。
 
 const open = async (page: Page) => {
   await page.getByTestId("nav-activity").click();
@@ -26,10 +23,8 @@ test("四级:对话 → 联系人(只有群聊)→ Compute → 子任务;不显�
   await expect(page.getByTestId("pano-contact-g/claude")).toBeVisible();
   await expect(page.getByTestId("pano-compute-login")).toContainText("登录页改成深色主题");
   await expect(page.getByTestId("pano-sub-sl1")).toBeVisible();
-  // 私聊没有联系人这一级
   await expect(page.getByTestId("pano-root-dm-claude")).toBeVisible();
   await expect(page.locator('[data-testid^="pano-contact-dm-"]')).toHaveCount(0);
-  // 群里同一上游同一原因失败两个 → 群级提示
   await expect(page.getByTestId("pano-hint-g")).toContainText("2 个同因失败");
   await expect(board).not.toContainText("¥");
   await expect(board).not.toContainText("花费");
@@ -64,7 +59,6 @@ test("状态块:点一下只看这一类,再点取消;关掉再开筛选还在",
   await page.getByTestId("pano-kpi-failed").click();
   await expect(page.getByTestId("pano-kpi-all")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("pano-compute-login")).toBeVisible();
-  // 组内左右方向键移动焦点
   await page.getByTestId("pano-kpi-all").focus();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByTestId("pano-kpi-wait")).toBeFocused();
@@ -86,7 +80,6 @@ test("关闭:Esc、点暗背景、×;搜索框里 Esc 先清搜索", async ({ pa
   await open(page);
   await page.getByTestId("pano-search").fill("provenance");
   await expect(page.locator('[data-testid^="pano-compute-"]')).toHaveCount(1);
-  // 搜索命中被折叠的子任务时把它露出来
   await expect(page.getByTestId("pano-sub-sr11")).toBeVisible();
   await expect(page.getByTestId("pano-more-in:d-pr1")).toHaveText(/还有 5 个/);
   await page.getByTestId("pano-search").press("Escape");
@@ -158,7 +151,6 @@ test("子任务超过 6 个折叠;展开后「收起」吸在可视区底部,点
   await more.click();
   await expect(more).toHaveText(/收起/);
   await expect(page.getByTestId("pano-sub-sr11")).toBeVisible();
-  // 把展开的列表顶部滚到可视区下沿附近:「收起」本来在可视区外,吸底后仍看得见
   const canvas = page.getByTestId("pano-canvas");
   const first = page.getByTestId("pano-sub-sr1");
   const cBox = (await canvas.boundingBox())!;

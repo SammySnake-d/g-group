@@ -1,6 +1,3 @@
-// 插件接线:plugins.list 全量读 → 插件切片(本机真实装好的插件);plugin.updated 整条换,plugin.removed 删掉。
-// 宿主里装好的插件对所有聊天生效(commands.list 不分会话),所以连上后端时每个插件都挂在全部会话上;新会话出现时补上。
-// 合同里没有的(简介、图标、命令标题与参数、更新记录、风险级别)不编:名字用合同的,图标按 id 稳定挑色、取名字首字,风险一律按低显示原文说明。
 import type { CapabilityLibraryView, PluginView } from '@g-group/api-contract'
 import type { PluginCategory, PluginManifest } from '@g-group/ui-core'
 import { SWATCHES, type PluginState } from '@/data'
@@ -17,7 +14,6 @@ function manifestOf(p: PluginView): PluginManifest {
     summary: p.commands.length ? p.commands.map((c) => `/${c}`).join(' ') : '', description: '',
     icon: { letter: [...p.name][0] ?? '?', color: SWATCHES[hash(p.id) % SWATCHES.length]! },
     permissions: p.permissions.map((x) => ({ scope: x.key, detail: x.description, risk: 'low' as const })),
-    /* 合同只给命令名,没有标题与参数说明:标题就用命令名,参数与说明不编 */
     contributes: { commands: p.commands.map((name) => ({ name, title: name, desc: '', args: [] })), panels: [], events: [] },
     changelog: [],
   }
@@ -25,7 +21,6 @@ function manifestOf(p: PluginView): PluginManifest {
 
 const PHASE: Record<PluginView['status'], PluginState['phase'] | null> = { installing: 'installing', uninstalling: 'uninstalling', ready: null, updating: null, error: null }
 
-/** 合同的插件 → 界面的插件;挂在 convs 这些会话上(宿主里装好就对所有聊天生效) */
 export function toPluginState(p: PluginView, convs: string[]): PluginState {
   const m = manifestOf(p)
   const phase = PHASE[p.status] ?? (p.enabled ? 'enabled' : 'disabled')
@@ -56,7 +51,6 @@ export const pluginsWiring = defineWiring({
   },
 })
 
-/** 全局能力库(capabilities.list):群资料「工具」页给联系人勾选的 skill / MCP 配上说明;读不到返回 null */
 export async function capabilitiesLive(): Promise<CapabilityLibraryView | null> {
   const r = await call('capabilities.list', {})
   return r.ok ? r.value : null

@@ -1,5 +1,3 @@
-/* 运行历史:每次醒来做了什么(发了消息 / 没打扰你 / 失败),当时带的公告是不是最新,点了跳回当次的消息。
-   最近一次失败的那行就地给「重试」。 */
 import { RotateCw } from 'lucide-react'
 import { formatRunAt } from '@g-group/ui-core'
 import { useApp } from '@/ctx'
@@ -11,7 +9,6 @@ import { Chip } from '@/components/ui/chip'
 import { DETAIL, HEALTH_TICKS, TICK_CLS } from './constants'
 import { ResultIcon } from './ResultIcon'
 
-/** 最近几次醒来的结果条(照 mirasim 自动化详情的 health strip):从旧到新一格一次,失败红、发了消息绿、没打扰你灰 */
 function HealthStrip({ runs }: { runs: Cron['runs'] }) {
   const recent = runs.slice(0, HEALTH_TICKS).reverse()
   if (!recent.length) return null

@@ -23,7 +23,6 @@ function isPidAlive(pid: number) {
 }
 
 function removeOwnedLock(lockDir: string, owner: string) {
-  // Only the process that unlinks this acquisition's unique marker removes the directory.
   try {
     fs.unlinkSync(path.join(lockDir, owner));
   } catch (error) {

@@ -16,7 +16,6 @@ import { PluginTab } from './PluginTab'
 import { PulseTimeline } from './PulseTimeline'
 import { ToolsTab } from './ToolsTab'
 
-/** 记住每个群上次看的页签：从定时详情等别的分屏标签切回来，还停在原来那页 */
 const lastTab: Record<string, GTab> = {}
 
 export function GroupPane({ id, initial }: { id: string; initial?: GTab }) {

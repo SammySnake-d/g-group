@@ -1,4 +1,3 @@
-/* C-US23 投票:每位助手投票附理由,你拍板 */
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { people } from '@/data'

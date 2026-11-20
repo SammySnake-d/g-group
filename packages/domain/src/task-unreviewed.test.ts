@@ -42,7 +42,6 @@ test("Q09 A2 提出者本人验收没经审查的交付 → T8_Accepted,记 waiv
   assert.equal(r.task.state, "T8_Accepted");
   assert.equal(r.task.badge, "accepted");
   assert.equal(r.task.reviewGate, "waived-by-user");
-  // 对照:合规审查过的交付被本人验收,门禁仍是 compliant,不被改记成豁免
   const reviewed = must(applyAll(inReview(), [
     { kind: "Review", reviewerId: "astra", reviewerModel: "gpt-6-astra", round: 1, commit: "abc", constraintVer: 0, verdict: "approve" },
     { kind: "DeliveredCard", taskId: "t1", deliveryRound: 1, commit: "abc" },

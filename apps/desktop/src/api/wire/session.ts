@@ -1,21 +1,13 @@
-// 「会话」页签在连上后端时读的记录:按合同里真有的东西拼出这个 Compute 的对话——
-//   联系人交给它的那段话(派活卡上的 brief)、它自己报的每一步(tasks.progress 全量)、受阻 / 失败 / 停下的提示、
-//   运行台账里它这次会话的轮次、后台任务、子代理和卡死判定、重跑(runs.get),以及本轮交付(任务工件)。
 // 合同里没有 harness 工具调用级的原始记录,这里不编工具调用;Compute 的原话只在这里和「过程」里,不进聊天(AC-03)。
 import type { ComputeProgress, RunEventView, RunView, TaskView } from '@g-group/api-contract'
 import type { AgentEvent, BackgroundJob, HarnessId, HarnessTranscript, TranscriptEvent } from '@g-group/ui-core'
 
 export interface SessionFacts {
   task: TaskView
-  /** tasks.progress 读到的全部进度(按时间) */
   progress: readonly ComputeProgress[]
-  /** 还有更早的进度没取 */
   hasEarlier: boolean
-  /** 联系人交给 Compute 的那段话;读不到就用任务标题 */
   brief: string
-  /** 派它的联系人名 */
   owner: string
-  /** 台账里这件事最近一次的 Compute 会话 */
   session?: { run: RunView; children: readonly RunView[]; events: readonly RunEventView[] }
 }
 
@@ -25,7 +17,6 @@ const JOB_STATUS: Record<RunView['status'], BackgroundJob['state']> = { queued: 
 type DistOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 type Draft = { at: string; e: DistOmit<TranscriptEvent, 'seq' | 'id'> & { id?: string } }
 
-/** 进度事件 → 对话里的一条:它报的进展、做完的结论算它说的话;受阻、失败、停下是系统提示 */
 function fromProgress(p: ComputeProgress): Draft['e'] {
   switch (p.kind) {
     case 'milestone': return { kind: 'text', at: p.at, text: p.stage ? `${p.stage} · ${p.summary}` : p.summary }
@@ -37,13 +28,11 @@ function fromProgress(p: ComputeProgress): Draft['e'] {
   }
 }
 
-/** 本轮交付的一项:写人看得懂的名字和它在「文件」区里叫什么 / 工作目录里的路径,不露内部编号 */
 function deliverable(title: string, a: TaskView['artifacts'][number]) {
   if (a.kind === 'text') return { name: '结果', type: a.kind, ref: `文件区：${title} · 结果` }
   return { name: a.name.split('/').pop() || a.name, type: a.kind, ref: a.name }
 }
 
-/** 台账事件里值得给人看的:卡死判定、重跑 */
 function fromRunEvent(e: RunEventView): Draft['e'] | null {
   if (e.kind === 'stall-judged') return { kind: 'notice', at: e.at, level: 'warn', text: '这一轮卡住没有进展，已判失败' }
   if (e.kind === 'rerun') {
@@ -53,7 +42,6 @@ function fromRunEvent(e: RunEventView): Draft['e'] | null {
   return null
 }
 
-/** 拼出对话记录;还没起过 Compute(排队等槽位)就是 null */
 export function liveTranscript(f: SessionFacts): HarnessTranscript | null {
   const runs = f.task.computeRuns
   const first = runs[0], last = runs[runs.length - 1]

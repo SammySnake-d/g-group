@@ -2,7 +2,6 @@ import type { SlashInvocation } from '@g-group/ui-core'
 import { cn } from '@/lib/utils'
 import { SourceBadge } from './SourceBadge'
 
-/** 命令提示:是哪条命令、现在该填什么、哪里不对 */
 export function SlashHint({ inv }: { inv: SlashInvocation }) {
   const shownErr = inv.args.filter((a, i) => a.error && !(inv.typing && i === inv.current)).map((a) => a.error!)
   const cur = inv.current >= 0 ? inv.args[inv.current]!.arg : undefined
@@ -21,12 +20,10 @@ export function SlashHint({ inv }: { inv: SlashInvocation }) {
   )
 }
 
-/** 打了个不存在的命令:说清楚回车会当普通消息发 */
 export function SlashUnknown({ name }: { name: string }) {
   return <div data-testid="slash-unknown" className="px-3 pt-2 text-[12px] text-fg-3">没有 <span className="font-mono text-fg-2">/{name}</span> 这个命令，回车会当普通消息发出</div>
 }
 
-/** 参数提示:在你打的字后面接上还没填的参数(当前该填的高亮,后面的灰色)。和输入框同字号同行高,叠在它下面 */
 export function ArgGhost({ inv, draft }: { inv: SlashInvocation; draft: string }) {
   return (
     <div aria-hidden data-testid="slash-ghost" className="pointer-events-none absolute inset-x-3 top-0 whitespace-pre-wrap break-words py-2 text-[14.5px] leading-[1.6]">

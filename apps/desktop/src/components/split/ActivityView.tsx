@@ -10,9 +10,7 @@ import { Avatar } from '@/components/Avatar'
 import { ACT } from './acts'
 import { Collapse } from './Collapse'
 
-/* 过程:左边步骤(可点筛选,再点一次取消),右边按步骤分组的活动流;默认展开最新一条 */
 
-/** 行状按钮:整行可点、左对齐、能换行(Button 原语的默认是居中单行) */
 const rowBtn = 'h-auto w-full justify-start whitespace-normal rounded-lg text-left font-normal active:scale-100'
 
 function StepIcon({ c, state }: { c: Compute; state: Compute['steps'][number]['state'] }) {

@@ -1,6 +1,4 @@
 // 常驻 Compute 适配器与轮边界换模型的行为测试(AC-51、需求文档 D27)。
-// 适配器测试起真实子进程:假 CLI(test-support/fake-claude-resident.mjs)按 Claude Code 2.1.319 实测的常驻 stream-json 行为工作,
-// 并真的起 report_progress MCP 服务器。不 mock child_process。每条测试只回收自己目录下的进程,结束删目录。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -144,7 +142,6 @@ test("子路径入口 @g-group/adapter-cc-compute/resident 导出常驻适配器
   assert.equal(createResidentComputeAdapter({ inSessionModelSwitch: false }).capabilities?.inSessionModelSwitch, false);
 });
 
-// ---------------- 常驻适配器:真实子进程 ----------------
 test("常驻:三轮同一 PID、同一会话 id,首个提示和后续输入都写进同一进程的 stdin", async () => {
   const r = rig(createResidentComputeAdapter);
   const id = await r.spawn();
@@ -229,7 +226,6 @@ test("切换被拒不静默:set_model 回 check_failed,这一轮输入不写入,
   await new Promise((ok) => setTimeout(ok, 150));
   assert.equal(r.recs().some((x) => x.kind === "in" && x.text === "用 X 跑这一轮"), false, "被拒后没有用旧模型照常发出");
   assert.equal(r.turnEnds().length, 1);
-  // 修好之后同一会话照常继续
   assert.equal((await r.adapter.resume(id, "暗号是什么", { model: "model-B" })).ok, true);
   await r.until(() => r.turnEnds().length === 2);
   const end = r.turnEnds()[1]!;

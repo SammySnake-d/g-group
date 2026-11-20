@@ -6,7 +6,6 @@ import type { Person, PersonId } from '@/data'
 
 export const people: Record<PersonId, Person> = { me: { ...SELF }, helper: { ...HELPER } }
 
-/** 整表换掉;没给你自己和 Helper 时补上默认身份 */
 export function replacePeople(list: Person[]) {
   for (const k of Object.keys(people)) delete people[k]
   people.me = { ...SELF }

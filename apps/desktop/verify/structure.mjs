@@ -1,12 +1,5 @@
 #!/usr/bin/env node
 // 结构检查(把 #932「做好解耦、代码拆分,不要硬编码常量、表情 Emoji」和 #929「优先用组件、原语」固化成机械规则):
-//  1. 组件里不出现表情字面量(表情集合放 src/config/emoji.ts)
-//  2. 组件里不写死色值(#rrggbb / rgb()),颜色走语义 token;插件品牌色这类数据放 data/config
-//  3. 不用 transition-all(Vercel:只列出要过渡的属性)
-//  4. 单文件不超过 400 行;历史大文件按 structure-baseline.json 的行数只许变少(棘轮),拆完从基线里删掉
-//  5. 原生 <button> 的数量按文件只许变少(新代码用 Button / IconButton 原语)
-//  1、2 在历史文件里同样按基线计数棘轮:只许变少,新文件一处都不许有。最终目标是基线清空。
-// 用法:node verify/structure.mjs [--update-baseline]   失败时列出每一处
 import fs from "node:fs";
 import path from "node:path";
 

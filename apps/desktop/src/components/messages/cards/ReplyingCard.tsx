@@ -10,7 +10,6 @@ import { Chip } from '@/components/ui/chip'
 import { Pressable, TextLink } from '../Pressable'
 import type { MsgOf } from '../types'
 
-/** 已经忙了多久:每秒走一次(连上后端时从宿主推「开始想」那一刻算起,不编) */
 function useElapsed(since: number | undefined): string | null {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -28,7 +27,6 @@ export function ReplyingCard({ m }: { m: MsgOf<'replying'> }) {
   const [open, setOpen] = useState(false)
   const elapsed = useElapsed(m.since)
   const p = people[m.from]
-  /* 没有步骤可展开(连上后端时宿主只报在看 / 在想 / 在写):只写这一行,不放展开箭头 */
   if (!m.steps.length) return (
     <div className="mt-3 flex items-start gap-2.5" data-testid={`replying-${m.from}`} data-msg={m.id} data-activity={m.phase}>
       <Avatar id={m.from} size={32} mood="thinking" />

@@ -1,4 +1,3 @@
-/* 挂在消息里的东西:文件、任务认领板、转发的聊天记录。整张卡可点,点了在右侧分栏或浮层里看 */
 import { FileText, Globe, Server, Table2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { artifacts, people } from '@/data'
@@ -7,7 +6,6 @@ import { Avatar } from '@/components/Avatar'
 import { Pressable } from '../Pressable'
 import type { MsgOf } from '../types'
 
-/** 卡片式可点区域:细边、悬停描边加深;按下回馈用 Button 原语自带的 scale(.97) */
 const CARD = 'flex max-w-full flex-col items-stretch rounded-2xl border border-line bg-elev text-[13px] hover:border-fg-3/40'
 
 export function ArtifactIcon({ kind, className }: { kind: 'doc' | 'page' | 'sheet' | 'asset'; className?: string }) {
@@ -26,7 +24,6 @@ export function FileCard({ id }: { id: string }) {
   )
 }
 
-/* US1 任务认领板:群里每个人都能看到谁领了什么 */
 export function BoardCard({ id }: { id: string }) {
   const { boards, openSplit } = useApp()
   const b = boards[id]

@@ -1,8 +1,4 @@
 // 定时归联系人(概念卡 v2 第 11 张,#1286):cron 表达式 + IANA 时区,宿主算下次触发时间。
-// 五段:分 时 日 月 周。每段支持 *、数字、a-b、a-b/n、*/n、逗号列表;月支持 JAN–DEC,周支持 SUN–SAT(0 与 7 都是周日)。
-// 日与周都受限(都不是 *)时按 Vixie cron 规则取「或」。
-// 时区按 Intl 计算本地时间,夏令时:跳过的本地时刻(春季拨快)不触发;重复的本地时刻(秋季拨慢)只在第一次触发。
-// 纯函数,不读系统时区。
 
 export interface CronSpec {
   readonly minutes: readonly number[];
@@ -109,11 +105,9 @@ function localOf(ms: number, tz: string): Local {
   for (const x of f.formatToParts(new Date(ms))) if (x.type !== "literal") p[x.type] = Number(x.value);
   return { y: p.year!, mo: p.month!, d: p.day!, h: p.hour!, mi: p.minute! };
 }
-/** 本地时刻 → UTC 毫秒;不存在的本地时刻返回 null,重复的返回较早那个。 */
 function utcOf(l: Local, tz: string): number | null {
   const guess = Date.UTC(l.y, l.mo - 1, l.d, l.h, l.mi);
   const hits: number[] = [];
-  // 时区偏移在 -14h..+14h 之间:用两个候选偏移试探
   for (const probe of [guess - 14 * 3600_000, guess, guess + 14 * 3600_000]) {
     const lp = localOf(probe, tz);
     const offset = Date.UTC(lp.y, lp.mo - 1, lp.d, lp.h, lp.mi) - probe;
@@ -137,7 +131,6 @@ function dayMatches(s: CronSpec, y: number, mo: number, d: number): boolean {
   return dm || wm;
 }
 
-/** afterMs 之后(严格大于)的接下来 count 次触发时间(UTC 毫秒)。最多向前找 5 年。 */
 export function nextRuns(spec: CronSpec, tz: string, afterMs: number, count = 1): number[] {
   if (!isValidTimeZone(tz)) throw new RangeError(`不认识的时区 ${tz}`);
   const out: number[] = [];
@@ -172,7 +165,6 @@ export function nextRuns(spec: CronSpec, tz: string, afterMs: number, count = 1)
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
-/** 人话描述,给表单预览。 */
 export function describeCron(spec: CronSpec, tz: string): string {
   const times =
     spec.hours.length * spec.minutes.length <= 6

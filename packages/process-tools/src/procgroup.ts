@@ -1,12 +1,6 @@
 // 进程组信号。对照 mirasim 0.0.774 server-main.cjs(用户 g-group#2309 定"按照 mirasim 的做法来"):
-// - POSIX 上 CLI 以 detached:true 启动,自成进程组;Windows 不 detached。
-// - 停止(z2 的 l2 → MLe)只对 CLI 主进程发 SIGTERM;reapForceMs 后主进程仍未退出才对进程组 SIGKILL(k2 → FG,process.kill(-pid));
-//   主进程先退出就清掉这个计时器(j2)。主进程已退出时 z2 什么都不发。
-// - 不按 ppid 遍历后代树、不追 setsid 脱组的进程、报停止前不确认任何进程已退出。
-// - 已受理 blocked 时对进程组 SIGSTOP 是本适配器自己的做法,mirasim 0.0.774 没有对照(非 mirasim 对照项)。
 export const IS_WINDOWS = process.platform === "win32";
 
-/** 对 CLI 的进程组发信号(mirasim 的 FG);pid 不合法(≤1)时什么都不做,永远不会落到 kill(0)/kill(-1) */
 export function signalGroup(pid: number | undefined, sig: NodeJS.Signals): void {
   if (pid === undefined || !Number.isInteger(pid) || pid <= 1) return;
   if (!IS_WINDOWS) {
@@ -21,15 +15,11 @@ export function signalGroup(pid: number | undefined, sig: NodeJS.Signals): void 
 }
 
 // ---- 停止确认(AC-23;需求 §8.1 已定第 16 条:停止照 mirasim、不用容器,
-//      「助手启动的程序及其子程序全部找出来关掉、确认都退出才显示已停止;交给系统后台托管的程序找不到也关不掉」)----
-// 上面的 mirasim 对照只管「发停止」;这里管「确认停下」:按进程表找 CLI 主进程的后代(含 setsid 脱组但父子链还在的)与同进程组成员,
-// 主进程退出后把还活着的全部 SIGKILL,轮询到都退出。父子链在停止前就断了的(双 fork 守护进程、launchd 托管)找不到,不在保证范围。
 
 export interface ProcRow {
   readonly pid: number;
   readonly ppid: number;
   readonly pgid: number;
-  /** ps 的 stat;Z 开头是已退出待回收 */
   readonly stat: string;
   /** ps 的 lstart 进程启动身份;读不到时为 null,不能用来确认同一 PID */
   readonly identity: string | null;
@@ -52,7 +42,6 @@ export function processTable(run: () => string): readonly ProcRow[] | null {
   return rows;
 }
 
-/** root 的全部后代(按 ppid 链)与同进程组(pgid = root)成员,不含 root 自己;已是僵尸的不算 */
 export function treeOf(root: number, table: readonly ProcRow[]): readonly ProcRow[] {
   const live = table.filter((r) => !r.stat.startsWith("Z") && r.pid > 1);
   const found = new Map<number, ProcRow>();
@@ -91,7 +80,6 @@ export function treeByPgrep(root: number, pgrep: (args: readonly string[]) => re
 
 export type ProcessMatch = "alive" | "gone" | "unknown";
 
-/** 按 PID + 启动身份核对是否仍是快照中的同一个进程;进程组变化不改变身份。 */
 export function processMatch(known: ProcRow, now: ProcRow | undefined): ProcessMatch {
   if (!now || now.stat.startsWith("Z")) return "gone";
   if (known.identity === null || now.identity === null) return "unknown";

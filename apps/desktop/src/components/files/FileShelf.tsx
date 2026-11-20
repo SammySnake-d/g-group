@@ -15,7 +15,6 @@ export function FileShelf({ collection, onOpen, onPeek }: {
   collection: Artifact[]; onOpen: (id: string) => void; onPeek: (a: Artifact, keyboard?: boolean) => void
 }) {
   const { convs, query, setQuery } = useApp((s) => ({ convs: s.convs, query: s.fileQuery, setQuery: s.setFileQuery }))
-  // 换了搜索词就从第一页重新数
   const [paging, setPaging] = useState({ q: query, n: PAGE_SIZE })
   const limit = paging.q === query ? paging.n : PAGE_SIZE
   const list = collection.filter((a) => matchFile(a, query, convs))

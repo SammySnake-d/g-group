@@ -8,7 +8,6 @@ import { Avatar } from '../Avatar'
 import { CardLabel, ConfirmCard } from './parts'
 import type { CsvCard, GroupCard } from './types'
 
-/* 面板里的两张确认卡:Helper 先把要做的事摆出来,你改好、点了才执行 */
 
 export function GroupConfirm({ c, card, onChange, onCreate }: { c: Conversation; card: GroupCard; onChange: (g: GroupCard) => void; onCreate: () => void }) {
   const by = dutyByConv[c.id] ?? {}

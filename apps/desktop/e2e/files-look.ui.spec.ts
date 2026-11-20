@@ -1,7 +1,6 @@
 import { test } from '@playwright/test';
 import { shot } from './shots';
 
-// 文件页前后对照截图:只导航、只拍,不依赖具体结构,改前改后用同一份跑。
 const sizes = [
   { tag: 'wide', width: 1440, height: 900 },
   { tag: 'narrow', width: 1024, height: 768 },
