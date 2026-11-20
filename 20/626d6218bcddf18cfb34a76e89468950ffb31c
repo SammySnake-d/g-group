@@ -1,0 +1,23 @@
+packages/server/src/task-doc.ts
+  s_b9ccea1f504419::t_73e48cf92889e4 3,25-48
+packages/server/src/host.ts
+  s_b9ccea1f504419::t_73e48cf92889e4 161,2004,2009,2034,2037,2062,2064,3184-3186
+packages/server/src/assemble.ts
+  s_b9ccea1f504419::t_acb99cba926803 42-46,55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20626d6218bcddf18cfb34a76e89468950ffb31c",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "blueloon-gpt/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
