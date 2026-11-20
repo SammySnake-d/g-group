@@ -1,0 +1,62 @@
+docs/third-party/task-board-adaptation.md
+  s_b9ccea1f504419::t_18cb233f0df414 1-15
+packages/domain/src/task.test.ts
+  s_b9ccea1f504419::t_59eca14850f22d 25,58,69,75,81,89,94,98-101
+  s_b9ccea1f504419::t_e514a67c20f14d 1298-1299
+  s_b9ccea1f504419::t_32d5b56763b8ca 48,138
+  s_b9ccea1f504419::t_90418b440161ad 63
+packages/kernel/src/runtime-ports.ts
+  s_b9ccea1f504419::t_20ece420217218 94,100-101,124
+packages/server/src/service.ts
+  s_b9ccea1f504419::t_8c2fe6c4aa00a2 117
+packages/adapter-pi-contact/src/mind.test.ts
+  s_b9ccea1f504419::t_4787d12c7fd18f 137,150
+packages/kernel/src/compact.ts
+  s_b9ccea1f504419::t_de8b52235101a6 20-23
+packages/adapter-pi-contact/src/tools.ts
+  s_b9ccea1f504419::t_0c3d62cc51f079 11-12,56-69,296-297
+packages/server/src/host.ts
+  s_b9ccea1f504419::t_65c7a339d7c246 3434
+  s_b9ccea1f504419::t_9db65eb9c1e2a2 2085-2102
+  s_b9ccea1f504419::t_490cee7bb80b9e 2003,2005
+  s_b9ccea1f504419::t_664b80890a6afd 3075,3161
+  s_b9ccea1f504419::t_16c414a656e5ce 3427-3433,3435-3447
+packages/api-contract/src/api.ts
+  s_b9ccea1f504419::t_83edb568721199 264
+packages/server/src/task-timeline.ts
+  s_b9ccea1f504419::t_87b4c0e46893a5 37-38
+packages/server/src/group-claim.test.ts
+  s_b9ccea1f504419::t_6ff3291ef02cdd 156,159-162,172-173
+  s_b9ccea1f504419::t_4448425f04ec04 176
+  s_b9ccea1f504419::t_aa29166b5918d3 152-155,157-158,163-171,174-175,177-179,182-192,194-199
+  s_b9ccea1f504419::t_780e29eb759d25 180-181
+  s_b9ccea1f504419::t_8f02e5ee9769de 193
+packages/server/src/assemble.ts
+  s_b9ccea1f504419::t_d52e4d13f5afd9 97,104,113-114
+packages/server/src/manual-task.test.ts
+  s_b9ccea1f504419::t_ffcd1b4b2ad2a6 35-36,114
+  s_b9ccea1f504419::t_46d8a004390516 113,115,117,119-126
+  s_b9ccea1f504419::t_0b83897de287af 116,118
+packages/domain/src/task.ts
+  s_b9ccea1f504419::t_df0096e8a0815c 437
+  s_b9ccea1f504419::t_83a54dec16b5db 341,349,359,376,392,399,406,415,418,441-442
+  s_b9ccea1f504419::t_0376fa6dcd0652 309-324
+  s_b9ccea1f504419::t_ef3ad2a72b0f97 5,10-11,72
+  s_b9ccea1f504419::t_1830db944c1487 474-475
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8e6a8fe9fb055276a37a60da7556227738d9a583",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "blueloon-gpt/gpt-6.2-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
