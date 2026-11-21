@@ -422,13 +422,16 @@ test("verdict 工具:通过与修改意见都登记成 verdict 动作,修改意�
     value: { kind: "action", action: { kind: "verdict", taskId: "t-1", sourceSeq: 10, verdict: "revise", feedback: "标题加粗" } },
   });
   const decl = TOOL_DECLARATIONS.find((d) => d.name === "verdict")!;
+  const deliverDecl = TOOL_DECLARATIONS.find((d) => d.name === "deliver")!;
+  assert.match(deliverDecl.description, /无需等用户回复通过/);
+  assert.match(decl.description, /不需要等用户说通过/);
   assert.deepEqual(decl.parameters, {
     type: "object",
     properties: {
-      taskId: { type: "string", minLength: 1, description: "被验收的任务 id" },
-      sourceSeq: { type: "integer", minimum: 0, description: "用户表达通过或修改意见的那条消息的 seq(必须是提出者本人在交付之后发的)" },
-      verdict: { type: "string", enum: ["accept", "revise"], description: "accept:用户明确说通过;revise:用户要改" },
-      feedback: { type: ["string", "null"], minLength: 1, description: "revise 时用户要改什么(原话);accept 省略" },
+      taskId: { type: "string", minLength: 1, description: "要验收或重新打开修改的任务 id" },
+      sourceSeq: { type: "integer", minimum: 0, description: "提出者表达修改意见或明确通过的那条消息的 seq(必须是提出者本人在交付之后发的)" },
+      verdict: { type: "string", enum: ["accept", "revise"], description: "revise:提出者要改(重新打开并续改);accept:提出者明确说通过(待确认时可选记下)" },
+      feedback: { type: ["string", "null"], minLength: 1, description: "revise 时提出者要改什么(原话);accept 省略" },
     },
     required: ["taskId", "sourceSeq", "verdict"],
     additionalProperties: false,

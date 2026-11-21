@@ -1030,7 +1030,7 @@ export class Host {
     const last = visible.at(-1);
     const openCards = one<{ n: number }>(this.db, "SELECT count(*) AS n FROM gg_cards WHERE room_id = ? AND state = 'open'", roomId)?.n ?? 0;
     // 等用户回复的交付(普通消息交付,没有卡片)也算一件待你处理的事
-    const pending = openCards + listDocs<TaskDoc>(this.db, "task:").filter((d) => d.value.roomId === roomId && awaitingUser(d.value)).length;
+    const pending = openCards + listDocs<TaskDoc>(this.db, "task:").filter((d) => d.value.roomId === roomId && awaitingUser(d.value) && this.needsCodeIntegration(d.value.task.id)).length;
     const draft = getDoc<DraftView>(this.db, `draft:${roomId}`)?.value;
     const linkedRooms = this.linksOfUser(roomId).map(({ linkedRoomId, kind, title, uptoSeq, linkedAt }) => ({ roomId: linkedRoomId, kind, title, uptoSeq, linkedAt }));
     return {
@@ -1862,7 +1862,8 @@ export class Host {
       this.cardAct({ roomId: card.room_id, seq: card.seq, cardId: card.card_id, actionId: decision, clientActionId, ...(note ? { text: note } : {}) });
       return this.taskViewById(taskId);
     }
-    if (decision === "cancel" || !awaitingUser(doc)) throw new HostError("conflict", decision === "cancel" ? `任务在 ${doc.task.state},不能取消` : `任务在 ${doc.task.state},没有待确认的交付`);
+    if (decision === "cancel" || !(decision === "accept" ? awaitingUser(doc) : awaitingUser(doc) || (doc.task.state === "T8_Accepted" && doc.task.delivery !== null)))
+      throw new HostError("conflict", decision === "cancel" ? `任务在 ${doc.task.state},不能取消` : `任务在 ${doc.task.state},没有待确认的交付`);
     const me: Member = { kind: "user", id: this.userId };
     const effects: HostEffect[] = [];
     const r = tx(this.db, () => {
@@ -3033,7 +3034,11 @@ ${e.body}` })), q.text, visible.length);
       ...(rerunOf ? { rerunOf: rerunOf.rerunOf, attempt: rerunOf.attempt } : {}),
     });
     this.setActivity(contactId, focusRoom, "thinking");
-    const tasks = this.listTasks({}).filter((t) => rooms.some((r) => r.id === t.roomId) && (!t.ownerContactId || t.ownerContactId === contactId) && !TERMINAL.has(t.state));
+    const roomTasks = this.listTasks({}).filter((t) => rooms.some((r) => r.id === t.roomId));
+    const tasks = [
+      ...roomTasks.filter((t) => (!t.ownerContactId || t.ownerContactId === contactId) && !TERMINAL.has(t.state)),
+      ...roomTasks.filter((t) => t.ownerContactId === contactId && t.state === "T8_Accepted").sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0)).slice(0, 10),
+    ];
     const claimable = new Map(tasks.filter(t => t.state === "T1_Open").map(t => [t.id, t.stateVer]));
     let note = getDoc<{ text: string }>(this.db, `note:${contactId}`);
     if (note) {
@@ -3548,7 +3553,8 @@ ${e.body}` })), q.text, visible.length);
           case "verdict": {
             const d = getDoc<TaskDoc>(this.db, `task:${a.taskId}`)?.value;
             if (!d || d.task.owner !== contactId) { reject(`任务 ${a.taskId} 不存在或不是你的`); break; }
-            if (!awaitingUser(d)) { reject(`任务在 ${d.task.state},没有等你确认的交付`); break; }
+            const canVerdict = a.verdict === "accept" ? awaitingUser(d) : awaitingUser(d) || (d.task.state === "T8_Accepted" && d.task.delivery !== null);
+            if (!canVerdict) { reject(`任务在 ${d.task.state},没有等你确认的交付`); break; }
             const src = freshMsgs.find((m) => m.roomId === d.roomId && m.seq === a.sourceSeq);
             if (!src) { reject(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 不是本轮新消息`); break; }
             if (src.sender.kind !== "user" || src.sender.id !== d.task.requester) { reject(`验收结论的来源 ${d.roomId} #${a.sourceSeq} 不是提出者本人的消息`); break; }
@@ -4405,8 +4411,8 @@ ${e.body}` })), q.text, visible.length);
     if (!session) return;
     if (!isLive(session.status)) {
       // 原位失败卡上点了[重试]/[换模型重试](AC-36):同一实例续跑,台账开一个接续的会话单元,原会话的失败记录保留
-      if (session.status !== "failed") return;
-      session = this.runs.start({ layer: "compute-session", parentId: session.parentId, roomId: session.roomId, sourceSeq: session.sourceSeq, contactId: session.contactId, taskId: session.taskId, computeId, upstream: session.upstream, rerunOf: session.id, attempt: session.attempt });
+      if (session.status !== "failed" && session.status !== "done") return;
+      session = this.runs.start({ layer: "compute-session", parentId: session.status === "done" ? null : session.parentId, roomId: session.roomId, sourceSeq: session.sourceSeq, contactId: session.contactId, taskId: session.taskId, computeId, upstream: session.upstream, rerunOf: session.id, attempt: session.attempt });
     } else if (session.status !== "running") this.runs.setStatus(session.id, "running");
     // 常驻进程跨轮不变:新的一轮沿用这个 Compute 还活着的 pid;进程已被回收的不沿用,等重新起来时 started 再报
     const pid = this.computePids.get(computeId);
@@ -4601,7 +4607,7 @@ ${e.body}` })), q.text, visible.length);
         if (!send) return;
         // 审过后由负责联系人发一条普通消息 @提出者(AC-28 / AC-56,不挂验收卡);发出即 T8a 待确认,沉默不通过,提出者用普通回复通过或提修改
         const r = this.appendMessageTx(doc.roomId, { kind: "contact", id: rv.owner_id }, {
-          text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」已由 ${who} 跨厂商审查通过${v.notes ? `:${v.notes}` : ""}。确认没问题就回复通过,要改哪里直接说。`,
+          text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」已由 ${who} 跨厂商审查通过${v.notes ? `:${v.notes}` : ""}。${this.needsCodeIntegration(rv.task_id) ? "确认没问题就回复通过,要改哪里直接说。" : "如需调整直接说。"}`,
           actionKey: `review-ok:${rv.task_id}:${rv.round}`,
           causeRoots: this.loopGuard.taskRoots(rv.task_id),
           replyToSeq: doc.deliveredSeq ?? doc.sourceSeq,
@@ -4610,6 +4616,7 @@ ${e.body}` })), q.text, visible.length);
         });
         posted = { roomId: doc.roomId, seq: r.seq };
         this.stepTaskTx(rv.task_id, { kind: "DeliveredCard", taskId: rv.task_id, deliveryRound: send.deliveryRound, commit: send.commit });
+        this.settleDeliveredTx(rv.task_id, rv.owner_id, doc.roomId);
         return;
       }
       // 打回(AC-26 / #820):可恢复就续接原 Compute 带审查意见改,不可恢复带交接新开;负责联系人收到一条进度,自己决定怎么跟用户说
@@ -4641,7 +4648,9 @@ ${e.body}` })), q.text, visible.length);
   private deliverUnreviewedTx(taskId: string, req: { round: number; commit: string; constraintVer: number }) {
     const { effects } = this.stepTaskTx(taskId, { kind: "ReviewUnavailable", round: req.round, commit: req.commit, constraintVer: req.constraintVer });
     const send = effects.find((x): x is Extract<typeof x, { kind: "send-card" }> => x.kind === "send-card");
-    if (send) this.stepTaskTx(taskId, { kind: "DeliveredCard", taskId, deliveryRound: send.deliveryRound, commit: send.commit });
+    if (!send) return;
+    const { doc } = this.stepTaskTx(taskId, { kind: "DeliveredCard", taskId, deliveryRound: send.deliveryRound, commit: send.commit });
+    if (doc.task.state === "T8a_Delivered") this.settleDeliveredTx(taskId, doc.task.owner, doc.roomId);
   }
   /** 审查没做成:任务还停在这一轮审查上,就由负责联系人发一条普通消息 @提出者说明,交付进 T8a 待确认;提出者回复通过即本人豁免(waived-by-user,不当合规),也可以说要改的地方。 */
   private reviewFallback(taskId: string, round: number, reason: string) {
@@ -4654,7 +4663,7 @@ ${e.body}` })), q.text, visible.length);
     const owner = t.owner;
     const r = tx(this.db, () => {
       const m = this.appendMessageTx(doc.roomId, { kind: "contact", id: owner }, {
-        text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」的跨厂商审查没做成:${reason.slice(0, 2000)}。交付在等你确认:可以直接回复通过(记为你本人豁免审查,不算合规审查),或说要改的地方。`,
+        text: `@${this.nameOf({ kind: "user", id: t.requester })} 「${doc.title}」的跨厂商审查没做成:${reason.slice(0, 2000)}。${this.needsCodeIntegration(taskId) ? "交付在等你确认:可以直接回复通过(记为你本人豁免审查,不算合规审查),或说要改的地方。" : "已按当前结果交付;如需修改直接说。"}`,
         actionKey: `review-fallback:${taskId}:${round}`,
         causeRoots: this.loopGuard.taskRoots(taskId),
         replyToSeq: doc.deliveredSeq ?? doc.sourceSeq,
@@ -4803,8 +4812,9 @@ ${e.body}` })), q.text, visible.length);
     const prev = t.computeId ? (one<{ result: string | null }>(this.db, "SELECT result FROM gg_compute WHERE compute_id = ?", t.computeId)?.result ?? null) : null;
     let eff: { kind: string; computeId?: string; requestId?: string }[];
     if (t.state === "T5_InReview") eff = this.stepTaskTx(taskId, { kind: "Amend", by, computeResumable: resumable }).effects;
-    else if (t.state === "T8a_Delivered" && t.delivery) eff = this.stepTaskTx(taskId, { kind: "UserReject", taskId, by, computeResumable: resumable, deliveryRound: t.delivery.round, commit: t.delivery.commit }).effects;
+    else if ((t.state === "T8a_Delivered" || t.state === "T8_Accepted") && t.delivery) eff = this.stepTaskTx(taskId, { kind: "UserReject", taskId, by, computeResumable: resumable, deliveryRound: t.delivery.round, commit: t.delivery.commit }).effects;
     else throw new HostError("conflict", `任务在 ${t.state},没有待确认的交付`);
+    this.setTaskCardStateTx(taskId, "done", "open");
     for (const e of eff) {
       if ((e.kind === "resume-compute" || e.kind === "update-constraints") && e.computeId) {
         // 恢复原实例:旧结果作废,等它这次的完成事件才能再交付
@@ -4823,6 +4833,20 @@ ${e.body}` })), q.text, visible.length);
     if (!computeId || !this.opts.compute) return false;
     const row = one<{ status: string }>(this.db, "SELECT status FROM gg_compute WHERE compute_id = ?", computeId);
     return !!row && row.status !== "stopped" && row.status !== "failed";
+  }
+  private needsCodeIntegration(taskId: string): boolean {
+    return Boolean(this.worktrees && this.workspace(taskId)?.value && this.workspace(taskId)!.value.state !== "W6_Merged");
+  }
+  private setTaskCardStateTx(taskId: string, from: "open" | "done", to: "open" | "done") {
+    const rows = all<{ room_id: string; seq: number }>(this.db, "SELECT room_id, seq FROM gg_cards WHERE task_id = ? AND kind = 'task-status' AND state = ?", taskId, from);
+    if (rows.length && run(this.db, "UPDATE gg_cards SET state = ? WHERE task_id = ? AND kind = 'task-status' AND state = ?", to, taskId, from)) {
+      for (const c of rows) this.cardUpdates.push({ roomId: c.room_id, seq: c.seq });
+    }
+  }
+  private settleDeliveredTx(taskId: string, owner: string | null, roomId: string) {
+    if (this.needsCodeIntegration(taskId)) return;
+    this.closeCommitmentsTx(owner, roomId, taskId, "done");
+    this.setTaskCardStateTx(taskId, "open", "done");
   }
   private closeCommitmentsTx(contactId: string | null, roomId: string, taskId: string, outcome: "done") {
     if (!contactId) return;

@@ -40,3 +40,27 @@ test("contacts.profile: duties.doneTasks 收录 T8/T10/T11,排除在途任务,�
     await host.close();
   }
 });
+
+test("contacts.profile: 非代码仓与已合入 T8a_Delivered 归入 duties.doneTasks, 未合入代码仓 T8a_Delivered 保留在 duties.tasks", async () => {
+  const dataDir = path.join(root, "delivered-case");
+  mkdirSync(dataDir, { recursive: true });
+  const host = new Host({ file: path.join(dataDir, "host.db"), dataDir, mind: () => scriptedMind() });
+  try {
+    const contact = host.createContact({ name: "小克" });
+    const room = host.openDm(contact.id);
+    const plain = host.createTask({ roomId: room.id, clientActionId: "plain", title: "plain-delivered" });
+    const merged = host.createTask({ roomId: room.id, clientActionId: "merged", title: "merged-delivered" });
+    const pinned = host.createTask({ roomId: room.id, clientActionId: "pinned", title: "pinned-delivered" });
+    for (const [id, offset] of [[plain.id, 1], [merged.id, 2], [pinned.id, 3]] as const) {
+      const doc = host.taskDoc(id);
+      putDoc(host.db, `task:${id}`, doc.ver, { ...doc.value, task: { ...doc.value.task, owner: contact.id, state: "T8a_Delivered" }, updatedAt: new Date(Date.UTC(2026, 10, 21, 1, offset)).toISOString() });
+    }
+    putDoc(host.db, `ws:${merged.id}`, 0, { taskId: merged.id, dir: "/tmp/merged", branch: "gg/merged", targetBranch: "main", baseSha: "a", candidateSha: "b", state: "W6_Merged", targetHead: "b", verifiedOn: null, mergedSha: "b", conflict: null });
+    putDoc(host.db, `ws:${pinned.id}`, 0, { taskId: pinned.id, dir: "/tmp/pinned", branch: "gg/pinned", targetBranch: "main", baseSha: "a", candidateSha: "b", state: "W3_Pinned", targetHead: null, verifiedOn: null, mergedSha: null, conflict: null });
+    const profile = contactProfile(host, contact.id);
+    assert.deepEqual(profile.duties.tasks.map((t) => t.id), [pinned.id]);
+    assert.deepEqual(profile.duties.doneTasks?.map((t) => t.id), [merged.id, plain.id]);
+  } finally {
+    await host.close();
+  }
+});
