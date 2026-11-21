@@ -3125,7 +3125,7 @@ ${e.body}` })), q.text, visible.length);
       stateNoteVersion: note?.ver ?? 0,
       stateNote: effectiveNote,
       fresh,
-      tasks: tasks.map((t) => `${t.id} [${t.state}]${t.ownerContactId ? ` 负责人 ${t.ownerContactId}` : " 待认领"} v${t.stateVer ?? 0} ${t.title}(会话 ${t.roomId} #${t.sourceSeq})`),
+      tasks: tasks.map((t) => `${t.id} [${t.state}]${t.ownerContactId ? ` 负责人 ${t.ownerContactId}` : " 待认领"} v${t.stateVer ?? 0} ${t.title}(会话 ${t.roomId} #${t.sourceSeq}${t.deliveredSeq != null ? `, 交付 #${t.deliveredSeq}` : ""})`),
       pointers: [...pointers, ...mem.pointers, ...extra],
       budgetBytes: this.opts.roundBudgetBytes ?? ROUND_BUDGET_BYTES,
       runs: this.runLinesFor(contactId, rooms),

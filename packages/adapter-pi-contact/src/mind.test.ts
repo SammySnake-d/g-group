@@ -425,6 +425,8 @@ test("verdict 工具:通过与修改意见都登记成 verdict 动作,修改意�
   const deliverDecl = TOOL_DECLARATIONS.find((d) => d.name === "deliver")!;
   assert.match(deliverDecl.description, /无需等用户回复通过/);
   assert.match(decl.description, /不需要等用户说通过/);
+  assert.match(decl.description, /禁止只用 reply/);
+  assert.match(decl.description, /重新打开任务交给 Compute 修订/);
   assert.deepEqual(decl.parameters, {
     type: "object",
     properties: {
