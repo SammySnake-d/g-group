@@ -1,0 +1,16 @@
+packages/server/src/direct-task-completion.test.ts
+  h_f33e46a035b77c 367-422
+packages/server/src/helper-intents.test.ts
+  h_f33e46a035b77c 160-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a338c0f2730a4c95707a643c4d780a7c86e17932",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
