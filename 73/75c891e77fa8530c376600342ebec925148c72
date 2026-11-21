@@ -1,0 +1,18 @@
+docs/subsystems/contact-and-gateway.md
+  h_f33e46a035b77c 15,19
+packages/server/proof/post-restart-reject-helper-ann-20261121.md
+  h_f33e46a035b77c 1-29
+receipts/fix-agy-post-restart-reject-helper-ann.json
+  h_f33e46a035b77c 1-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7375c891e77fa8530c376600342ebec925148c72",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
