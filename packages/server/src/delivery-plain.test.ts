@@ -80,8 +80,10 @@ test("交付是普通消息:联系人 @ 提出者汇报结果,不挂交付卡;�
   assert.equal(last.replyToSeq, ask.seq);
   assert.deepEqual(msgs.filter((m) => m.card?.kind === "delivery"), [], "整段对话里没有交付卡");
   const [t] = host.listTasks({ roomId: dm.id });
-  assert.equal(t!.state, "T8a_Delivered", "已交付、待确认(没有跨厂商审查人,不审,由提出者决定)");
-  assert.equal(host.roomView(dm.id).pendingForUser, 2, "任务卡 + 一件等你回复的交付");
+  assert.equal(t!.state, "T8a_Delivered", "普通任务交付即自完成(没有跨厂商审查人,不审)");
+  assert.equal(host.roomView(dm.id).pendingForUser, 0, "普通交付立即自完成,不留待处理计数");
+  assert.deepEqual(host.listCommitments({ contactId: c.id }).map((k) => [k.text, k.status]), [["写报告", "done"]]);
+  assert.equal(host.listMessages(dm.id, {}).messages.find((m) => m.card?.kind === "task-status")?.card?.state, "done");
   // 沉默:再等几轮也不自动通过、不归档
   await new Promise((r) => setTimeout(r, 60));
   await settle(host, compute);

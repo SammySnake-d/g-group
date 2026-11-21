@@ -103,16 +103,25 @@ test("移出群成员后不再收到群消息;删联系人:有在途任务拒绝
 });
 
 test("任务显式入口:tasks.accept 等同点交付卡;没有待确认交付时如实拒绝;用户撤销承诺", async () => {
-  const compute = scriptedCompute();
+  let spawnCount = 0;
+  const compute = scriptedCompute({
+    script: (_id, brief) => {
+      spawnCount++;
+      if (spawnCount === 1) return [{ kind: "started", sessionId: "s1", resumed: false }, { kind: "completed", result: `完成:${(brief as { task: string }).task}` }];
+      return [{ kind: "started", sessionId: "s2", resumed: false }];
+    },
+  });
   const host = new Host({ file: file(), mind: () => scriptedMind(), compute: () => compute.adapter, maxDeferMs: 5 });
   const svc = createService(host);
   const c = host.createContact({ name: "小克" });
   const dm = host.openDm(c.id);
   host.send({ roomId: dm.id, clientActionId: "1", text: "帮我写报告" });
+  await settle(host, compute);
   host.send({ roomId: dm.id, clientActionId: "2", text: "帮我订会议室" });
   await settle(host, compute);
   const t1 = host.listTasks({}).find((t) => t.title === "写报告");
   const t2 = host.listTasks({}).find((t) => t.title === "订会议室");
+  assert.equal(host.listCommitments({ status: "done" }).some((x) => x.taskId === t1!.id), true);
   const acc = await svc.handle("tasks.accept", { taskId: t1!.id, clientActionId: "3" });
   assert.ok(acc.ok, JSON.stringify(acc));
   assert.equal((acc.value as { state: string }).state, "T8_Accepted");

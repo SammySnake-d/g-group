@@ -60,10 +60,10 @@ test("私聊派活闭环:接任务 → Compute 进度回聊天 → 普通消息�
   assert.deepEqual(delivered.mentions, [{ id: "me", source: "auto" }]);
   assert.equal(msgs[1]!.card?.kind, "task-status");
   assert.equal(msgs[1]!.replyToSeq, sent.seq);
-  assert.equal(host.roomView(dm.id).pendingForUser, 2, "任务卡与一件等你回复的交付");
+  assert.equal(host.roomView(dm.id).pendingForUser, 0, "普通交付后任务卡收口,无待处理确认");
 
   const commitments = host.listCommitments({ contactId: c.id });
-  assert.deepEqual(commitments.map((k) => [k.text, k.status, k.taskId]), [["写一个 hello.txt", "active", task.id]]);
+  assert.deepEqual(commitments.map((k) => [k.text, k.status, k.taskId]), [["写一个 hello.txt", "done", task.id]]);
 
   const done = host.taskDecision(task.id, "accept", "u2");
   assert.equal(done.state, "T8_Accepted");
