@@ -1,0 +1,40 @@
+packages/server/src/helper.ts
+  s_c105f303c99f6a::t_a516a25334495f 98
+packages/server/src/speaking.ts
+  s_c105f303c99f6a::t_a516a25334495f 8
+packages/server/src/start.ts
+  s_c105f303c99f6a::t_a516a25334495f 10,51,81,87
+packages/adapter-pi-contact/src/text-request.ts
+  s_c105f303c99f6a::t_a516a25334495f 1-28,30-45
+  s_c105f303c99f6a::t_ac7bb353f45d92 29
+packages/adapter-pi-contact/src/index.ts
+  s_c105f303c99f6a::t_a516a25334495f 6
+packages/server/src/cli.ts
+  s_c105f303c99f6a::t_a516a25334495f 5,134,174,181
+packages/server/src/helper-replies.ts
+  s_c105f303c99f6a::t_a516a25334495f 1-37
+packages/adapter-pi-contact/src/request.ts
+  s_c105f303c99f6a::t_a516a25334495f 24
+docs/subsystems/contact-and-gateway.md
+  s_c105f303c99f6a::t_a516a25334495f 14-17
+packages/server/src/pi-runtime.ts
+  s_c105f303c99f6a::t_a516a25334495f 86-91
+packages/adapter-pi-contact/src/compact.ts
+  s_c105f303c99f6a::t_a516a25334495f 8-9,89,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "84dd68964e6c3bf28ead797c5e2e79c13f0cdd56",
+  "prompts": {},
+  "sessions": {
+    "s_c105f303c99f6a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f982-6773-7730-93f4-d59af5ac94d5",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
