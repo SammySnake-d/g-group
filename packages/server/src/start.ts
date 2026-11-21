@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { DEFAULT_RETRY_POLICY, type ThresholdConfig } from "@g-group/kernel";
 import { type ComputeCommands, claudeCompute, codexCompute } from "./compute.ts";
 import { deskCompute } from "./fakes.ts";
+import { startHelperReplies } from "./helper-replies.ts";
 import { Host } from "./host.ts";
 import { DEFAULT_STATE_NOTE_MAX_BYTES, type PiRuntimeOptions } from "./pi-runtime.ts";
 import { type IpcMainLike, type Service, bindIpc, createService } from "./service.ts";
@@ -47,7 +48,7 @@ export async function startServer(o: StartOptions): Promise<Started> {
   const env = o.env ?? process.env;
   mkdirSync(o.dataDir, { recursive: true });
   const delayMs = Math.min(Math.max(Number(env.GG_MIND_DELAY_MS) || 0, 0), 60_000);
-  const { defaultModel: model, ...speaking } = await assembleSpeaking(o.mind ?? "fake", o, env, delayMs);
+  const { defaultModel: model, helperReply, ...speaking } = await assembleSpeaking(o.mind ?? "fake", o, env, delayMs);
   const fake = o.compute === "claude" || o.compute === "codex" ? null : deskCompute({ stepMs: 300 });
   const compute = fake
     ? () => fake.adapter
@@ -77,11 +78,13 @@ export async function startServer(o: StartOptions): Promise<Started> {
   if (o.compute === "codex") host.updateSettings({ defaultHarness: "codex", confirmAffected: true });
   if (model) host.updateSettings({ defaultSpeakingModel: model, defaultComputeModel: model, confirmAffected: true });
   const service = createService(host);
+  const stopHelper = startHelperReplies(host, helperReply, o.onReport);
   return {
     host,
     service,
     bind: (ipc) => bindIpc(ipc, service),
     close: async () => {
+      await stopHelper();
       fake?.close();
       await host.close();
     },

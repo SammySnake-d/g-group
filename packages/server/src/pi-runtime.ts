@@ -83,5 +83,10 @@ export async function makePiRuntime(o: PiRuntimeOptions, env: Readonly<Record<st
   const selected = options(defaultModel);
   const endpointConfig = Object.freeze({ provider: selected.provider, baseUrl: new URL(selected.baseUrl!).origin, authRef: "none", maxOutputTokens: positive("GG_SPEAKING_MAX_OUTPUT_TOKENS", selected.maxTokens ?? 4096), contextWindow: positive("GG_SPEAKING_CONTEXT_WINDOW", 200000), reasoning: Object.freeze({}) });
   modelConfig.checkSpeakingEndpoint(endpointConfig);
-  return { mind, compactor, defaultModel, speakingEndpoint: () => endpointConfig };
+  const helperReply = (id: string, system: string, prompt: string, signal: AbortSignal) => {
+    const base = options(id);
+    const maxTokens = Math.max(endpointConfig.maxOutputTokens, base.reasoning ? 8192 : 1);
+    return pi.createPiTextResponder({ ...base, maxTokens, contextWindow: endpointConfig.contextWindow })(system, prompt, signal);
+  };
+  return { mind, compactor, helperReply, defaultModel, speakingEndpoint: () => endpointConfig };
 }

@@ -1,0 +1,9 @@
+Provider blueloon-gpt. Requested and returned model blueloon-gpt/gpt-6.1-terra.
+Candidate ac45e1d5. HTTP RPC, SQLite room messages, WebSocket delivery, real Responses transport.
+
+Before the change, helper.context resolved the mention but no Helper reply followed.
+helper: the generated reply at message #3 replies to #2 and contains task GG-TASK-4775bb3a (T1_Open).
+helper-group: the generated reply at message #3 replies to #2 and contains task GG-TASK-7af5ee3f (T1_Open).
+
+The compaction regression replied with the recorded value after state-note adoption.
+This receipt covers public replies in direct messages and groups.

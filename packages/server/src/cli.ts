@@ -2,6 +2,7 @@
 import { createHttpWsBridge } from "./http-ws.ts";
 import { createService } from "./service.ts";
 import { assembleSpeaking } from "./speaking.ts";
+import { startHelperReplies } from "./helper-replies.ts";
 // gg:P0 闭环的命令行驱动器(技术栈文档阶段一「先用 CLI/测试驱动跑通」)。
 //   node packages/server/src/cli.ts dm --db ./gg.db --name 小克 "帮我在 /tmp/gg-demo 写 hello.txt"
 //   node packages/server/src/cli.ts log --db ./gg.db [roomId]
@@ -130,7 +131,7 @@ async function main() {
     console.log("用法: cli.ts serve|dm|log|group [--port 3489 --host 127.0.0.1 --token TOKEN --cors-origin ORIGIN --data-dir DIR] --db 文件 [--name 联系人] [--members 甲,乙 --to 甲] [--mind fake|pi] [--api 协议 | --protocols 协议,协议] [--magpie | --no-magpie] [--note-max-bytes 字节|none] [--compute fake|claude|codex] [--cwd 目录] \"消息\"");
     process.exit(2);
   }
-  const { defaultModel: model, ...mind } = await makeMind(values.mind);
+  const { defaultModel: model, helperReply, ...mind } = await makeMind(values.mind);
   const stateNoteMaxBytes = noteLimit(values["note-max-bytes"]);
   const compute = makeCompute(values.compute);
   const cwdRoot = values.cwd ? path.resolve(values.cwd) : undefined;
@@ -170,13 +171,14 @@ async function main() {
         ...(values.token ? { token: values.token } : {}),
         ...(values["cors-origin"] ? { corsOrigins: values["cors-origin"].flatMap(origins => origins.split(",").map(origin => origin.trim()).filter(Boolean)) } : {}),
       });
+      const stopHelper = startHelperReplies(host, helperReply, (what, detail) => console.error(`[宿主] ${what}`, JSON.stringify(detail)));
       try {
         await new Promise<void>(resolve => {
           const stop = () => { process.off("SIGINT", stop); process.off("SIGTERM", stop); resolve(); };
           process.once("SIGINT", stop); process.once("SIGTERM", stop);
           console.log(JSON.stringify({ httpUrl: bridge.httpUrl, wsUrl: bridge.wsUrl, eventSeq: host.bus.head() }));
         });
-      } finally { await bridge.close(); }
+      } finally { await stopHelper(); await bridge.close(); }
       return;
     }
     if (cmd === "group") return await runGroup(host, model);

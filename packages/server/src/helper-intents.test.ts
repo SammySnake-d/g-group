@@ -6,12 +6,14 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 import type { ContactMind } from "@g-group/kernel";
 import { run } from "./db.ts";
 import { senderAudit } from "./drive.ts";
 import { HELPER_ID } from "./helper.ts";
 import { Host } from "./host.ts";
 import { createService } from "./service.ts";
+import { startServer } from "./start.ts";
 
 const dir = mkdtempSync(path.join(tmpdir(), "gg-helper-"));
 after(() => rmSync(dir, { recursive: true, force: true }));
@@ -128,4 +130,30 @@ test("聊天里 @Helper:回复作为一条 helper 消息出现在当前聊天、
   assert.equal(!sidebarPost.ok && sidebarPost.error.code, "invalid_params", "侧栏/全局的回复不能发成会话消息");
   assert.equal(host.listMessages(g.id, {}).messages.length, 3);
   await host.close();
+});
+
+test("用户发出 @Helper 后，真实运行时将生成的回答回复到当前聊天", async (t) => {
+  const helperRequests: Array<{ model: string; messages: unknown[]; tools?: unknown[] }> = [];
+  const fetch: typeof globalThis.fetch = async (_url, init) => {
+    const request = JSON.parse(String(init?.body));
+    if (!request.tools?.length && JSON.stringify(request.messages).includes("私聊回执")) helperRequests.push(request);
+    const chunk = (delta: object, finish_reason: string | null) =>
+      `data: ${JSON.stringify({ id: "chatcmpl-test", object: "chat.completion.chunk", model: request.model, created: 1, choices: [{ index: 0, delta, finish_reason }] })}\n\n`;
+    return new Response(chunk({ role: "assistant", content: "私聊回执收到" }, null) + chunk({}, "stop") + "data: [DONE]\n\n", { headers: { "Content-Type": "text/event-stream" } });
+  };
+  const s = await startServer({ dataDir: path.join(dir, "helper-runtime"), mind: "pi", api: "openai-chat", magpie: false, model: "fixture-model", env: { OPENAI_API_KEY: "fixture" }, fetch });
+  t.after(() => s.close());
+  const c = s.host.createContact({ name: "观察者" });
+  const dm = s.host.openDm(c.id);
+  const other = s.host.createGroup("另一个会话", [{ kind: "contact", id: c.id }]);
+  s.host.send({ roomId: other.id, clientActionId: "helper-other", text: "独立会话里的背景" });
+  const input = { roomId: dm.id, clientActionId: "helper-runtime", text: "@Helper 请给出私聊回执", mentions: [{ id: HELPER_ID, source: "manual" as const }] };
+  const sent = s.host.send(input);
+  s.host.send(input);
+  const replies = () => s.host.listMessages(dm.id, { afterSeq: sent.seq }).messages.filter(m => m.sender.kind === "helper");
+  for (const deadline = Date.now() + 1500; replies().length === 0 && Date.now() < deadline;) await delay(15);
+  assert.deepEqual(replies().map(m => [m.text, m.replyToSeq]), [["私聊回执收到", sent.seq]]);
+  assert.equal(helperRequests.length, 1);
+  assert.equal(helperRequests[0]!.model, "fixture-model");
+  assert.doesNotMatch(JSON.stringify(helperRequests[0]!.messages), /独立会话里的背景/);
 });

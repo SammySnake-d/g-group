@@ -21,7 +21,7 @@ export interface Resolved extends ModelConfig {
 const COMMON = new Set(["api", "protocols", "healthCache", "sessionAffinity", "reasoning", "provider", "model", "baseUrl", "apiKey", "authHeader", "maxTokens", "contextWindow", "fetch"]);
 export const describe = (e: unknown): string => e instanceof Error ? e.message : String(e);
 
-export function resolveOptions(opts: unknown, profile: "mind" | "compactor" | "probe"): Resolved {
+export function resolveOptions(opts: unknown, profile: "mind" | "compactor" | "probe" | "helper"): Resolved {
   const bad = (why: string): never => { throw new PiContactMindError("invalid-options", `${profile} 选项不合格:${why}`); };
   if (typeof opts !== "object" || opts === null || types.isProxy(opts)) return bad("必须是普通对象");
   const proto = Object.getPrototypeOf(opts);
