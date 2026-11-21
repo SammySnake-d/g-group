@@ -1,0 +1,18 @@
+docs/subsystems/contact-and-gateway.md
+  h_f33e46a035b77c 15
+packages/server/proof/delivery-revision-guidance-20261121.md
+  h_f33e46a035b77c 1-24
+receipts/fix-agy-delivery-revision-guidance.json
+  h_f33e46a035b77c 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df7b6249d209d02fc55fd07b489cc5c29c6faf23",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
