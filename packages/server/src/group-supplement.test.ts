@@ -171,34 +171,3 @@ test("结构化 @everyone 展开为当前成员,与逐个点名去重并立即�
     assert.deepEqual(seen.sort(([x], [y]) => x.localeCompare(y)), [a.id, b.id].sort().map((id) => [id, [a.id, b.id]]));
   } finally { await host.close(); rmSync(dir, { recursive: true, force: true }); }
 });
-
-test("宿主自动群发去重,无人回答时仍可追加不同的发言", { timeout: 10_000 }, async () => {
-  const dir = mkdtempSync(path.join(tmpdir(), "gg-room-budget-"));
-  let leader = "", follower = "", roomId = "";
-  let followerSawUser!: () => void;
-  const initialSeen = new Promise<void>((resolve) => { followerSawUser = resolve; });
-  const host = new Host({ file: path.join(dir, "test.db"), maxDeferMs: 4, loopGuard: { maxHops: 20 }, mind: () => ({ async round(input) {
-    const user = input.fresh.find((f) => f.kind === "message" && f.sender.kind === "user");
-    if (user?.kind === "message" && user.text === "开始") {
-      if (input.contact.id === follower) followerSawUser();
-      if (input.contact.id === leader) { await initialSeen; await new Promise((resolve) => setTimeout(resolve, 20)); }
-    }
-    const peer = input.fresh.find((f) => f.kind === "message" && f.sender.id === leader);
-    const text = input.contact.id === leader && user?.kind === "message" && user.text === "开始" ? ["发起原文"]
-      : input.contact.id === follower && peer ? ["自动补充", "自动补充", "自动补充二", "自动补充三"]
-      : input.contact.id === follower && user?.kind === "message" && user.text === "真人追问" ? ["自动补充"] : [];
-    return { actions: text.map((text) => ({ kind: "reply", roomId, text, replyToSeq: null })), stateNote: null };
-  } }) });
-  try {
-    leader = host.createContact({ name: "甲" }).id; follower = host.createContact({ name: "乙" }).id;
-    roomId = host.createGroup("预算", [{ kind: "contact", id: leader }, { kind: "contact", id: follower }]).id;
-    host.send({ roomId, clientActionId: "begin", text: "开始", mentions: [{ id: leader, source: "manual" }] });
-    await host.idle();
-    const peer = host.listMessages(roomId, {}).messages.find((m) => m.text === "发起原文");
-    assert.ok(peer);
-    assert.deepEqual(host.listMessages(roomId, {}).messages.filter((m) => m.sender.id === follower).map((m) => m.text), ["自动补充", "自动补充二", "自动补充三"]);
-    host.send({ roomId, clientActionId: "follow", text: "真人追问", mentions: [{ id: follower, source: "manual" }] });
-    await host.idle();
-    assert.deepEqual(host.listMessages(roomId, {}).messages.filter((m) => m.sender.id === follower).map((m) => m.text), ["自动补充", "自动补充二", "自动补充三", "自动补充"]);
-  } finally { await host.close(); rmSync(dir, { recursive: true, force: true }); }
-});

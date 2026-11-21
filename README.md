@@ -107,7 +107,7 @@ npm run check && npm run lint && npm test && npm run gates:selftest
 ### 第三方组件与致谢
 
 - 旧消息与记忆的混合检索使用 [acp-kernel 0.0.191](https://github.com/ranxianglei/acp-kernel)，来自 [Billion Context `541cf26`](https://github.com/ranxianglei/billion-context/tree/541cf26/kernel)。随仓保留 [MIT 及出处标注条款](third_party/acp-kernel/LICENSE)和[上游构建说明](third_party/acp-kernel/UPSTREAM.md)。
-- `packages/server/src/room-post-budget.ts`、`compaction-summary.ts` 与配套测试改编自 [milind-soni/OpenMausBot (`613ed01fd`)](https://github.com/milind-soni/OpenMausBot/tree/613ed01fd)，Copyright 2026 Milind Soni and OpenMausBot contributors，[Apache-2.0](packages/server/licenses/OpenMausBot-APACHE-2.0.txt)。
+- `packages/server/src/compaction-summary.ts` 与配套测试改编自 [milind-soni/OpenMausBot (`613ed01fd`)](https://github.com/milind-soni/OpenMausBot/tree/613ed01fd)，Copyright 2026 Milind Soni and OpenMausBot contributors，[Apache-2.0](packages/server/licenses/OpenMausBot-APACHE-2.0.txt)。
 
 
 ## Codex Compute 与轮边界换 Harness（P1-B）
