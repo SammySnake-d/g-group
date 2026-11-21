@@ -1,0 +1,22 @@
+packages/adapter-pi-contact/src/tools.ts
+  h_f33e46a035b77c 104,117,119-122
+packages/server/src/assemble.ts
+  h_f33e46a035b77c 108,119,121
+packages/server/src/host.ts
+  h_f33e46a035b77c 1033,1865-1866,3037-3041,3556-3557,4414-4415,4610,4619,4651-4653,4666,4815,4817,4837-4850
+packages/server/src/views.ts
+  h_f33e46a035b77c 11-12,20,29
+scripts/gates/lib.ts
+  h_f33e46a035b77c 387
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c5ddd855b5df3ab13d682e34ec60e38734338bb2",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
