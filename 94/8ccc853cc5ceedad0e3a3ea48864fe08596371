@@ -1,0 +1,21 @@
+packages/server/proof/room-post-defaults-20261121.md
+  s_b9ccea1f504419::t_91cf35b03ad390 1-7
+receipts/fix-agy-remove-room-post-budget.json
+  s_b9ccea1f504419::t_91cf35b03ad390 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "948ccc853cc5ceedad0e3a3ea48864fe08596371",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
