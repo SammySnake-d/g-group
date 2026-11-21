@@ -123,3 +123,7 @@ packages/adapter-codex-compute/src/startup.ts 的启动 admission 思路参考 O
 ## F0 前端合同扩展
 
 后端已同步前端合同快照，提供网关模型发现、用户手动长期记忆写入、能力目录 MCP 描述与脚本清单，以及联系人资料页最近完成任务。当前证据覆盖 D 层和合同 parity，前端 UI、真实网关/模型与 Electron 端到端联调仍待 P3。
+
+## `#4386` 任务交付即完成与对话追问重开
+
+未挂未合入 `codeRepo` 工作树的普通任务在联系人调用 `deliver` 后即视为完成（立即了结承诺与 `task-status` 卡片、清空 `pendingForUser`、归入联系人资料页 `doneTasks` 并使用非催促交付文案），不再要求人类回复「通过」；挂有 `codeRepo` 工作树的任务仍保留人工确认与合入闸门。交付或验收后的任务（`T8a_Delivered` / `T8_Accepted`）在提出者于聊天追问修改或调用 `tasks.reject` 时可重开回 `T3_Running` 继续执行并再次交付，轮次装配默认随附最近最多 10 条本人 `T8_Accepted` 任务供联系人定位修改目标。详见[证明](packages/server/proof/direct-task-completion-20261121.md)与[进度清单](docs/BACKEND-PROGRESS-CHECKLIST.md)。

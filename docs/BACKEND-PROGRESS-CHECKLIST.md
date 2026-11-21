@@ -56,3 +56,11 @@ P1-B 不替代 B1 已有证明，也不把 wire 实验提升为真实 Codex 或�
 - [x] D 层 Magpie/兼容网关模型发现、长期记忆手动写入、能力目录 MCP 描述与 scripts listing、联系人已完成任务历史已接入。
 - [x] Hardened Red/Green、类型检查、lint、全量测试与严格合同检查已完成。
 - [ ] 前端 UI 渲染、真实 Magpie/网关、真实模型与 Electron 端到端联调留待 P3。
+
+## `#4386` — `feat/agy-direct-task-completion`
+
+- [x] 非 `codeRepo` 普通任务 `deliver` 即自完成：`pendingForUser === 0`、自动了结对应承诺与 `task-status` 卡片、非 `codeRepo` `T8a_Delivered` 进入 `duties.doneTasks`，审查通过/超时兜底改用非催促文案。
+- [x] `codeRepo` 未合入工作树任务继续保留人工确认与 `integrateTask` 合入保护，不破坏 `T8a_Delivered` / `T8_Accepted` 领域边界与 `@g-group/api-contract`（`107` methods / `21` events）。
+- [x] 支持交付后/验收后对 `T8a_Delivered` 与 `T8_Accepted` 发起 `verdict(revise)` 或 `tasks.reject` 重开至 `T3_Running` 并恢复/重启 Compute 修订，轮次装配向联系人附带最近最多 10 条名下 `T8_Accepted` 任务。
+- [x] 3-commit 严格先红后绿、`npm run lint`、`npm run check`、`npm test`、`npm run gates:selftest` 及证明与收据已完成。
+- [ ] 真实模型与 Electron UI X 层端到端验收及跨厂商独立审查留待后续环节。

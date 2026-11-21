@@ -1,0 +1,34 @@
+{
+  "slice": "非代码仓任务 deliver 即自完成、取消人工通过等待，并支持 T8a_Delivered / T8_Accepted 对话追问重开修订（#4386 后端）",
+  "author": {
+    "agent": "antigravity",
+    "model": "gemini-4-hydrogen",
+    "session": "antigravity:ef8bc5e2-fdbd-4abe-8d60-93c6b52f58bb"
+  },
+  "red": {
+    "commit": "4bac546e9d0674d5e57ea3a2032744daabe3cfc6"
+  },
+  "green": {
+    "commit": "c5ddd855b5df3ab13d682e34ec60e38734338bb2"
+  },
+  "review": null,
+  "waiver": null,
+  "acceptance": [
+    {
+      "id": "AC-27",
+      "status": "通过",
+      "evidence": "packages/server/proof/direct-task-completion-20261121.md"
+    },
+    {
+      "id": "AC-28",
+      "status": "未测",
+      "reason": "已完成 D 层确定性单测（非代码仓 deliver 即闭环 pendingForUser 归零/doneTasks/非催促文案、T8a 与 T8_Accepted 追问重开与最近 10 条上下文注入、codeRepo 保留等待确认）；真实模型说话与 Electron UI X 层端到端未测。"
+    },
+    {
+      "id": "AC-56",
+      "status": "未测",
+      "reason": "已完成 D 层工具描述/系统提示与普通交付消息、自然修改重开路径单测；真实模型行为与前端展示 X 层未测。"
+    }
+  ],
+  "unverifiable": "AC-28、AC-56 的真实模型与前端 X 层端到端未在本后端切片实测；AC-27、R-02、R-05 已按 4bac546e 红基线与 c5ddd855 绿基线在 D 层验证。项目当前闭环阶段授权自测合入 dev/agy-backend，未做跨厂商独立审查（review=null, waiver=null，不伪造审查）。"
+}
