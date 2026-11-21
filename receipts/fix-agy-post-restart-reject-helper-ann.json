@@ -1,0 +1,43 @@
+{
+  "slice": "修复重启宿主后退回已交付或已验收任务卡死在 T3_Running 的问题（未在当前 computeRuns 则交接新开 Compute），并在聊天 @Helper 自动回复注入当前会话有效公告与群规",
+  "author": {
+    "agent": "antigravity",
+    "model": "gemini-4-hydrogen-xhigh",
+    "session": "antigravity:4403b3b5-b278-4b0d-b1ca-1a23f119b86c"
+  },
+  "red": {
+    "commit": "a338c0f2730a4c95707a643c4d780a7c86e17932",
+    "tests": [
+      "重启宿主后退回已交付或已验收任务时新开 Compute 并携交接完成返工",
+      "聊天里 @Helper 能读到当前群的有效公告和群规，不读取已撤下的公告"
+    ]
+  },
+  "green": {
+    "commit": "587c59e0101321f9f3a19933f783c5fc0aa9dce7"
+  },
+  "review": null,
+  "waiver": null,
+  "acceptance": [
+    {
+      "id": "AC-27",
+      "status": "通过",
+      "evidence": "packages/server/proof/post-restart-reject-helper-ann-20261121.md"
+    },
+    {
+      "id": "AC-28",
+      "status": "未测",
+      "reason": "已完成重启退回走交接新开 Compute 的 D 层先红后绿及真实 cli.ts serve + Codex 联调，Electron UI X 层端到端留待 E2E 验收。"
+    },
+    {
+      "id": "AC-52",
+      "status": "未测",
+      "reason": "已完成 @Helper 注入有效公告与群规的 D 层先红后绿及真实 Magpie 联调，⌘K/侧栏及 CSV 导入 X 层留待 E2E 验收。"
+    },
+    {
+      "id": "AC-55",
+      "status": "未测",
+      "reason": "已验证群有效公告注入与已撤下公告过滤的 @Helper 上下文装配，群置顶及 UI 展示 X 层未测。"
+    }
+  ],
+  "unverifiable": "AC-28、AC-52、AC-55 的 Electron UI X 层端到端交互未在本后端修复片测验；AC-27、R-02、R-05 已按 a338c0f2 红基线与 587c59e0 绿基线验证。按当前闭环授权自测合入 dev/agy-backend，review=null, waiver=null，不伪造审查。"
+}
