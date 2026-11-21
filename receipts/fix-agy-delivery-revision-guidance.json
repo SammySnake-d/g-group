@@ -1,0 +1,38 @@
+{
+  "slice": "第 5 块在途任务附带交付消息序号，并在通用系统提示、工具清单及 verdict 工具说明中明确待认领任务认领路径与交付后必须用 verdict(revise) 交 Compute 返工",
+  "author": {
+    "agent": "antigravity",
+    "model": "gemini-4-neon-xhigh",
+    "session": "antigravity:4403b3b5-b278-4b0d-b1ca-1a23f119b86c"
+  },
+  "red": {
+    "commit": "cf5ef15f24f7f3695723ee809396b146bcd6ee40",
+    "tests": [
+      "verdict 工具:通过与修改意见都登记成 verdict 动作,修改意见可省略",
+      "第 5 块在途任务在交付前不含交付序号、交付后附带交付序号，且系统提示与工具清单明确认领与返工规则"
+    ]
+  },
+  "green": {
+    "commit": "215dafb5dc036c966a4276126453a9d07615e30c"
+  },
+  "review": null,
+  "waiver": null,
+  "acceptance": [
+    {
+      "id": "AC-27",
+      "status": "通过",
+      "evidence": "packages/server/proof/delivery-revision-guidance-20261121.md"
+    },
+    {
+      "id": "AC-28",
+      "status": "未测",
+      "reason": "已完成第 5 块交付序号与返工工具指引的 D 层先红后绿验证，真实模型零剧透人设与 Electron UI X 层端到端留待下游 E2E 验证。"
+    },
+    {
+      "id": "AC-56",
+      "status": "未测",
+      "reason": "已完成普通交付消息序号注入与 verdict(revise) 禁止 reply 替代指引的 D 层验证，真实模型与前端 X 层展示留待下游 E2E 验证。"
+    }
+  ],
+  "unverifiable": "AC-28、AC-56 的真实模型零剧透行为与 Electron UI X 层端到端未在本后端切片实跑；AC-27、R-02、R-05 已按 cf5ef15f 红基线与 215dafb5 绿基线在 D 层核验。按当前闭环授权自测合入 dev/agy-backend，review=null, waiver=null，不伪造审查。"
+}
