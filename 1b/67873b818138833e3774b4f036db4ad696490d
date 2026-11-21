@@ -1,0 +1,26 @@
+packages/adapter-pi-contact/src/mind.test.ts
+  h_f33e46a035b77c 425-427,431-434
+packages/server/src/chat-ops.test.ts
+  h_f33e46a035b77c 106-113,119,124
+packages/server/src/delivery-plain.test.ts
+  h_f33e46a035b77c 83-86
+packages/server/src/delivery-t8a.test.ts
+  h_f33e46a035b77c 101-102
+packages/server/src/direct-task-completion.test.ts
+  h_f33e46a035b77c 1-364
+packages/server/src/host.test.ts
+  h_f33e46a035b77c 63,66
+packages/server/src/views.test.ts
+  h_f33e46a035b77c 43-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1b67873b818138833e3774b4f036db4ad696490d",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
