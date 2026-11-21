@@ -4830,7 +4830,7 @@ ${e.body}` })), q.text, visible.length);
   }
   /** 原 Compute 实例还能不能恢复:实例记录在、没停也没失败、宿主有适配器。 */
   private computeResumable(computeId: string | null): boolean {
-    if (!computeId || !this.opts.compute) return false;
+    if (!computeId || !this.opts.compute || !this.computeRuns.has(computeId)) return false;
     const row = one<{ status: string }>(this.db, "SELECT status FROM gg_compute WHERE compute_id = ?", computeId);
     return !!row && row.status !== "stopped" && row.status !== "failed";
   }

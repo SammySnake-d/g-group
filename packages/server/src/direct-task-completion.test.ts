@@ -364,3 +364,59 @@ test("配了 codeRepo 时工作树交付仍需人工确认与合入,未配工作
   plainCompute.close();
   await plainHost.close();
 });
+
+test("重启宿主后退回已交付或已验收任务时新开 Compute 并携交接完成返工", async () => {
+  const file = dbFile();
+  const c1 = scriptedCompute({ idPrefix: "h1" });
+  const host1 = new Host({ file, mind: () => scriptedMind(), compute: () => c1.adapter, maxDeferMs: 5 });
+  const svc1 = createService(host1);
+  const contact = host1.createContact({ name: "小克" });
+  const dm = host1.openDm(contact.id);
+  host1.send({ roomId: dm.id, clientActionId: "u1", text: "帮我写第一份报告" });
+  await settle(host1, c1);
+  host1.send({ roomId: dm.id, clientActionId: "u2", text: "帮我写第二份报告" });
+  await settle(host1, c1);
+  const tasks1 = host1.listTasks({ roomId: dm.id });
+  const tDelivered = tasks1.find((x) => x.title.includes("第一份"))!;
+  const tAccepted = tasks1.find((x) => x.title.includes("第二份"))!;
+  assert.equal(tDelivered.state, "T8a_Delivered");
+  const acc = await svc1.handle("tasks.accept", { taskId: tAccepted.id, clientActionId: "acc-t2" });
+  assert.ok(acc.ok, JSON.stringify(acc));
+  assert.equal((acc.value as { state: string }).state, "T8_Accepted");
+  await host1.close();
+  c1.close();
+
+  const resumeAttempts: string[] = [];
+  const c2 = scriptedCompute({
+    idPrefix: "h2",
+    resumeResult: (computeId) => {
+      resumeAttempts.push(computeId);
+      return { ok: false, reason: "unknown Codex compute" };
+    },
+  });
+  const host2 = new Host({ file, mind: () => scriptedMind(), compute: () => c2.adapter, maxDeferMs: 5 });
+  const svc2 = createService(host2);
+  const r1 = await svc2.handle("tasks.reject", { taskId: tDelivered.id, clientActionId: "post-rej-t8a", feedback: "重启后补充要点A" });
+  const r2 = await svc2.handle("tasks.reject", { taskId: tAccepted.id, clientActionId: "post-rej-t8", feedback: "重启后补充要点B" });
+  assert.ok(r1.ok, JSON.stringify(r1));
+  assert.ok(r2.ok, JSON.stringify(r2));
+  assert.equal((r1.value as { state: string }).state, "T3_Running");
+  assert.equal((r2.value as { state: string }).state, "T3_Running");
+  await settle(host2, c2);
+
+  assert.deepEqual(resumeAttempts, []);
+  assert.deepEqual(c2.resumed, []);
+  assert.equal(c2.spawned.length, 2);
+  assert.ok(c2.spawned.some((s) => (s.brief as { task: string }).task.includes("上次结果:完成:写第一份报告") && (s.brief as { task: string }).task.includes("用户退回意见:重启后补充要点A")));
+  assert.ok(c2.spawned.some((s) => (s.brief as { task: string }).task.includes("上次结果:完成:写第二份报告") && (s.brief as { task: string }).task.includes("用户退回意见:重启后补充要点B")));
+  const v1 = host2.taskView(host2.taskDoc(tDelivered.id).value);
+  const v2 = host2.taskView(host2.taskDoc(tAccepted.id).value);
+  assert.equal(v1.state, "T8a_Delivered");
+  assert.equal(v1.constraintVersion, 1);
+  assert.equal(v2.state, "T8a_Delivered");
+  assert.equal(v2.constraintVersion, 1);
+  assert.equal(v1.computeRuns.length, 2);
+  assert.equal(v2.computeRuns.length, 2);
+  await host2.close();
+  c2.close();
+});
