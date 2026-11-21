@@ -3,7 +3,7 @@ import { HELPER_ID, HelperDesk } from "./helper.ts";
 import type { Host } from "./host.ts";
 import type { SpeakingAssembly } from "./speaking.ts";
 
-const system = "你是 Helper。请回答用户在当前会话里发给 Helper 的这条消息。只依据提供的会话和任务，直接输出回复正文。无法确认时如实回答，不编造软件操作。";
+const system = "你是 Helper。请回答用户在当前会话里发给 Helper 的这条消息。只依据提供的会话、公告、群规和任务，直接输出回复正文。无法确认时如实回答，不编造软件操作。";
 
 export function startHelperReplies(host: Host, generate: SpeakingAssembly["helperReply"], report?: (what: string, detail: unknown) => void) {
   if (!generate) return async () => {};
@@ -15,8 +15,10 @@ export function startHelperReplies(host: Host, generate: SpeakingAssembly["helpe
     const entry = { kind: "mention" as const, roomId: message.roomId, seq: message.seq };
     const { rooms } = desk.context(entry);
     const messages = rooms[0]?.messages.filter(m => !m.retracted && m.seq < message.seq).map(({ seq, sender, text }) => ({ seq, sender, text }));
+    const announcements = host.announcementViews(message.roomId).map(({ text, createdAt }) => ({ text, createdAt }));
+    const { rules } = host.roomView(message.roomId);
     const tasks = host.listTasks({ roomId: message.roomId }).map(({ title, state }) => ({ title, state }));
-    const prompt = JSON.stringify({ history: messages, tasks, question: message.text });
+    const prompt = JSON.stringify({ history: messages, announcements, rules, tasks, question: message.text });
     const text = await generate!(host.settingsView().defaultSpeakingModel, system, prompt, controller.signal);
     if (!controller.signal.aborted) desk.post(entry, text, `auto:${message.roomId}:${message.seq}`);
   }
