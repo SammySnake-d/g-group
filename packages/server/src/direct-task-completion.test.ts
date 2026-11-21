@@ -420,3 +420,50 @@ test("重启宿主后退回已交付或已验收任务时新开 Compute 并携�
   await host2.close();
   c2.close();
 });
+
+test("第 5 块在途任务在交付前不含交付序号、交付后附带交付序号，且系统提示与工具清单明确认领与返工规则", async () => {
+  const seenBlock5: string[] = [];
+  const baseMind = scriptedMind();
+  const observingMind: ContactMind = {
+    async round(input: RoundInput, signal) {
+      const b5 = input.request.blocks.find((b) => b.block === 5)?.text ?? "";
+      seenBlock5.push(b5);
+      return baseMind.round(input, signal);
+    },
+  };
+  const compute = scriptedCompute();
+  const host = new Host({ file: dbFile(), mind: () => observingMind, compute: () => compute.adapter, maxDeferMs: 5 });
+  const c = host.createContact({ name: "小克" });
+  const g = host.createGroup("交付序号测试群", [{ kind: "contact", id: c.id }]);
+  const created = host.createTask({ roomId: g.id, clientActionId: "open-1", title: "核对交付序号" });
+  host.send({ roomId: g.id, clientActionId: "u-before", text: "@小克 先看一下任务", mentions: [{ id: c.id, source: "manual" }] });
+  await settle(host, compute);
+  const beforeLine = seenBlock5.find((b) => b.includes(created.id)) ?? "";
+  assert.ok(beforeLine.includes(`${created.id} [T1_Open]`), "交付前第 5 块包含待认领任务");
+  assert.equal(beforeLine.includes(", 交付 #"), false, "交付前第 5 块不应出现交付序号");
+
+  host.assignTask({ taskId: created.id, contactId: c.id, clientActionId: "assign-1" });
+  await settle(host, compute);
+  const delivered = host.taskView(host.taskDoc(created.id).value);
+  assert.equal(delivered.state, "T8a_Delivered");
+  assert.ok(delivered.deliveredSeq != null);
+
+  seenBlock5.length = 0;
+  host.send({ roomId: g.id, clientActionId: "u-after", text: "@小克 复查一下", mentions: [{ id: c.id, source: "manual" }] });
+  await settle(host, compute);
+  const afterLine = seenBlock5.find((b) => b.includes(created.id)) ?? "";
+  assert.ok(afterLine.includes(`(会话 ${g.id} #${delivered.sourceSeq}, 交付 #${delivered.deliveredSeq})`), "交付后第 5 块应附带交付消息序号");
+
+  assert.match(CONTACT_SYSTEM, /待认领/);
+  assert.match(CONTACT_SYSTEM, /read_task/);
+  assert.match(CONTACT_SYSTEM, /claim_task/);
+  assert.match(CONTACT_SYSTEM, /verdict\(revise\)/);
+  assert.match(CONTACT_SYSTEM, /不要仅用 reply/);
+  assert.match(CONTACT_TOOLS, /read_task\(taskId\)/);
+  assert.match(CONTACT_TOOLS, /claim_task\(taskId, expectedRevision, text\)/);
+  assert.match(CONTACT_TOOLS, /release_task\(taskId, expectedRevision, text\)/);
+  assert.match(CONTACT_TOOLS, /verdict\(taskId, sourceSeq, accept\|revise, feedback\?\).*勿仅 reply/);
+
+  await host.close();
+  compute.close();
+});
