@@ -140,7 +140,6 @@ import {
   identityOf,
 } from "./assemble.ts";
 import { HistoryAccess, type HistoryPrefetchOptions, type HistorySearchFn } from "./history.ts";
-import { decideRoomPost, emptyRoomPostBudget, type RoomPostBudget } from "./room-post-budget.ts";
 import { LoopGuard, type LoopLimits } from "./loop-guard.ts";
 import { type Bus, createBus } from "./bus.ts";
 import { type Db, HostError, all, getDoc, listDocs, one, openDb, putDoc, run, tx } from "./db.ts";
@@ -186,7 +185,6 @@ export interface HostOptions {
   readonly historySearch?: HistorySearchFn;
   readonly historyPrefetch?: false | HistoryPrefetchOptions;
   readonly loopGuard?: LoopLimits;
-  /** Autonomous model-authored group posts have a separate budget from causal wakeups. */
   readonly roomPostBudget?: false;
   readonly file: string;
   readonly userId?: string;
@@ -292,7 +290,6 @@ interface ContactDoc extends Omit<ContactView, "activity"> {
   /** Legacy rows lack provenance, so only contacts created without a model in B4 follow the default. */
   readonly speakingModelInherited?: boolean;
 }
-interface RoomPostState { readonly budget: RoomPostBudget }
 
 /** 补充关联边 + Compute 轮次版本(AC-15/16/45):rounds 是已开始、还没结束的轮次各自依据的约束版本(先进先出),
  *  resultVer 是最近一次完成的产出依据的版本,queued 是 Compute 在运行时没送进去、等这一轮结束再续接的补充。 */
@@ -1216,16 +1213,6 @@ export class Host {
       actionKey: `loop-limit:${root}`,
     }));
     if (!result.duplicate) this.afterAppend(roomId, result.seq, sender);
-  }
-
-  private roomPostRefusalTx(roomId: string, contact: ContactDoc, text: string): string | null {
-    const key = `room-post:${roomId}`;
-    const previous = getDoc<RoomPostState>(this.db, key);
-    const decision = decideRoomPost(previous?.value.budget ?? emptyRoomPostBudget(), {
-      botId: contact.id, botName: contact.name, text, now: this.clock(),
-    });
-    putDoc(this.db, key, previous?.ver ?? 0, { budget: decision.budget });
-    return decision.allowed ? null : `room-post:${decision.refusal}: ${decision.message}`;
   }
 
   /** 发完一条消息之后:推事件、送达成员联系人的注意循环。 */
@@ -3332,6 +3319,12 @@ ${e.body}` })), q.text, visible.length);
     tx(this.db, () => {
       // 群回复在提交事务里检查其他联系人是否已先发言。
       // 不判断新消息是否有价值,也不机械禁言;回到注意循环后由联系人结合原消息与新消息复核。
+      const replyRooms = new Set(out.actions.flatMap((a) => a.kind === "reply" && roomIds.has(a.roomId) && !leavingRooms.has(a.roomId) ? [a.roomId] : []));
+      for (const roomId of replyRooms) {
+        if (this.roomRow(roomId).kind !== "group") continue;
+        const newer = loadLog(this.db.store, `room:${roomId}`).log.events.filter((m) => m.seq > (lastSeen[roomId] ?? 0) && m.sender.kind === "contact" && m.sender.id !== contactId);
+        if (newer.length) throw new GroupReplyStaleError(roomId, newer.map((m) => m.seq));
+      }
       const byRoom = new Map<string, Parameters<typeof applyLedger>[2][]>();
       const push = (roomId: string, c: Parameters<typeof applyLedger>[2]) => byRoom.set(roomId, [...(byRoom.get(roomId) ?? []), c]);
       const ledgerNow = new Map<string, Ledger>();
@@ -3370,10 +3363,6 @@ ${e.body}` })), q.text, visible.length);
               const user = source ?? (origin && this.toInbound(a.roomId, origin));
               const refusal = user && replyAudienceRefusal(user, contactId, a.replyToSeq, () => history.some((m) => !m.retracted && m.seq > user.seq && m.sender.id === contactId && m.text.trim() === a.text.trim() && fromRoot(m)));
               if (refusal) { reject(refusal); break; }
-            }
-            if (this.opts.roomPostBudget !== false && !humanByRoom.has(a.roomId) && group) {
-              const refusal = this.roomPostRefusalTx(a.roomId, contact, a.text);
-              if (refusal !== null) { reject(refusal); break; }
             }
             const peers = this.members(a.roomId).filter(m => m.kind === "contact" && m.id !== contactId && !this.exits.isLeaving(a.roomId, m.id));
             const mentions = replyMentions(a.text, peers.map(m => ({ id: m.id, name: this.nameOf(m) })));
