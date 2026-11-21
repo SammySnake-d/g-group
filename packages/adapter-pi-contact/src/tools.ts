@@ -101,7 +101,7 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
     },
   },
   deliver: {
-    description: "交付任务结果,等用户确认。",
+    description: "交付任务结果，普通任务交付即视为完成（无需等用户回复通过；有代码合入工作树时仍等用户确认合入）。",
     fields: {
       taskId: f("text", true, "任务 id"),
       text: f("text", true, "交付说明"),
@@ -114,12 +114,12 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
     },
   },
   verdict: {
-    description: "记下提出者对你交付的回复:他明确说通过用 accept,他说要改用 revise 并带上原话。只认他本人在交付之后发的消息;没回复就一直等,不要自己当作通过。宿主核对来源后才生效。",
+    description: "记下提出者对你交付的回复：交付后任务已直接完成，不需要等用户说通过；若提出者在交付后指出问题或要修改，用 revise 并带上原话重新打开任务并继续修改，改完后再次 deliver；若用户明确说通过且任务还在待确认状态，可用 accept 记下。只认提出者本人在交付之后发的消息，宿主核对来源后生效。",
     fields: {
-      taskId: f("text", true, "被验收的任务 id"),
-      sourceSeq: f("seq", true, "用户表达通过或修改意见的那条消息的 seq(必须是提出者本人在交付之后发的)"),
-      verdict: f("verdict", true, "accept:用户明确说通过;revise:用户要改"),
-      feedback: f("textOrNull", false, "revise 时用户要改什么(原话);accept 省略"),
+      taskId: f("text", true, "要验收或重新打开修改的任务 id"),
+      sourceSeq: f("seq", true, "提出者表达修改意见或明确通过的那条消息的 seq(必须是提出者本人在交付之后发的)"),
+      verdict: f("verdict", true, "revise:提出者要改(重新打开并续改);accept:提出者明确说通过(待确认时可选记下)"),
+      feedback: f("textOrNull", false, "revise 时提出者要改什么(原话);accept 省略"),
     },
   },
   progress_rerun: {

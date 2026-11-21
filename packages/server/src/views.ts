@@ -8,6 +8,8 @@ import { HostError, all, getDoc, one } from "./db.ts";
 import type { Host } from "./host.ts";
 
 const DONE_STATES = new Set(["T8_Accepted", "T10_Cancelled", "T11_Failed"]);
+const isDoneTask = (host: Host, t: { id: string; state: string }): boolean =>
+  DONE_STATES.has(t.state) || (t.state === "T8a_Delivered" && (!host.workspace(t.id) || host.workspace(t.id)?.value.state === "W6_Merged"));
 const DEFAULT_MAX_BYTES = 1024 * 1024;
 
 export function contactProfile(host: Host, contactId: string): ContactProfileView {
@@ -15,7 +17,7 @@ export function contactProfile(host: Host, contactId: string): ContactProfileVie
   const note = getDoc<{ text: string }>(host.db, `note:${contactId}`);
   const allTasks = host.listTasks({ contactId });
   const doneTasks = allTasks
-    .filter((t) => DONE_STATES.has(t.state))
+    .filter((t) => isDoneTask(host, t))
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
     .slice(0, 50);
   return {
@@ -24,7 +26,7 @@ export function contactProfile(host: Host, contactId: string): ContactProfileVie
     memory: { stateNote: note ? { text: note.value.text, version: note.ver } : null, longTerm: longTermMemory(host, contactId) },
     duties: {
       commitments: host.listCommitments({ contactId, status: "active" }),
-      tasks: allTasks.filter((t) => !DONE_STATES.has(t.state)),
+      tasks: allTasks.filter((t) => !isDoneTask(host, t)),
       doneTasks,
       schedules: host.scheduler.list({ contactId }),
       rooms: host.roomsOfContact(contactId).map((r) => ({ roomId: r.id, kind: r.kind, title: r.title })),

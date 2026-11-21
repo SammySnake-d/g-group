@@ -384,7 +384,7 @@ export function runNodeTests(root: string, files: string[], extraArgs: string[] 
     const rows: { depth: number; ok: boolean; name: string; skip: boolean }[] = [];
     for (const line of lines) {
       const m = /^(\s*)(not ok|ok) \d+ - (.+?)(?: # (.*))?$/.exec(line);
-      if (m) rows.push({ depth: m[1]!.length, ok: m[2] === "ok", name: m[3]!.trim(), skip: /^(SKIP|TODO)/i.test(m[4] ?? "") });
+      if (m) rows.push({ depth: m[1]!.length, ok: m[2] === "ok", name: m[3]!.trim().replace(/\\#/g, "#"), skip: /^(SKIP|TODO)/i.test(m[4] ?? "") });
     }
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]!;
