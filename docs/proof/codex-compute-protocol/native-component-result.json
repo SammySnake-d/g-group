@@ -1,0 +1,196 @@
+{
+  "head": "f5587177a25b878ada4fa121fcc9f86fa09c1af7",
+  "scope": "real native app-server through exported thin createCodexComputeProtocol; not a complete ComputeAdapter or Host/G2 integration",
+  "binaryVersion": "codex-cli 0.167.2",
+  "owner": "/Users/snakesammy/.mirasim/agent-homes/codex-relay/config.toml",
+  "ownerSha256": "449df8120916fc7919ab53213ab946d7c7ea726871f21e3140f349471c9cc4bf",
+  "credentialBinding": {
+    "configOwner": "/Users/snakesammy/.mirasim/agent-homes/codex-relay/config.toml",
+    "processLocalEnvironment": "OPENAI_API_KEY",
+    "resolved": true,
+    "credentialLogged": false,
+    "credentialWritten": false
+  },
+  "requestedModel": "chatflows/gpt-6.1-sol",
+  "requestedEffort": "xhigh",
+  "observedActualModelClaimed": false,
+  "startedAt": 1794510655441,
+  "isolatedRoot": "/private/tmp/q08-component-native-20261113-FTQkgX",
+  "steps": [
+    {
+      "name": "native-thread-start",
+      "value": {
+        "ok": true,
+        "value": {
+          "threadId": "01a1d12b-909f-7c93-b373-439258f84244"
+        }
+      },
+      "at": 1794510655711
+    },
+    {
+      "name": "Q08_COMPONENT_NATIVE_A",
+      "value": {
+        "threadId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "turnId": "01a1d12b-90e1-7460-b3de-5629ed075285",
+        "terminal": {
+          "computeId": "01a1d12b-909f-7c93-b373-439258f84244",
+          "kind": "completed",
+          "result": "Q08_COMPONENT_NATIVE_A"
+        },
+        "markerExact": true
+      },
+      "at": 1794510659840
+    },
+    {
+      "name": "first-native-process-quiesced",
+      "value": {
+        "ok": true,
+        "killed": 3
+      },
+      "at": 1794510660016
+    },
+    {
+      "name": "native-resume-same-thread",
+      "value": {
+        "ok": true,
+        "value": {
+          "threadId": "01a1d12b-909f-7c93-b373-439258f84244"
+        }
+      },
+      "at": 1794510660262
+    },
+    {
+      "name": "Q08_COMPONENT_NATIVE_B",
+      "value": {
+        "threadId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "turnId": "01a1d12b-a2a8-7b81-86b5-1e6bb08871fb",
+        "terminal": {
+          "computeId": "01a1d12b-909f-7c93-b373-439258f84244",
+          "kind": "completed",
+          "result": "Q08_COMPONENT_NATIVE_B"
+        },
+        "markerExact": true
+      },
+      "at": 1794510664056
+    },
+    {
+      "name": "wrong-turn-refused",
+      "value": {
+        "ok": false,
+        "reason": "no matching active native turn"
+      },
+      "at": 1794510664082
+    },
+    {
+      "name": "matching-native-steer-ack-only-not-semantic-claim",
+      "value": {
+        "ok": true,
+        "value": {
+          "turnId": "01a1d12b-b17a-7620-9af4-b12754db9028"
+        }
+      },
+      "at": 1794510664191
+    },
+    {
+      "name": "matching-native-interrupted-terminal",
+      "value": {
+        "ok": true,
+        "value": {
+          "status": "interrupted"
+        }
+      },
+      "at": 1794510664262
+    },
+    {
+      "name": "nonempty-tools-refused",
+      "value": {
+        "ok": false,
+        "reason": "native per-tool authorization is not mapped; Host/G2 policy must not be guessed"
+      },
+      "at": 1794510664262
+    }
+  ],
+  "events": [
+    {
+      "instance": 1,
+      "event": {
+        "computeId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "kind": "started",
+        "sessionId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "resumed": false,
+        "pid": 99386
+      }
+    },
+    {
+      "instance": 1,
+      "event": {
+        "computeId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "kind": "completed",
+        "result": "Q08_COMPONENT_NATIVE_A"
+      }
+    },
+    {
+      "instance": 2,
+      "event": {
+        "computeId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "kind": "started",
+        "sessionId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "resumed": true,
+        "pid": 99702
+      }
+    },
+    {
+      "instance": 2,
+      "event": {
+        "computeId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "kind": "completed",
+        "result": "Q08_COMPONENT_NATIVE_B"
+      }
+    },
+    {
+      "instance": 2,
+      "event": {
+        "computeId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "kind": "started",
+        "sessionId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "resumed": true,
+        "pid": 99702
+      }
+    },
+    {
+      "instance": 2,
+      "event": {
+        "computeId": "01a1d12b-909f-7c93-b373-439258f84244",
+        "kind": "stopped",
+        "code": null,
+        "signal": null,
+        "scope": "main-then-group",
+        "violations": []
+      }
+    }
+  ],
+  "quiescence": [
+    {
+      "ok": true,
+      "killed": 3
+    },
+    {
+      "ok": true,
+      "killed": 0
+    },
+    {
+      "ok": true,
+      "killed": 4
+    }
+  ],
+  "errors": [],
+  "complete": true,
+  "nativePids": [
+    99386,
+    99702
+  ],
+  "remainingOwnNativeProcesses": [],
+  "ownerBytesUnchanged": true,
+  "temporaryConfigRemoved": true,
+  "finishedAt": 1794510664518
+}

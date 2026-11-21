@@ -1,0 +1,8 @@
+{
+  "name": "@g-group/adapter-codex-compute",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@g-group/kernel": "*", "@g-group/process-tools": "*" },
+  "gGroup": { "layer": "adapter" }
+}
