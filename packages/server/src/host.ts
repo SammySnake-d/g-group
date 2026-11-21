@@ -3332,12 +3332,6 @@ ${e.body}` })), q.text, visible.length);
     tx(this.db, () => {
       // 群回复在提交事务里检查其他联系人是否已先发言。
       // 不判断新消息是否有价值,也不机械禁言;回到注意循环后由联系人结合原消息与新消息复核。
-      const replyRooms = new Set(out.actions.flatMap((a) => a.kind === "reply" && roomIds.has(a.roomId) && !leavingRooms.has(a.roomId) ? [a.roomId] : []));
-      for (const roomId of replyRooms) {
-        if (this.roomRow(roomId).kind !== "group") continue;
-        const newer = loadLog(this.db.store, `room:${roomId}`).log.events.filter((m) => m.seq > (lastSeen[roomId] ?? 0) && m.sender.kind === "contact" && m.sender.id !== contactId);
-        if (newer.length) throw new GroupReplyStaleError(roomId, newer.map((m) => m.seq));
-      }
       const byRoom = new Map<string, Parameters<typeof applyLedger>[2][]>();
       const push = (roomId: string, c: Parameters<typeof applyLedger>[2]) => byRoom.set(roomId, [...(byRoom.get(roomId) ?? []), c]);
       const ledgerNow = new Map<string, Ledger>();

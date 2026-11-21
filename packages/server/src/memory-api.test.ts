@@ -264,7 +264,7 @@ test("P1A structured reflect ignores a source-retracted entry when planning rela
 });
 
 test("P1A stale group reply during reflect abandons all structured capture writes", async () => {
-  const o = fresh(); let roomId = ""; let otherId = ""; let seq = 0;
+  const o = fresh(); let roomId = ""; let speakerId = ""; let otherId = ""; let seq = 0;
   let injectPeer = true; let reflects = 0;
   let entered!: () => void; let release!: () => void;
   const started = new Promise<void>(resolve => { entered = resolve; });
@@ -272,7 +272,10 @@ test("P1A stale group reply during reflect abandons all structured capture write
   const reports: { what: string; detail: unknown }[] = [];
   const host = new Host({ ...o, maxDeferMs: 1,
     onReport: (what, detail) => reports.push({ what, detail }),
-    mind: () => ({ async round() {
+    mind: () => ({ async round(input) {
+      if (input.contact.id !== speakerId || !input.fresh.some(m => m.kind === "message" && m.roomId === roomId && m.seq === seq)) {
+        return { actions: [], stateNote: null };
+      }
       if (injectPeer) appendEvent(host.db.store, `room:${roomId}`, { kind: "contact", id: otherId }, { kind: "message", text: "peer spoke during the round" }, new Date().toISOString());
       return { actions: [{ kind: "reply" as const, roomId, text: "stale draft", replyToSeq: seq }], stateNote: null }; } }),
     compactor: () => ({ async compact() { return "note"; }, async reflect() {
@@ -281,7 +284,7 @@ test("P1A stale group reply during reflect abandons all structured capture write
     } }),
   });
   try {
-    const c = host.createContact({ name: "speaker" }); otherId = host.createContact({ name: "other" }).id;
+    const c = host.createContact({ name: "speaker" }); speakerId = c.id; otherId = host.createContact({ name: "other" }).id;
     roomId = host.createGroup("stale capture", [{ kind: "contact", id: c.id }, { kind: "contact", id: otherId }]).id;
     seq = appendEvent(host.db.store, `room:${roomId}`, { kind: "user", id: host.userId }, { kind: "message", text: "以后都用中文回复" }, new Date().toISOString()).seq;
     assert.equal(await host.runRound(c.id, new AbortController().signal), "stale");
