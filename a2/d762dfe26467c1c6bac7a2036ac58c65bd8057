@@ -1,0 +1,23 @@
+packages/server/src/host.ts
+  s_b9ccea1f504419::t_d5b5a0bd339f3e 3324,3380,3401,3442-3445
+docs/subsystems/contact-and-gateway.md
+  s_b9ccea1f504419::t_d5b5a0bd339f3e 9
+packages/adapter-pi-contact/src/tools.ts
+  s_b9ccea1f504419::t_d5b5a0bd339f3e 78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a2d762dfe26467c1c6bac7a2036ac58c65bd8057",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
