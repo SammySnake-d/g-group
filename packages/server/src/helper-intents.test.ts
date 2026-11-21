@@ -157,3 +157,35 @@ test("用户发出 @Helper 后，真实运行时将生成的回答回复到当�
   assert.equal(helperRequests[0]!.model, "fixture-model");
   assert.doesNotMatch(JSON.stringify(helperRequests[0]!.messages), /独立会话里的背景/);
 });
+
+test("聊天里 @Helper 能读到当前群的有效公告和群规，不读取已撤下的公告", async (t) => {
+  const helperRequests: Array<{ model: string; messages: unknown[]; tools?: unknown[] }> = [];
+  const fetch: typeof globalThis.fetch = async (_url, init) => {
+    const request = JSON.parse(String(init?.body));
+    if (!request.tools?.length && JSON.stringify(request.messages).includes("公告与群规核对")) helperRequests.push(request);
+    const chunk = (delta: object, finish_reason: string | null) =>
+      `data: ${JSON.stringify({ id: "chatcmpl-test", object: "chat.completion.chunk", model: request.model, created: 1, choices: [{ index: 0, delta, finish_reason }] })}\n\n`;
+    return new Response(chunk({ role: "assistant", content: "公告回执收到" }, null) + chunk({}, "stop") + "data: [DONE]\n\n", { headers: { "Content-Type": "text/event-stream" } });
+  };
+  const s = await startServer({ dataDir: path.join(dir, "helper-ann-runtime"), mind: "pi", api: "openai-chat", magpie: false, model: "fixture-model", env: { OPENAI_API_KEY: "fixture" }, fetch });
+  t.after(() => s.close());
+  const svc = createService(s.host);
+  const c = s.host.createContact({ name: "群成员" });
+  const g = s.host.createGroup("公告测试群", [{ kind: "contact", id: c.id }]);
+  s.host.updateRoom(g.id, { rules: "规则Alpha：必须核对最新公告" });
+  const stale = await svc.handle("announcements.add", { roomId: g.id, clientActionId: "ann-stale", text: "OLD-ANN-REMOVED" });
+  assert.ok(stale.ok, JSON.stringify(stale));
+  const rem = await svc.handle("announcements.remove", { roomId: g.id, announcementId: (stale.value as { id: string }).id, clientActionId: "ann-rm" });
+  assert.ok(rem.ok, JSON.stringify(rem));
+  const live = await svc.handle("announcements.add", { roomId: g.id, clientActionId: "ann-live", text: "ORBIT-77" });
+  assert.ok(live.ok, JSON.stringify(live));
+  const sent = s.host.send({ roomId: g.id, clientActionId: "ask-ann", text: "@Helper 公告与群规核对", mentions: [{ id: HELPER_ID, source: "manual" as const }] });
+  const replies = () => s.host.listMessages(g.id, { afterSeq: sent.seq }).messages.filter((m) => m.sender.kind === "helper");
+  for (const deadline = Date.now() + 1500; replies().length === 0 && Date.now() < deadline;) await delay(15);
+  assert.deepEqual(replies().map((m) => [m.text, m.replyToSeq]), [["公告回执收到", sent.seq]]);
+  assert.equal(helperRequests.length, 1);
+  const payload = JSON.stringify(helperRequests[0]!.messages);
+  assert.match(payload, /ORBIT-77/);
+  assert.match(payload, /规则Alpha：必须核对最新公告/);
+  assert.doesNotMatch(payload, /OLD-ANN-REMOVED/);
+});
