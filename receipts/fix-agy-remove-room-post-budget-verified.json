@@ -1,0 +1,12 @@
+{
+  "slice": "移除联系人自动群回复的默认发言预算，并隔离记忆回归的假模型",
+  "author": { "agent": "codex", "model": "group/gpt-sol", "session": "codex:a7578765-b49e-4032-ade0-af63cbe67c4c" },
+  "red": { "commit": "3d1eb913d0142313879c1ef773125533247406cb" },
+  "green": { "commit": "a65b37bce51cd23cb10febc57ac6cdf2bf7e95d3" },
+  "review": null,
+  "waiver": null,
+  "acceptance": [
+    { "id": "AC-31", "status": "未测", "reason": "确定性用例验证独立发言、过期草稿和记忆行为；未执行完整 AC-31 的真模型或规模验收。" }
+  ],
+  "unverifiable": "AC-31 的自然群聊和规模压测未执行。原策略出处、超时、红对照和通过记录见 packages/server/proof/room-post-defaults-20261121.md。按本阶段授权自测，无独立审查。"
+}
