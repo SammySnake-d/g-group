@@ -114,7 +114,7 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
     },
   },
   verdict: {
-    description: "记下提出者对你交付的回复：交付后任务已直接完成，不需要等用户说通过；若提出者在交付后指出问题或要修改，用 revise 并带上原话重新打开任务并继续修改，改完后再次 deliver；若用户明确说通过且任务还在待确认状态，可用 accept 记下。只认提出者本人在交付之后发的消息，宿主核对来源后生效。",
+    description: "重开已交付任务返工(revise)或记下通过(accept)。交付后任务已直接完成，不需要等用户说通过；但只要提出者在交付后要求修改、调整格式、补充或重做，必须先调用 verdict(verdict='revise', taskId, sourceSeq, feedback) 重新打开任务交给 Compute 修订，改完后再 deliver，禁止只用 reply 改写文字替代返工。若任务仍在待确认状态且用户明确说通过，可用 accept 记下。只认提出者本人在交付之后发的消息，宿主核对来源后生效。",
     fields: {
       taskId: f("text", true, "要验收或重新打开修改的任务 id"),
       sourceSeq: f("seq", true, "提出者表达修改意见或明确通过的那条消息的 seq(必须是提出者本人在交付之后发的)"),
