@@ -1,0 +1,10 @@
+{
+  "slice": "记录群协作暂缓范围并从原有需求及验收条目链接",
+  "author": { "agent": "codex", "model": "group/gpt-sol", "session": "codex:a7578765-b49e-4032-ade0-af63cbe67c4c" },
+  "review": null,
+  "waiver": null,
+  "acceptance": [
+    { "id": "AC-31", "status": "未测", "reason": "仅为未交付的部分添加排期链接，不改变原判据，不在本片运行产品验收。" }
+  ],
+  "unverifiable": "AC-31 和其余链接所指的功能不因文档标记改变状态。已核对 42 个链接的章节；去掉链接标记，两份规格原文逐字一致。"
+}
