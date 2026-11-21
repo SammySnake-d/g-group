@@ -14,7 +14,6 @@ interface TextRequest {
   readonly usage?: UsageSink;
 }
 
-/** A single, tool-free model response through the existing protocol selection and usage path. */
 export async function textRequest(cfg: Resolved, input: TextRequest): Promise<string> {
   const timestamp = Date.now();
   const system: SystemMessage = { role: "system", content: input.system, timestamp };

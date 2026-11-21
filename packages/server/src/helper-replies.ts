@@ -5,7 +5,6 @@ import type { SpeakingAssembly } from "./speaking.ts";
 
 const system = "你是 Helper。请回答用户在当前会话里发给 Helper 的这条消息。只依据提供的会话和任务，直接输出回复正文。无法确认时如实回答，不编造软件操作。";
 
-/** Subscribe to committed user mentions and reuse HelperDesk for scope and durable delivery. */
 export function startHelperReplies(host: Host, generate: SpeakingAssembly["helperReply"], report?: (what: string, detail: unknown) => void) {
   if (!generate) return async () => {};
   const desk = new HelperDesk(host);
