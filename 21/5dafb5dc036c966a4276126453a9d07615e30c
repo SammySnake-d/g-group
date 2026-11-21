@@ -1,0 +1,18 @@
+packages/adapter-pi-contact/src/tools.ts
+  h_f33e46a035b77c 117
+packages/server/src/assemble.ts
+  h_f33e46a035b77c 100-104,106-107,109,114-117,122,124-129
+packages/server/src/host.ts
+  h_f33e46a035b77c 3128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "215dafb5dc036c966a4276126453a9d07615e30c",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
