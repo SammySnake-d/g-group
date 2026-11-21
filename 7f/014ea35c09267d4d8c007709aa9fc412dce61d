@@ -1,0 +1,23 @@
+docs/PARKING_LOT.md
+  s_b9ccea1f504419::t_24706f5e99d34d 1-70
+docs/spec/需求文档.md
+  s_b9ccea1f504419::t_86b3bdb3236e60 2718,2720-2731,2733
+docs/spec/验收文档-v0.1.md
+  s_b9ccea1f504419::t_86b3bdb3236e60 98,109,117-120,152,154-155,157-161,163,170,179-185,187-188,217-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7f014ea35c09267d4d8c007709aa9fc412dce61d",
+  "prompts": {},
+  "sessions": {
+    "s_b9ccea1f504419": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f9f2-1568-7701-9aec-1339c98ddcfb",
+        "model": "group/gpt-sol"
+      },
+      "human_author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
