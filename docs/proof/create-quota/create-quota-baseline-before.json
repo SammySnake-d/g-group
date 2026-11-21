@@ -1,0 +1,74 @@
+{
+  "head": "3cfabba2978e3b617a07c86b962eba5fd8e4d411",
+  "specifiedContactQuota": {
+    "ok": true,
+    "value": {
+      "id": "c-mwdp2up9-1",
+      "name": "指定额度",
+      "avatar": null,
+      "bio": "",
+      "speakingModel": "claude-sonnet-4-6",
+      "harness": "claude-code",
+      "computeModel": {
+        "mode": "inherit"
+      },
+      "tools": [],
+      "computeAssets": [],
+      "activity": "idle",
+      "createdAt": "2026-11-12T15:20:28.653Z",
+      "computeResolved": {
+        "resolved": {
+          "harness": "claude-code",
+          "model": "claude-sonnet-4-6",
+          "effort": "medium",
+          "vendor": "anthropic",
+          "modelSource": "global",
+          "effortSource": "global",
+          "chain": [
+            "compute 继承全局",
+            "全局 Compute 默认 claude-sonnet-4-6"
+          ]
+        },
+        "support": "undeclared"
+      }
+    }
+  },
+  "specifiedGroupQuota": {
+    "ok": true,
+    "value": {
+      "id": "g-mwdp2upa-2",
+      "kind": "group",
+      "title": "指定群额度",
+      "avatar": null,
+      "members": [
+        {
+          "kind": "user",
+          "id": "me"
+        }
+      ],
+      "rules": "",
+      "rulesVersion": 0,
+      "pinned": false,
+      "muted": false,
+      "lastSeq": 0,
+      "readSeq": 0,
+      "unread": 0,
+      "pendingForUser": 0,
+      "lastMessagePreview": null,
+      "updatedAt": "2026-11-12T15:20:28.654Z",
+      "announcementCount": 0,
+      "leavingMembers": [],
+      "tempComputeSlots": 0
+    }
+  },
+  "groupDefault": 0,
+  "contactActionReusedSameEntity": false,
+  "groupActionReusedSameEntity": false,
+  "groupStoredQuota": null,
+  "counts": {
+    "contacts": 3,
+    "groups": 3
+  },
+  "helperCreationAvailable": false,
+  "helperPrerequisite": "Current base has HelperDesk context/note/history/post only; Helper create entry requires #64/Q13 and is not added here."
+}

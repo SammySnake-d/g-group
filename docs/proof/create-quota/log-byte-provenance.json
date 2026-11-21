@@ -1,0 +1,44 @@
+[
+  {
+    "file": "create-quota-calibrated-red.tap",
+    "raw_sha256": "a0454aeb0903a8c0226fb412d7d8521d07cdff8c7b51fe83030113ca394a5321",
+    "display_sha256": "9ddf21f84bdf50e3468c4135f1abdcc011248eabfbb39a32cff3c62ff6aab5e1",
+    "transformation": "rstrip each line and EOF only; raw bytes preserved in raw-log-whitespace-originals.zip"
+  },
+  {
+    "file": "create-quota-full-red.tap",
+    "raw_sha256": "9141d5955d88475f76c1c8a87ec3bcdb6b8098514f78b2590f8a5a5e881ac8a1",
+    "display_sha256": "48f294207a21e34a611a6844a722860fe1a82bd7b7fb03b50cb642c6c5252340",
+    "transformation": "rstrip each line and EOF only; raw bytes preserved in raw-log-whitespace-originals.zip"
+  },
+  {
+    "file": "create-quota-initial-green.tap",
+    "raw_sha256": "78b18b47cce0609c78c90c586be27671250ee85641799ea1cf05ad334ad423a5",
+    "display_sha256": "244d0614ed48a761f8feab29e54f1cfb8d0f27fc1db55d13f8d91d3da38058fe",
+    "transformation": "rstrip each line and EOF only; raw bytes preserved in raw-log-whitespace-originals.zip"
+  },
+  {
+    "file": "create-quota-initial-red.tap",
+    "raw_sha256": "b1009f472a6a9d83bb2f8b430e30d00a5091394cf575437f9e054dbfa51524c2",
+    "display_sha256": "43d84d6f3af5225b956b86637cee4b1ecfadd833981459bd75f546bdd0b64b8a",
+    "transformation": "rstrip each line and EOF only; raw bytes preserved in raw-log-whitespace-originals.zip"
+  },
+  {
+    "file": "create-quota-typecheck-initial.txt",
+    "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "display_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "transformation": "rstrip each line and EOF only; raw bytes preserved in raw-log-whitespace-originals.zip"
+  },
+  {
+    "file": "gate-inherited-api-red.tap",
+    "raw_sha256": "b36fe348460d0a354f6fce9530047aa90ef87967fc962f81b28ae2567794c8f1",
+    "display_sha256": "a96963c80d53403579511ab3f3a97dab59ee606e19a096f393a449a94d08c5a4",
+    "transformation": "rstrip each line and EOF only; raw bytes preserved in raw-log-whitespace-originals.zip"
+  },
+  {
+    "file": "range-calibrated-red.tap",
+    "raw_sha256": "609440965b52d2d26178bcec5170d68bca1a76e160813a9160fda1fc63c5d7dc",
+    "display_sha256": "85e2dc30e74793be91d9989621131ead6f5bd7f2c80cf8f4b4081de1eaadc06a",
+    "transformation": "rstrip each line and EOF only; raw bytes preserved in raw-log-whitespace-originals.zip"
+  }
+]

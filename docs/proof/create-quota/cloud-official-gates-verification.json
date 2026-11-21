@@ -1,0 +1,66 @@
+{
+  "frozen_head": "e1b91fc123148d637ddfd5db0db64ba6efdba4bf",
+  "archive": "cloud-official-gates-raw.tar.gz",
+  "archive_bytes": 142582,
+  "archive_sha256": "0f0ba518331a3c347633ee984b883f0eba4c34350e360d02d2f83e2d058cf004",
+  "verified_archive_members": 53,
+  "all_archive_member_sizes_and_sha256_verified": true,
+  "gate_exit": 1,
+  "content_hash": "956800445b0db1a2b6fd2eee75f73529ce62ec385b548fa5255ed31389570774",
+  "official_gate_result_member": "official-gates-resume-v3/result.json",
+  "raw_runtime_diagnostic_member": "official-gates-resume-v3/runNodeTests-diagnostic.json",
+  "gate_failures": [
+    "G-REVIEW",
+    "G-RED",
+    "G-STUB",
+    "G-TAUTO"
+  ],
+  "operational_gate_passes": [
+    "G-TRACE",
+    "G-WORKFLOW",
+    "G-LAYER"
+  ],
+  "provenance": "review=null short circuit; not actual author/reviewer provenance validation",
+  "runtime": {
+    "exitOk": false,
+    "passed": [],
+    "failed": [],
+    "output": "### packages/server/src/create-quota.test.ts\ndocker: Error response from daemon: failed to mount /tmp/containerd-mount2143298106: mount source: \"overlay\", target: \"/tmp/containerd-mount2143298106\", fstype: overlay, flags: 0, data: \"workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/26/work,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/26/fs,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/5/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/3/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/2/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1/fs,index=off\", err: invalid argument\n\nRun 'docker run --help' for more information\n"
+  },
+  "official_image": {
+    "requested": "docker.io/library/node:22.22.0-slim",
+    "official_index_digest": "sha256:dd9d21971ec4395903fa6143c2b9267d048ae01ca6d3ea96f16cb30df6187d94",
+    "official_manifest_digest": "sha256:7cc56ef285a8568121537d17b05e72128f01b89c54607b51acf084a50ef483f3",
+    "official_config_digest": "sha256:e894118949319b479bfc3e16e545cb2f85b7a2194aa86ea9cd4e29538f2b13c3",
+    "loaded_exported_config_digest": "sha256:e894118949319b479bfc3e16e545cb2f85b7a2194aa86ea9cd4e29538f2b13c3",
+    "exported_config_bytes_equal": true,
+    "rootfs_diff_ids_equal": true,
+    "rootfs_diff_ids": [
+      "sha256:9eb9a78eeb101ab215acf43ffb2a709d5fca9ca2a22178564c7ee5cc30774c60",
+      "sha256:f6e71f9d22ec0d0bae2efa77e58e546696fdefb29ea86e480ff1692f30965d5b",
+      "sha256:4353f08b878699ccb1ddad75458dd7d17f97911b46d91a07779baca3b4755991",
+      "sha256:cc5e91a4e413ffbc14fc7624806852156d32444569b5d0ef61cb60ebce7e9b1a",
+      "sha256:a2a4e69ea5e16fe3f4301bf9e1e8e32e90918c26a72e59246a0220d8bb0b04ac"
+    ],
+    "docker_inspect_target_id": "sha256:d5ade540c67a471009a07648f75cbfff854ac590158936a0c1b04bb2c2cd63d9",
+    "docker_descriptor": {
+      "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+      "digest": "sha256:d5ade540c67a471009a07648f75cbfff854ac590158936a0c1b04bb2c2cd63d9",
+      "size": 1079,
+      "annotations": {
+        "io.containerd.image.name": "docker.io/library/node:22.22.0-slim",
+        "org.opencontainers.image.ref.name": "22.22.0-slim"
+      }
+    },
+    "verified": true,
+    "executor_correction": "Docker containerd inspect target/index Id is not OCI config digest; v2 incorrect field assertion retained, not a gate failure. v3 checks exact exported config bytes plus rootfs diff_ids."
+  },
+  "original_failures_retained": [
+    "official-gates-result.json",
+    "official-gates-resume-v2/result.json"
+  ],
+  "no_gate_or_assertion_modified": true,
+  "no_shared_daemon_configuration_modified": true,
+  "review_complete": false,
+  "acceptance_complete": false
+}

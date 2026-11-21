@@ -1,0 +1,484 @@
+{
+  "head": "e1b91fc123148d637ddfd5db0db64ba6efdba4bf",
+  "source_archive_verified_files": 45,
+  "green": {
+    "tests": 13,
+    "pass": 13,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "full": {
+    "tests": 1498,
+    "pass": 1498,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "named_mutant_kills": 17,
+  "mutant_results": [
+    {
+      "mutant": "M01",
+      "criterion": "CQ01",
+      "named_ERR_ASSERTION": [
+        "CQ01 contacts.create 在创建事务持久化指定个人额度与首版历史"
+      ],
+      "tap": "mutant-tap/M01.tap",
+      "tap_sha256": "3c5df24f666b83a4913d279b9d4c451188306985b735b23807d4c13ba802a5bc",
+      "summary": {
+        "tests": 13,
+        "pass": 6,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体",
+          "assertion": true
+        },
+        {
+          "name": "CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放",
+          "assertion": true
+        },
+        {
+          "name": "CQ07 联系人创建动作跨重启返回原响应，修改参数冲突且不覆当前配置历史",
+          "assertion": true
+        },
+        {
+          "name": "CQ10 创建动作记账失败回滚联系人、额度与历史，修复后同号可重试",
+          "assertion": true
+        },
+        {
+          "name": "CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还",
+          "assertion": true
+        },
+        {
+          "name": "CQ13 个人额度下调保留旧租约，未停止不抢占，低于新上限后才让排队起跑",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M02",
+      "criterion": "CQ01",
+      "named_ERR_ASSERTION": [
+        "CQ01 contacts.create 在创建事务持久化指定个人额度与首版历史"
+      ],
+      "tap": "mutant-tap/M02.tap",
+      "tap_sha256": "027fe857df47a51e00aec9536c5251028cc8041710fb4075c4547ce89273c368",
+      "summary": {
+        "tests": 13,
+        "pass": 7,
+        "fail": 6,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体",
+          "assertion": true
+        },
+        {
+          "name": "CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放",
+          "assertion": true
+        },
+        {
+          "name": "CQ10 创建动作记账失败回滚联系人、额度与历史，修复后同号可重试",
+          "assertion": true
+        },
+        {
+          "name": "CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还",
+          "assertion": true
+        },
+        {
+          "name": "CQ13 个人额度下调保留旧租约，未停止不抢占，低于新上限后才让排队起跑",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M03",
+      "criterion": "CQ02",
+      "named_ERR_ASSERTION": [
+        "CQ02 rooms.createGroup 原子保存群成员与指定临时额度并对外返回"
+      ],
+      "tap": "mutant-tap/M03.tap",
+      "tap_sha256": "c78b465fe3c2d099c209106031b282c838f5185700d5f95d1a263ebc4b9928d9",
+      "summary": {
+        "tests": 13,
+        "pass": 7,
+        "fail": 6,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员",
+          "assertion": true
+        },
+        {
+          "name": "CQ06 群创建缺省零与显式 0 和 64 都持久化同一额度文档",
+          "assertion": true
+        },
+        {
+          "name": "CQ08 建群动作跨重启返回原响应，额度或成员变更冲突且不覆当前群",
+          "assertion": true
+        },
+        {
+          "name": "CQ11 群额度落盘失败回滚群、成员与动作，修复后同号可重试",
+          "assertion": true
+        },
+        {
+          "name": "CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M04",
+      "criterion": "CQ02",
+      "named_ERR_ASSERTION": [
+        "CQ02 rooms.createGroup 原子保存群成员与指定临时额度并对外返回"
+      ],
+      "tap": "mutant-tap/M04.tap",
+      "tap_sha256": "25464dfeb93717fa125a00e174e35fb0fe90bbeee7c9cb9e511cc0759f36ad7c",
+      "summary": {
+        "tests": 13,
+        "pass": 6,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员",
+          "assertion": true
+        },
+        {
+          "name": "CQ06 群创建缺省零与显式 0 和 64 都持久化同一额度文档",
+          "assertion": true
+        },
+        {
+          "name": "CQ08 建群动作跨重启返回原响应，额度或成员变更冲突且不覆当前群",
+          "assertion": true
+        },
+        {
+          "name": "CQ09 动作号按创建种类隔离，JSON字段顺序不产生伪冲突或重复实体",
+          "assertion": true
+        },
+        {
+          "name": "CQ11 群额度落盘失败回滚群、成员与动作，修复后同号可重试",
+          "assertion": true
+        },
+        {
+          "name": "CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M05",
+      "criterion": "CQ02",
+      "named_ERR_ASSERTION": [
+        "CQ02 rooms.createGroup 原子保存群成员与指定临时额度并对外返回"
+      ],
+      "tap": "mutant-tap/M05.tap",
+      "tap_sha256": "682cbb20368f9271dc157b6ecf135a07a5b79cd71093752c3e48ca5d2abf227c",
+      "summary": {
+        "tests": 13,
+        "pass": 8,
+        "fail": 5,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员",
+          "assertion": true
+        },
+        {
+          "name": "CQ06 群创建缺省零与显式 0 和 64 都持久化同一额度文档",
+          "assertion": true
+        },
+        {
+          "name": "CQ11 群额度落盘失败回滚群、成员与动作，修复后同号可重试",
+          "assertion": true
+        },
+        {
+          "name": "CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M06",
+      "criterion": "CQ03",
+      "named_ERR_ASSERTION": [
+        "CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体"
+      ],
+      "tap": "mutant-tap/M06.tap",
+      "tap_sha256": "50961eea51ce59d3244bf12da501919bde00708a1832360d6707313f56361334",
+      "summary": {
+        "tests": 13,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": []
+    },
+    {
+      "mutant": "M07",
+      "criterion": "CQ04",
+      "named_ERR_ASSERTION": [
+        "CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员"
+      ],
+      "tap": "mutant-tap/M07.tap",
+      "tap_sha256": "c184707c46699342a0a505287daf83c9208c73e179d45837152358eb8eef2833",
+      "summary": {
+        "tests": 13,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": []
+    },
+    {
+      "mutant": "M08",
+      "criterion": "CQ05",
+      "named_ERR_ASSERTION": [
+        "CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放"
+      ],
+      "tap": "mutant-tap/M08.tap",
+      "tap_sha256": "c4e9eebd60619795ea61933f541d8c11e5731c1641e4fab48af4ff850c3af8b4",
+      "summary": {
+        "tests": 13,
+        "pass": 11,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ03 contacts.create 与更新共用 null 或 1..64 整数范围，坏额度不残留实体",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M09",
+      "criterion": "CQ06",
+      "named_ERR_ASSERTION": [
+        "CQ06 群创建缺省零与显式 0 和 64 都持久化同一额度文档"
+      ],
+      "tap": "mutant-tap/M09.tap",
+      "tap_sha256": "6f5157a7833cb15f022a62e99cc8d7b9a77b73427c0abdd29212339d5b401720",
+      "summary": {
+        "tests": 13,
+        "pass": 11,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ04 rooms.createGroup 与更新共用 0..64 整数范围，坏额度不残留群成员",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M10",
+      "criterion": "CQ07",
+      "named_ERR_ASSERTION": [
+        "CQ07 联系人创建动作跨重启返回原响应，修改参数冲突且不覆当前配置历史"
+      ],
+      "tap": "mutant-tap/M10.tap",
+      "tap_sha256": "538288dc51fb86815f556071ee01402fd14a21575e213e81952a503d9ddce91d",
+      "summary": {
+        "tests": 13,
+        "pass": 10,
+        "fail": 3,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ05 个人创建缺省和 null 保留宿主默认，1 与 64 边界保存且动作可重放",
+          "assertion": true
+        },
+        {
+          "name": "CQ09 动作号按创建种类隔离，JSON字段顺序不产生伪冲突或重复实体",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M11",
+      "criterion": "CQ08",
+      "named_ERR_ASSERTION": [
+        "CQ08 建群动作跨重启返回原响应，额度或成员变更冲突且不覆当前群"
+      ],
+      "tap": "mutant-tap/M11.tap",
+      "tap_sha256": "398fbd54fd10e680323417f1e0f02977fc8f4ce7067c562b851fb41520a8df55",
+      "summary": {
+        "tests": 13,
+        "pass": 11,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ09 动作号按创建种类隔离，JSON字段顺序不产生伪冲突或重复实体",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M12",
+      "criterion": "CQ09",
+      "named_ERR_ASSERTION": [
+        "CQ09 动作号按创建种类隔离，JSON字段顺序不产生伪冲突或重复实体"
+      ],
+      "tap": "mutant-tap/M12.tap",
+      "tap_sha256": "800a6a866ba4da9600d790acd6b4c0fb7d874163586b5ca5bc645c1ee1b4a5cd",
+      "summary": {
+        "tests": 13,
+        "pass": 11,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ10 创建动作记账失败回滚联系人、额度与历史，修复后同号可重试",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M13",
+      "criterion": "CQ10",
+      "named_ERR_ASSERTION": [
+        "CQ10 创建动作记账失败回滚联系人、额度与历史，修复后同号可重试"
+      ],
+      "tap": "mutant-tap/M13.tap",
+      "tap_sha256": "f7b4d9f02082d83abc2cf714c85c66a7308d3a3953f037c45208d611a52955b1",
+      "summary": {
+        "tests": 13,
+        "pass": 11,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ11 群额度落盘失败回滚群、成员与动作，修复后同号可重试",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M14",
+      "criterion": "CQ07",
+      "named_ERR_ASSERTION": [
+        "CQ07 联系人创建动作跨重启返回原响应，修改参数冲突且不覆当前配置历史"
+      ],
+      "tap": "mutant-tap/M14.tap",
+      "tap_sha256": "52405144cb52ddc9bae5577ba7bab625f3d67c5f65f86017cd92037288014b01",
+      "summary": {
+        "tests": 13,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": []
+    },
+    {
+      "mutant": "M15",
+      "criterion": "CQ08",
+      "named_ERR_ASSERTION": [
+        "CQ08 建群动作跨重启返回原响应，额度或成员变更冲突且不覆当前群"
+      ],
+      "tap": "mutant-tap/M15.tap",
+      "tap_sha256": "49e1976970990700d0f6db89eee3a995a6658dc8b7af6e950d1eea1d0e396149",
+      "summary": {
+        "tests": 13,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": []
+    },
+    {
+      "mutant": "M16",
+      "criterion": "CQ12",
+      "named_ERR_ASSERTION": [
+        "CQ12 创建额度进入既有租约原语，群不串借，下调不抢在途且停止确认才归还"
+      ],
+      "tap": "mutant-tap/M16.tap",
+      "tap_sha256": "3ada40454735e683364b167e2d16a47b7c9e703b8631f7e8269c2375ca952e83",
+      "summary": {
+        "tests": 13,
+        "pass": 11,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": [
+        {
+          "name": "CQ13 个人额度下调保留旧租约，未停止不抢占，低于新上限后才让排队起跑",
+          "assertion": true
+        }
+      ]
+    },
+    {
+      "mutant": "M17",
+      "criterion": "CQ13",
+      "named_ERR_ASSERTION": [
+        "CQ13 个人额度下调保留旧租约，未停止不抢占，低于新上限后才让排队起跑"
+      ],
+      "tap": "mutant-tap/M17.tap",
+      "tap_sha256": "9880194ba5f0e36935ef27fb8c67c748e5ccabfebebc82b271ef6db75cbb7cb2",
+      "summary": {
+        "tests": 13,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "other_criteria_failures": []
+    }
+  ],
+  "seven_phases_complete": true,
+  "official_gate_v1": "image pull failed before gates; preserved, pending resume",
+  "limits": [
+    "CQ12/CQ13 scripted adapters, not CLI/subprocess/model acceptance",
+    "review not performed; provenance review-null short circuit not verified"
+  ],
+  "verified_at": "2026-11-13T00:46:28.208801+08:00"
+}
