@@ -1,0 +1,16 @@
+packages/adapter-pi-contact/src/mind.test.ts
+  h_f33e46a035b77c 428-429
+packages/server/src/direct-task-completion.test.ts
+  h_f33e46a035b77c 423-469
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cf5ef15f24f7f3695723ee809396b146bcd6ee40",
+  "prompts": {},
+  "humans": {
+    "h_f33e46a035b77c": {
+      "author": "Sammy <caxapokrq+sammy@gmail.com>"
+    }
+  }
+}
