@@ -99,6 +99,10 @@ export function createPiContactMind(opts: PiContactMindOptions): ContactMind {
       execute: async (_id: string, params: unknown): Promise<AgentToolResult<null>> => {
         const r = parseToolCall(d.name, params);
         if (!r.ok) return { content: [{ type: "text", text: `未登记:参数不合形状(${r.why})。请按工具说明修正后重新调用。` }], details: null, isError: true };
+        if (r.value.kind === "read-task") {
+          const task = await tools?.readTask?.(r.value.id);
+          return { content: [{ type: "text", text: task ?? "本轮读不到这个任务" }], details: null, ...(task ? {} : { isError: true }) };
+        }
         if (r.value.kind === "query-history") {
           const q = r.value.query;
           if (!tools?.queryHistory) return { content: [{ type: "text", text: "本轮没有找旧消息的查询口" }], details: null, isError: true };

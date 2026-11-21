@@ -42,7 +42,14 @@ export interface InboundSchedule {
   readonly prompt: string;
   readonly at: string;
 }
-export type Inbound = InboundMessage | InboundCompute | InboundSchedule;
+export interface InboundClaimConflict {
+  readonly kind: "claim-conflict";
+  readonly roomId: string;
+  readonly taskId: string;
+  readonly summary: string;
+  readonly at: string;
+}
+export type Inbound = InboundMessage | InboundCompute | InboundSchedule | InboundClaimConflict;
 
 /** 五块重拼:块号固定 1–5,块内按 parts 顺序。cacheBreakpoint 标在第 1 块末尾(前缀稳定,AC-39①)。 */
 export type BlockNo = 1 | 2 | 3 | 4 | 5;
@@ -85,11 +92,14 @@ export interface RoundInput {
  * forward:把用户追加的要求/回答转给在途 Compute(resume);
  * deliver:交付任务结果(T7→T8a 待确认,AC-28);
  * stop:请求停止任务的 Compute;
+ * claim_task:认领一个本群已有的待认领任务并在群里发出接单话;release_task:放弃自己名下的认领并把任务退回待认领;
  * rerun:重跑运行台账里失败 / 中断 / 没跑完的单元(progress_rerun,D26 第 5 节)。basisSeq 是本轮里明确要求重跑的那条消息;
  *   不给就是自己决定的自动重跑(只能重跑自己名下的,有次数上限),别人名下的必须给 basisSeq,宿主在群里留记录。
  */
 export type MindAction =
   | { readonly kind: "reply"; readonly roomId: string; readonly text: string; readonly replyToSeq: number | null }
+  | { readonly kind: "claim"; readonly taskId: string; readonly expectedRevision: number; readonly text: string }
+  | { readonly kind: "release"; readonly taskId: string; readonly expectedRevision: number; readonly text: string }
   | { readonly kind: "dispatch"; readonly roomId: string; readonly sourceSeq: number; readonly title: string; readonly task: string }
   | { readonly kind: "commit"; readonly roomId: string; readonly sourceSeq: number; readonly text: string; readonly taskId: string | null }
   // sourceSeq:这段转交来自任务所在会话里哪条用户消息;给了就是用户中途改条件(E3),宿主据此原位升版并登记关联边(AC-45/AC-16)
@@ -112,7 +122,7 @@ export type MindAction =
   | { readonly kind: "memory-use"; readonly id: string; readonly good: boolean; readonly note: string | null }
   | { readonly kind: "rerun"; readonly runId: string; readonly roomId: string; readonly basisSeq: number | null };
 export type MindActionKind = MindAction["kind"];
-export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "dispatch", "commit", "forward", "deliver", "stop", "verdict", "remember", "memory-use", "rerun"]);
+export const MIND_ACTION_KINDS: readonly MindActionKind[] = Object.freeze(["reply", "claim", "release", "dispatch", "commit", "forward", "deliver", "stop", "verdict", "remember", "memory-use", "rerun"]);
 
 export interface RoundOutput {
   readonly actions: readonly MindAction[];
@@ -133,6 +143,7 @@ export interface LinkedQuery {
 }
 
 export interface RoundTools {
+  readTask?(id: string): Promise<string | null>;
   readLinked?(q: LinkedQuery): Promise<string | null>;
   /** 按 id 读一条记忆全文(含状态与关系);没有这条或无权读返回 null */
   readMemory(id: string): Promise<string | null>;

@@ -34,6 +34,8 @@ export function recordTaskFacts(db: Db, before: FactDoc | null, doc: FactDoc, ca
 }
 const eventActor = (event: TaskEvent, doc: FactDoc): Actor | null => {
   if (event.kind === "Claim") return { kind: "contact", id: event.by };
+  if (event.kind === "Release") return { kind: "contact", id: event.by };
+  if (event.kind === "Reassign") return { kind: "user", id: event.by };
   if (event.kind === "Cancel" || event.kind === "Amend" || event.kind === "UserAccept" || event.kind === "UserReject") return { kind: "user", id: event.by };
   if (event.kind === "HumanReply") return { kind: "user", id: doc.task.requester };
   if (event.kind === "Review") return event.waiverBy != null ? { kind: "user", id: event.waiverBy } : { kind: "contact", id: event.reviewerId };

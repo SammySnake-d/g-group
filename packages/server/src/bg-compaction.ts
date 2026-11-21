@@ -138,7 +138,7 @@ async function settleNote(ports: CompactionPorts, job: RoundJob, previous: strin
   let reflected = false;
   if (compactor?.reflect && fresh.length) {
     if (stale()) return null;
-    const neighbors = ports.neighbors(contactId, { rooms: roomIdsAtStart, text: [previous ?? "", ...fresh.map(f => f.kind === "message" ? f.text : f.kind === "compute" ? f.summary : f.prompt)].join("\n") });
+    const neighbors = ports.neighbors(contactId, { rooms: roomIdsAtStart, text: [previous ?? "", ...fresh.map(f => f.kind === "message" ? f.text : f.kind === "schedule" ? f.prompt : f.summary)].join("\n") });
     const sources = ports.sources(fresh);
     try {
       const r = await compactor.reflect({ contact, kind: "round-note", previous, material, maxBytes: max, neighbors, sources, noteWritten: committedNote }, signal, usage("reflect"));

@@ -1,0 +1,20 @@
+{
+  "slice": "现有群任务的联系人认领与放弃、群用户未开工改派、接入共享清单",
+  "author": {
+    "agent": "codex",
+    "model": "blueloon-gpt/gpt-6.2-sol",
+    "session": "codex:a7578765-b49e-4032-ade0-af63cbe67c4c"
+  },
+  "red": { "commit": "a071788b5bde1d8e8dd88c5b57aacff10ffbc618" },
+  "green": { "commit": "e2a527355954788c40572bdcccb4a207999c4e5d" },
+  "review": null,
+  "waiver": null,
+  "acceptance": [
+    { "id": "AC-09", "status": "通过", "evidence": "packages/server/proof/taskboard-claim-20261121.md" },
+    { "id": "AC-10", "status": "未测", "reason": "有并发竞争与过期版本对照；本切片未执行 TLA+/TLC 模型检查。" },
+    { "id": "AC-28", "status": "未测", "reason": "真模型重基候选覆盖待确认与面板确认；未覆盖自然回复验收和真实返工，不能报整条通过。" },
+    { "id": "AC-47", "status": "未测", "reason": "只实测浏览器无负责人新建；不宣称原型候选的全部表单及显示范围通过。" },
+    { "id": "AC-56", "status": "未测", "reason": "普通群消息交付实测，未以真模型验证自然回复验收及返工。" }
+  ],
+  "unverifiable": "AC-10 未做形式模型检查。run-13 在含已合入 #132/#133 的目标分支候选重跑；脚本组织两位提案一起提交并暂缓第一位的 Compute 响应，不证明无引导认领。R-02 的原 6 条为回溯 Red；run-12 的重复派发另先复现再修。项目本阶段授权自测、不走独立审查；未生成审查或伪造豁免。"
+}

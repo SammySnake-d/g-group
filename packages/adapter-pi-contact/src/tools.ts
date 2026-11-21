@@ -8,6 +8,9 @@ import type { HistoryQuery, LinkedQuery, MindAction } from "@g-group/kernel";
 /** 工具名 → 对应的动作种类;update_state_note 不是动作,写进 RoundOutput.stateNote。 */
 export const PI_CONTACT_TOOL_NAMES = Object.freeze([
   "reply",
+  "read_task",
+  "claim_task",
+  "release_task",
   "dispatch_compute",
   "commit",
   "forward",
@@ -51,8 +54,28 @@ const SPECS: Readonly<Record<PiContactToolName, ToolSpec>> = Object.freeze({
       replyToSeq: f("seqOrNull", false, "回复哪条消息的 seq;不针对某条消息就省略"),
     },
   },
+  read_task: {
+    description: "读取本轮群里的已有任务要求、负责人、状态和当前版本。先从在途任务清单找到任务 id。",
+    fields: { taskId: f("text", true, "清单中的任务 id") },
+  },
+  claim_task: {
+    description: "认领已有的待认领任务，连同接单话一起提交。带上你刚读到的版本，成功后自动开工，不要再派活或另发接单话。",
+    fields: {
+      taskId: f("text", true, "要认领的任务 id"),
+      expectedRevision: f("seq", true, "刚读到的任务版本"),
+      text: f("text", true, "认领成功后在群里发出的接单话"),
+    },
+  },
+  release_task: {
+    description: "放弃自己名下的任务认领，并把任务退回待认领；放弃时在群里发出的说明会和状态变化一起落盘。Compute 已开工时会先等真实停止确认。",
+    fields: {
+      taskId: f("text", true, "要放弃的任务 id"),
+      expectedRevision: f("seq", true, "刚读到的任务版本"),
+      text: f("text", true, "放弃时在群里发出的说明"),
+    },
+  },
   dispatch_compute: {
-    description: "开一个 Compute 去干活(写文件、跑命令、改代码、长时间任务都走这里;你自己没有 shell 和文件工具)。宿主建任务并异步启动,结果之后以事件回到你这里。",
+    description: "为本轮新提出、尚不在清单里的工作新建任务并启动 Compute。接手已有清单项只用 claim_task，不再调用本工具。适用于写文件、跑命令、改代码和长时间工作；你自己没有 shell 和文件工具。",
     fields: {
       roomId: f("text", true, "任务来源的会话 id"),
       sourceSeq: f("seq", true, "提出这件事的那条消息的 seq"),
@@ -216,6 +239,7 @@ export const TOOL_DECLARATIONS: readonly ToolDeclaration[] = Object.freeze(
 /** 一次工具调用登记成什么:动作,或新的状态笔记。 */
 export type Registered =
   | { readonly kind: "action"; readonly action: MindAction }
+  | { readonly kind: "read-task"; readonly id: string }
   | { readonly kind: "note"; readonly note: string }
   | { readonly kind: "read"; readonly id: string }
   | { readonly kind: "read-linked"; readonly query: LinkedQuery }
@@ -277,6 +301,9 @@ export function parseToolCall(name: string, args: unknown): ParseResult {
   const nn = (k: string) => v[k] as number | null;
   switch (tool) {
     case "reply": return act({ kind: "reply", roomId: s("roomId"), text: s("text"), replyToSeq: nn("replyToSeq") });
+    case "read_task": return { ok: true, value: { kind: "read-task", id: s("taskId") } };
+    case "claim_task": return act({ kind: "claim", taskId: s("taskId"), expectedRevision: n("expectedRevision"), text: s("text") });
+    case "release_task": return act({ kind: "release", taskId: s("taskId"), expectedRevision: n("expectedRevision"), text: s("text") });
     case "dispatch_compute": return act({ kind: "dispatch", roomId: s("roomId"), sourceSeq: n("sourceSeq"), title: s("title"), task: s("task") });
     case "commit": return act({ kind: "commit", roomId: s("roomId"), sourceSeq: n("sourceSeq"), text: s("text"), taskId: sn("taskId") });
     case "forward": {

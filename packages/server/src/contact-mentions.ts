@@ -1,7 +1,6 @@
 import type { MessageView } from "@g-group/api-contract";
 import type { InboundMessage } from "@g-group/kernel";
 
-/** Resolve the contact's visible @names against the room membership at commit time. */
 export function replyMentions(text: string, peers: readonly { id: string; name: string }[]): MessageView["mentions"] {
   const idsByName = new Map<string, string | null>();
   for (const { id, name } of peers) {
@@ -22,7 +21,6 @@ export function replyMentions(text: string, peers: readonly { id: string; name: 
 
 const noReply = /(?:^|[，。！？!?；;,\n])\s*(?:其他人|其余人?|任何人|所有人)?(?:不用|无需|不要|别)回复[。！!\s]*$/u;
 
-/** Explicit audience instructions apply to the originating message and its follow-ups. */
 export function replyAudienceRefusal(
   user: InboundMessage,
   contactId: string,

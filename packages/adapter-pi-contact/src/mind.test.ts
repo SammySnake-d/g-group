@@ -134,7 +134,7 @@ test("A5 正常 end_turn 的空回合仍可成功,不误判截断", async () => 
   }
 });
 
-test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具只有十五个具名工具(含 read_quote_parent、progress_rerun、progress_get、query_history)", async () => {
+test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2–5 块按序在一条 user 消息里,工具包含任务认领与协作查询", async () => {
   const fake = fakeAnthropic([{ text: "看过了,不用动作" }]);
   try {
     const out = await createPiContactMind(opts(fake)).round(input("r1"), live());
@@ -147,7 +147,7 @@ test("首个请求恰好是五块:第 1 块作 system 且带缓存断点,第 2�
     assert.deepEqual(body.messages.map((m) => ({ role: m.role, texts: texts(m.content) })), [
       { role: "user", texts: [2, 3, 4, 5].map((n) => `<block n="${n}" label="${BLOCK_LABELS[n as BlockNo]}">\nr1-第${n}块内容\n</block>`) },
     ]);
-    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "dispatch_compute", "commit", "forward", "deliver", "stop", "verdict", "update_state_note", "remember", "memory_feedback", "read_memory", "read_quote_parent", "progress_rerun", "query_history", "read_linked", "progress_get"]);
+    assert.deepEqual(body.tools?.map((t) => t.name), ["reply", "read_task", "claim_task", "release_task", "dispatch_compute", "commit", "forward", "deliver", "stop", "verdict", "update_state_note", "remember", "memory_feedback", "read_memory", "read_quote_parent", "progress_rerun", "query_history", "read_linked", "progress_get"]);
     assert.deepEqual([...PI_CONTACT_TOOL_NAMES], body.tools?.map((t) => t.name));
     assert.equal(renderBlock(blocks("r1")[3]!), `<block n="4" label="新消息">\nr1-第4块内容\n</block>`);
   } finally {

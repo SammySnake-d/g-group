@@ -103,6 +103,7 @@
     "tasks.integrate",
     "tasks.list",
     "tasks.progress",
+    "tasks.reassign",
     "tasks.rebindFollowUp",
     "tasks.reject",
     "tasks.timeline",

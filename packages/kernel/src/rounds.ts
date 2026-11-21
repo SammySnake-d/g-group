@@ -191,7 +191,8 @@ function checkInbound(x: unknown, at: string): string | undefined {
     if (!isStr(x.prompt)) return `${at}.prompt 必须是字符串`;
     return undefined;
   }
-  return `${at}.kind 只能是 message、compute 或 schedule`;
+  if (x.kind === "claim-conflict") return isLine(x.taskId) && isStr(x.summary) ? undefined : `${at} 缺少任务号或认领结果`;
+  return `${at}.kind 只能是 message、compute、schedule 或 claim-conflict`;
 }
 
 function checkPointers(ps: unknown): string | undefined {
@@ -263,6 +264,7 @@ export function renderInboundText(x: Inbound): string {
     return `${head}\n${x.text}\n`;
   }
   if (x.kind === "compute") return `〔Compute ${x.computeId} · 任务 ${x.taskId} · ${x.signal}〕 · ${x.roomId} · ${x.at}\n${x.summary}\n`;
+  if (x.kind === "claim-conflict") return `〔认领未成功 · 任务 ${x.taskId}〕 · ${x.roomId}\n${x.summary}\n`;
   return `〔定时 ${x.scheduleId}〕 · ${x.roomId} · ${x.at}\n${x.prompt}\n`;
 }
 
